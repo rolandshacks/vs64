@@ -1,0 +1,9 @@
+# git ignores
+.idea
+.vscode
+node_modules
+.clang-format
+.clwb
+.cache
+.project
+*~

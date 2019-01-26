@@ -1,0 +1,212 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Acme Cross Compiler Assembly",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#meta"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#constants-numeric"
+		},
+		{
+			"include": "#macros"
+		}
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.semicolon",
+					"begin": ";",
+					"end": "$",
+					"comment": "Single line comment"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.asm",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.asm",
+					"match": "\\\\."
+				}
+			]
+		},
+		"meta": {
+			"patterns": [
+				{
+					"include": "#meta-preprocessor-cpu"
+				},
+				{
+					"include": "#meta-preprocessor-flow-control"
+				},
+				{
+					"include": "#meta-preprocessor-io"
+				}
+			]
+		},
+		"meta-preprocessor-cpu": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(cpu)\\b"
+				}
+			]
+		},
+		"meta-preprocessor-flow-control": {
+			"patterns": [
+				{
+					"name": "meta.diff.header",
+					"match": "\\!(if|ifdef|for|set|do|warn|error|serious|endoffile)\\b"
+				}
+			]
+		},
+		"meta-preprocessor-io": {
+			"patterns": [
+				{
+					"match": "\\!(binary|bin)\\b",
+					"name": "meta.preprocessor.io"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.output"
+						},
+						"2": {
+							"name": "string.quoted.double.untitled"
+						},
+						"3": {
+							"name": "meta.preprocessor.io.format"
+						}
+					},
+					"match": "(\\!to)\\s*(\\\"[^\"]+\\\")\\s*,\\s*([a-zA-Z]+)"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.input"
+						},
+						"2": {
+							"name": "string.quoted.double.library.name"
+						}
+					},
+					"match": "(\\!source|\\!src)\\s*([\\\"<][^\\\">]+[\\\">])"
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"include": "#keywords-instructions"
+				},
+				{
+					"include": "#keywords-instructions-program-counter"
+				},
+				{
+					"include": "#keywords-assignment-values"
+				},
+				{
+					"include": "#keywords-assignment-text"
+				},								
+				{
+					"include": "#keywords-control"
+				},
+				{
+					"include": "#keywords-illegal"
+				}
+			]
+		},
+		"keywords-instructions": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)[\\s]*\\b(adc|and|asl|bit|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|sbc|sec|sed|sei|sta|stx|sty|tax|txa|tay|tya|tsx|txs)\\b"
+				}
+			]
+		},
+		"keywords-instructions-program-counter": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "keyword.instructions"
+						}
+					},
+					"match": "(\\*=)"
+				}
+			]
+		},
+		"keywords-assignment-values": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|align|fill|fi)\\b"
+				}
+			]
+		},
+		"keywords-assignment-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text)\\b"
+				}
+			]
+		},				
+		"keywords-control": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "(?i)[\\s]*\\b(bcc|bcs|beq|bmi|bne|bpl|brk|bvc|bvs|jmp|jsr|rti|rts)\\b"
+				}
+			]
+		},
+		"keywords-illegal": {
+			"patterns": [
+				{
+					"name": "keyword.illegal",
+					"match": "(?i)[\\s]*\\b(slo|rla|sre|rra|sax|lax|dcp|isc|anc|asr|arr|sbx|dop|top|jam)\\b"
+				}
+			]
+		},
+		"constants-numeric": {
+			"patterns": [
+				{
+					"match": "#?\\$[0-9a-fA-F]+\\b",
+					"name": "constant.numeric.hex"
+				},
+				{
+					"match": "#?\\%[0-1]+\\b",
+					"name": "constant.numeric.bin"
+				},
+				{
+					"match": "#?\\[0-9]+\\b",
+					"name": "constant.numeric.dec"
+				},
+				{
+					"match": "#?\\&[0-7]+\\b",
+					"name": "constant.numeric.oct"
+				}
+			]
+		},
+		"macros": {
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "\\!(macro)\\b"
+				}
+			]
+		}
+	},	
+	"scopeName": "source.asm"
+}

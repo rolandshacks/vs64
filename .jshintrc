@@ -1,0 +1,9 @@
+{
+    "esversion": 6,
+    "undef": true,
+    "unused": false,
+    "node": true,
+    "globals": {
+        "BIND": true
+    }
+}

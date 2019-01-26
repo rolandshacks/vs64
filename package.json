@@ -1,0 +1,181 @@
+{
+	"name": "vs64",
+	"displayName": "vs64",
+	"description": "VS64 - The C64 Development Environment",
+	"version": "0.0.1",
+	"preview": true,
+	"publisher": "rosc",
+	"license": "GPL-3.0",
+	"icon": "images/icon.png",
+	"author": {
+		"name": "Roland Schabenberger"
+	},
+	"private": true,
+	"engines": {
+		"vscode": "^1.30.0"
+	},
+	"main": "./main.js",
+	"bin": "main.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/rosc77/vs64.git"
+	},
+	"scripts": {
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "node ./node_modules/vscode/bin/test"
+	},
+	"devDependencies": {
+		"@types/mocha": "^2.2.42",
+		"@types/node": "^8.10.25",
+		"eslint": "^4.11.0",
+		"typescript": "^3.1.4",
+		"vscode": "^1.1.25"
+	},
+	"galleryBanner": {
+		"color": "#6c9fd2",
+		"theme": "light"
+	},
+	"activationEvents": [
+		"onLanguage:asm",
+		"onCommand:c64.build",
+		"onCommand:c64.run",
+		"onCommand:c64.debug",
+		"onDebug"
+	],
+	"categories": [
+		"Programming Languages",
+		"Snippets",
+		"Linters",
+		"Debuggers",
+		"Formatters"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "c64.build",
+				"title": "build",
+				"category": "C64"
+			},
+			{
+				"command": "c64.run",
+				"title": "run",
+				"category": "C64"
+			},
+			{
+				"command": "c64.debug",
+				"title": "debug",
+				"category": "C64"
+			}
+		],
+		"languages": [
+			{
+				"id": "asm",
+				"aliases": [
+					"6502",
+					"asm",
+					"acme"
+				],
+				"extensions": [
+					".asm",
+					".acme",
+					".a",
+					".h"
+				],
+				"configuration": "./syntaxes/language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "asm",
+				"scopeName": "source.asm",
+				"path": "./syntaxes/asm.tmLanguage.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "C64 tools configuration",
+			"properties": {
+				"c64.verbose": {
+					"type": "boolean",
+					"default": false,
+					"description": "Flag to enable verbose output of extension"
+				},
+				"c64.autoBuild": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable automatic build before running or debugging"
+				},
+				"c64.backgroundBuild": {
+					"type": "boolean",
+					"default": true,
+					"description": "Enable automatic background build after source changes"
+				},
+				"c64.assemblerPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path to assembler executable"
+				},
+				"c64.emulatorPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path to emulator executable"
+				},
+				"c64.debuggerEnabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Flag to enable C64 debugger instead of emulator"
+				},
+				"c64.debuggerPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path to C64 debugger executable"
+				}
+			}
+		},
+		"breakpoints": [
+			{
+				"language": "asm"
+			}
+		],
+		"debuggers": [
+			{
+				"type": "asm",
+				"label": "C64 Debugger",
+				"program": "./src/debugger.js",
+				"runtime": "node",
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"binary"
+						],
+						"properties": {
+							"binary": {
+								"type": "string",
+								"description": "Path to C64 binary",
+								"default": ""
+							}
+						}
+					}
+				},
+				"initialConfigurations": [],
+				"configurationSnippets": [
+					{
+						"label": "C64 Debugger: Launch",
+						"description": "A new configuration for launching the C64 debugger.",
+						"body": {
+							"type": "asm",
+							"request": "launch",
+							"name": "Launch Program",
+							"binary": ""
+						}
+					}
+				],
+				"variables": {}
+			}
+		]
+	},
+	"dependencies": {
+		"await-notify": "^1.0.1",
+		"vscode-debugadapter": "^1.33.0"
+	}
+}
