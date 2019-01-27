@@ -21,6 +21,7 @@ There are no additional requirements or dependencies to operate this extension.
 
 This package includes open source from other developers and I would like to thank all of those:
 
+* Gregory Estrade - 6502.js: It was great to have your 6502 emulator to form the core of the debugger. Thank you for compressing the 6502 cpu in such a nice piece of software!
 * Tony Landi - Acme Cross Assembler (C64): I started with the basic syntax definition for ACME from your package. Thanks for starting that!
 
 ## Ideas Taken From
@@ -33,19 +34,4 @@ This package includes open source from other developers and I would like to than
 * The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass/
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net/
 * C64 65XE Debugger: https://sourceforge.net/projects/c64-debugger/
-
-## Copyright
-
-```
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+* Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js
