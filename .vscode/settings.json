@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.tpp": "cpp"
+    },
+    "terminal.integrated.shell.windows": "cmd.exe",
+    "typescript.surveys.enabled": false
+}

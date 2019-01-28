@@ -347,10 +347,10 @@ class DebugSession extends debug.LoggingDebugSession {
                         verified: true 
                     });
                     if (this._settings.verbose) {
-                        console.log("set breakpoint at line " + breakpoint.line);
+                        Utils.debuggerLog("set breakpoint at line " + breakpoint.line);
                     }
                 } else {
-                    console.log("could not set breakpoint at line " + sourceBreakpoint.line);
+                    Utils.debuggerLog("could not set breakpoint at line " + sourceBreakpoint.line);
                 }
             }
         }
@@ -620,10 +620,8 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
         emu.stop();
 
-        var e = new debug.StoppedEvent("pause");
+        var e = new debug.StoppedEvent("pause", Debugger.THREAD_ID);
         e.body.text = "Successfully paused";
-        e.body.threadId = Debugger.THREAD_ID;
-        e.body.allThreadsStopped = true;
         this.sendEvent(e);
 	}
 
@@ -655,9 +653,7 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
         emu.step();
 
-        let e = new debug.StoppedEvent("breakpoint");
-        e.body.threadId = Debugger.THREAD_ID;
-        e.body.allThreadsStopped = true;
+        let e = new debug.StoppedEvent("breakpoint", Debugger.THREAD_ID);
         this.sendEvent(e);        
 	}
 
@@ -672,9 +668,10 @@ class DebugSession extends debug.LoggingDebugSession {
             this.sendEvent(new debug.TerminatedEvent());
         } else {
             var eventReason = (reason == Constants.InterruptReason.BREAK) ? "breakpoint" : "stopped";
-            let e = new debug.StoppedEvent(eventReason);
-            e.body.threadId = Debugger.THREAD_ID;
-            e.body.allThreadsStopped = true;
+            let e = new debug.StoppedEvent(eventReason, Debugger.THREAD_ID);
+            if (reason == Constants.InterruptReason.BREAK) {
+                e.body.description = "Paused on breakpoint";
+            }
             this.sendEvent(e);
         }
     }

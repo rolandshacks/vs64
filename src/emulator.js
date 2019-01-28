@@ -5,6 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const process = require('process');
+const vscode = require('vscode');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -16,6 +17,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 var Constants = require('src/constants');
+var Utils = require('src/utils');
 var CPU6502 = require('src/6502/cpu');
 
 var CPU6510 = false;
@@ -754,9 +756,10 @@ class Emulator extends CPU6502 {
                 var breakpoint = breakpoints[breakpointIndex];
                 if (null != breakpoint && pc ==  breakpoint.address.address) {
                     if (null != breakpoint.logMessage) {
-                        console.log("LOGPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line + ": " + breakpoint.logMessage);
+                        Utils.debuggerLog("LOGPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line + ": " + breakpoint.logMessage);
                     } else {
-                        console.log("BREAKPOINT at $" + this.fmtAddress(pc));
+                        Utils.debuggerLog("BREAKPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line);
+                        //Utils.debuggerLog("BREAKPOINT at $" + this.fmtAddress(pc));
                         result.reason = Constants.InterruptReason.BREAKPOINT;
                         result.breakpoint = breakpoint;
                         break;
@@ -770,7 +773,7 @@ class Emulator extends CPU6502 {
             this.step();
 
             if (this.B) {
-                console.log("BREAK at $" + this.fmtAddress(pc));
+                Utils.debuggerLog("BREAK at $" + this.fmtAddress(pc));
                 result.reason = Constants.InterruptReason.BREAKPOINT;
                 result.breakpoint = this.getAddressInfo(pc);
                 break;

@@ -47,6 +47,11 @@ var Utils = {
         console.log(timestamp + " " + txt);
     },
 
+    
+    debuggerLog: function(message) {
+	    vscode.debug.activeDebugConsole.appendLine(message);
+    },
+
     mkdirRecursive: function(dirname) {
 
         if (null == dirname || dirname == "") {
