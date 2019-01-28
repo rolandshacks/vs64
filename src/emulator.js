@@ -714,6 +714,16 @@ class Emulator extends CPU6502 {
         
     }
 
+    focusLine(line) {
+        var editor = vscode.window.activeTextEditor;
+        if (null != editor) {
+            var editorLine = editor.document.lineAt(line-1);
+            if (null != editorLine) {
+                editor.revealRange(editorLine.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            }
+        }
+    }
+
     run(runAsync, resolve, continueExecution) {
 
         var result = {
@@ -759,7 +769,7 @@ class Emulator extends CPU6502 {
                         Utils.debuggerLog("LOGPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line + ": " + breakpoint.logMessage);
                     } else {
                         Utils.debuggerLog("BREAKPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line);
-                        //Utils.debuggerLog("BREAKPOINT at $" + this.fmtAddress(pc));
+                        this.focusLine(breakpoint.line);
                         result.reason = Constants.InterruptReason.BREAKPOINT;
                         result.breakpoint = breakpoint;
                         break;
