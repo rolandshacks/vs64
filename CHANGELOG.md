@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
-## 0.0.1 Initial Release -(preview)_
+## 0.0.1 Initial Release _(preview)_
 - Initial release
 
 ### Added
