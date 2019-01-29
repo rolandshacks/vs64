@@ -168,8 +168,19 @@ class DebugSession extends debug.LoggingDebugSession {
         this._server = null;
         this._port = 0;
         this._configurationDone = new Subject();
-        this._emulator = new Emulator();
         this._launchBinary = null;
+        this._emulator = new Emulator();
+
+        var thisInstance = this;
+
+        this._emulator.on('breakpoint', function(breakpoint) {
+            thisInstance.onBreakpoint(breakpoint);
+        });
+
+        this._emulator.on('logpoint', function(breakpoint) {
+            thisInstance.onLogpoint(breakpoint);
+        });
+
     }
 
     // start session socket server
@@ -674,6 +685,48 @@ class DebugSession extends debug.LoggingDebugSession {
             }
             this.sendEvent(e);
         }
+    }
+
+    showCode(breakpoint) {
+        var filename = breakpoint.path;
+        var line = breakpoint.line;
+        vscode.workspace.openTextDocument(filename).then(textDocument => {
+            var documentLine = textDocument.lineAt(line-1);
+            if (null != documentLine) {
+                vscode.window.showTextDocument(textDocument).then(textEditor => {
+                    textEditor.revealRange(documentLine.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+                });
+            }
+        });
+    }
+
+    onBreakpoint(breakpoint) {
+
+        var emu = this._emulator;
+
+        Utils.debuggerLog(
+            "BREAKPOINT at $" + 
+            emu.fmtAddress(breakpoint.address.address) +
+            ", line " +
+            breakpoint.line
+        );
+
+        this.showCode(breakpoint);
+
+    }
+
+    onLogpoint(breakpoint) {
+
+        var emu = this._emulator;
+
+        Utils.debuggerLog(
+            "LOGPOINT at $" +
+            emu.fmtAddressbreakpoint.address.address +
+            ", line " +
+            breakpoint.line +
+            ": " +
+            breakpoint.logMessage
+        );
     }
 
     formatValue(value) {

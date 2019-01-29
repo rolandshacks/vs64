@@ -5,7 +5,6 @@
 const path = require('path');
 const fs = require('fs');
 const process = require('process');
-const vscode = require('vscode');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -123,6 +122,7 @@ class Emulator extends CPU6502 {
         }
 
         this._memory = new Uint8Array(65536);
+        this._eventMap = null;
 
         this.init();
     }
@@ -134,6 +134,23 @@ class Emulator extends CPU6502 {
             this._debugInfo = null;
             this._breakpoints = null;
         }
+    }
+
+    on(eventName, eventFunction) {
+        if (null == this._eventMap) {
+            this._eventMap = [];
+        }
+
+        this._eventMap[eventName] = eventFunction;
+    }
+
+    fireEvent(eventName, arg1, arg2, arg3) {
+        if (null == this._eventMap) return null;
+
+        var eventFunction = this._eventMap[eventName];
+        if (null == eventFunction) return null;
+
+        return eventFunction(arg1, arg2, arg3);
     }
 
     getStats() {
@@ -714,16 +731,6 @@ class Emulator extends CPU6502 {
         
     }
 
-    focusLine(line) {
-        var editor = vscode.window.activeTextEditor;
-        if (null != editor) {
-            var editorLine = editor.document.lineAt(line-1);
-            if (null != editorLine) {
-                editor.revealRange(editorLine.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-            }
-        }
-    }
-
     run(runAsync, resolve, continueExecution) {
 
         var result = {
@@ -766,10 +773,9 @@ class Emulator extends CPU6502 {
                 var breakpoint = breakpoints[breakpointIndex];
                 if (null != breakpoint && pc ==  breakpoint.address.address) {
                     if (null != breakpoint.logMessage) {
-                        Utils.debuggerLog("LOGPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line + ": " + breakpoint.logMessage);
+                        this.fireEvent('logpoint', breakpoint);
                     } else {
-                        Utils.debuggerLog("BREAKPOINT at $" + this.fmtAddress(pc) + ", line " + breakpoint.line);
-                        this.focusLine(breakpoint.line);
+                        this.fireEvent('breakpoint', breakpoint);
                         result.reason = Constants.InterruptReason.BREAKPOINT;
                         result.breakpoint = breakpoint;
                         break;

@@ -7,6 +7,9 @@ All notable changes to the **VS64 Development Environment** extension will be do
 ## 0.1.1 Minor Update _(preview)_
 - Minor bug fixes
 
+## 0.1.2 Minor Update _(preview)_
+- Minor bug fixes
+
 ### Added
 * Syntax highlighting
 * Debugging for MOS 6502 cpu
