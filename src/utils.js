@@ -47,7 +47,6 @@ var Utils = {
         console.log(timestamp + " " + txt);
     },
 
-    
     debuggerLog: function(message) {
 	    vscode.debug.activeDebugConsole.appendLine(message);
     },
@@ -158,14 +157,14 @@ var Utils = {
         }
 
         var elements = fs.readdirSync(baseDir);
-        for (var i=0, element; element=elements[i]; i++) {
+        for (var i=0, element; (element=elements[i]); i++) {
             var filePath = path.join(baseDir, element);
             var stat = fs.lstatSync(filePath);
             if (stat.isDirectory()) {
                 return Utils.findFile(filePath, filename);
             } else if (filename == element) {
                 return filePath;
-            };
+            }
         }
     }
 

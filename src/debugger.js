@@ -67,7 +67,7 @@ class Debugger {
 
     // dispose resource
     dispose() {
-        stop();
+        this.stop();
     }
 
     findPrg(filename) {
@@ -291,7 +291,7 @@ class DebugSession extends debug.LoggingDebugSession {
 		this.sendResponse(response);
     }
 
-    async launchRequest(response, args) {
+    async launchRequest(response, args) { // jshint ignore:line
 
         if (args.type != "asm") {
             response.success = false;
@@ -325,7 +325,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
         // ready for configuration requests
         this.sendEvent(new debug.InitializedEvent());
-        await this._configurationDone.wait(3000);
+        await this._configurationDone.wait(3000); // jshint ignore:line
 
         var thisInstance = this;
         emu.start().then(function(exitInfo) {
@@ -347,7 +347,7 @@ class DebugSession extends debug.LoggingDebugSession {
             var source = path.resolve(args.source.path);
             var sourceBreakpoints = args.breakpoints;
 
-            for (var i=0, sourceBreakpoint; sourceBreakpoint=sourceBreakpoints[i]; i++) {
+            for (var i=0, sourceBreakpoint; (sourceBreakpoint=sourceBreakpoints[i]); i++) {
 
                 var breakpoint = emu.addBreakpoint(source, sourceBreakpoint.line, sourceBreakpoint.logMessage);
 
@@ -436,7 +436,7 @@ class DebugSession extends debug.LoggingDebugSession {
             response.body = {
                 scopes: scopes
             };
-        };
+        }
 
         this.sendResponse(response);
     }
@@ -486,7 +486,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
                     var symbols = emu._debugInfo.symbols;
 
-                    for (var i=0, symbol; symbol=symbols[i]; i++) {
+                    for (var i=0, symbol; (symbol=symbols[i]); i++) {
 
                         var info = this.formatSymbol(symbol);
 
