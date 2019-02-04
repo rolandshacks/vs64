@@ -16,12 +16,9 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 var Constants = require('src/constants');
-var Utils = require('src/utils');
-var DebugInfo = require('src/debug_info');
 var CPU6502 = require('src/6502/cpu');
 
 var CPU6510 = false;
-
 
 function getTime() {
     var t = process.hrtime();
@@ -34,8 +31,10 @@ function getTime() {
 
 class Emulator extends CPU6502 {
 
-    constructor() {
+    constructor(session) {
         super();
+
+        this._session = session;
 
         if (CPU6510) {
             this._roms = {
@@ -52,13 +51,9 @@ class Emulator extends CPU6502 {
         this.init();
     }
 
-    init(keepDebugState) {
+    init() {
         this._running = false;
         this._prg = null;
-        if (true != keepDebugState) {
-            this._debugInfo = null;
-            this._breakpoints = null;
-        }
     }
 
     on(eventName, eventFunction) {
@@ -101,211 +96,9 @@ class Emulator extends CPU6502 {
             nmi: this.nmi,
             opcode: this.opcode,
             cycles: this.cycles,
-            source: this.getAddressInfo(this.PC)
         };
 
         return stats;
-    }
-
-    injectProgram(prg, autoOffsetCorrection) {
-
-        var addr = ((prg[1] << 8) | prg[0]);
-        var data = prg.slice(2);
-
-        var addrOffset = 0;
-
-        if (true == autoOffsetCorrection) {
-
-            // skip if...
-            // starts with valid next statement address
-            //        and SYS basic comment
-            //        and end of statement zero bytes
-            //        !byte $0c,$08,$b5,$07,$9e,$20,$32,$30,$36,$32,$00,$00,$00
-
-            var addr2 = ((data[1] << 8) | data[0]);
-            var delta = (addr2-addr);
-            if (delta > 0 && delta < 32 && 
-                (data[3] == 0x9e || data[4] == 0x9e) &&
-                data[delta] == 0x0 && data[delta+1] == 0x0) {
-                addrOffset = delta + 2;
-            }
-        }
-
-        this.reset(addr + addrOffset||0);
-        this._memory.set(data, addr);
-        this.opcode = this.read( this.PC );
-    }
-
-    loadProgram(filename, autoOffsetCorrection) {
-
-        var prg = null;
-
-        try {
-            prg = fs.readFileSync(filename);
-        } catch (err) {
-            if (err.code == 'ENOENT') {
-                throw("file " + filename + " does not exist");
-            } else {
-                throw("unable to read file '" + filename + "'");
-            }
-        }
-
-        this._prg = prg;
-
-        this.injectProgram(prg, true);
-    }
-
-    getSymbol(name) {
-        if (null == this._debugInfo || null == this._debugInfo.symbols) {
-            return null;
-        }
-
-        var symbols = this._debugInfo.symbols;
-
-        for (var i=0, symbol; (symbol=symbols[i]); i++) {
-            if (symbol.name == name) {
-                return symbol;
-            }
-        }
-
-        return null;
-    }
-
-    getLabel(name) {
-        if (null == this._debugInfo || null == this._debugInfo.labels) {
-            return null;
-        }
-
-        var labels = this._debugInfo.labels;
-
-        for (var i=0, label; (label=labels[i]); i++) {
-            if (label.name == name) {
-                return label;
-            }
-        }
-
-        return null;
-    }
-
-    loadDebugInfo(filename) {
-        this._debugInfo = DebugInfo.load(filename);
-    }
-
-    getAddressInfo(address) {
-
-        var debugInfo = this._debugInfo;
-
-        if (null == debugInfo) return null;
-
-        var addr = debugInfo.addresses;
-        if (addr.length < 1) return null;
-
-        if (address < addr[0].address ||
-            address > addr[addr.length-1].addr) {
-            return null;
-        }
-
-        // perform binary search
-
-        var foundAddr = null;
-        var l = 0;
-        var r = addr.length-1;
-
-        while (null == foundAddr && l <= r) {
-            var m = Math.floor((l+r)/2);
-            var a = addr[m];
-
-            //console.log("OFS: " + ofs + " " + line + ":" + a.line);
-
-            if (address == a.address) {
-                foundAddr = a;
-                break;
-            } else if (address > a.address) {
-                l = m + 1;
-            } else {
-                r = m - 1;
-            }
-        }
-
-        return foundAddr;
-    }
-
-    fmtAddress(a) {
-        return ("0000"+a.toString(16)).substr(-4);
-    }
-
-    clearBreakpoints() {
-        this._breakpoints = null;
-    }
-
-    addBreakpoint(path, line, logMessage) {
-
-        var foundAddr = this.findNearestCodeLine(path, line);
-        if (null == foundAddr) return null;
-
-        if (null == this._breakpoints) {
-            this._breakpoints = [];
-        }
-
-        var breakpoint = { 
-            path: path,
-            line: line,
-            address: foundAddr,
-            logMessage: logMessage
-        };
-
-        this._breakpoints.push(breakpoint);
-
-        return breakpoint;
-    }
-
-    findNearestCodeLine(path, line) {
-
-        var debugInfo = this._debugInfo;
-        if (null == debugInfo) return null;
-
-        var addr = debugInfo.sourceRef[path];
-        if (null == addr || addr.length == 0) {
-            addr = debugInfo.addresses;
-        }
-
-        if (null == addr || addr.length == 0) return null;
-
-        var foundAddr = null;
-
-        var firstLine = addr[0].line;
-        var lastLine = addr[addr.length-1].line;
-
-        if (line <= firstLine) {
-            foundAddr = addr[0];
-        } else if (line >= lastLine) {
-            foundAddr = addr[addr.length-1];
-        } else { 
-            
-            // perform binary search
-
-            var l = 0;
-            var r = addr.length-1;
-
-            while (null == foundAddr && l <= r) {
-                var m = Math.floor((l+r)/2);
-                var a = addr[m];
-
-                //console.log("OFS: " + ofs + " " + line + ":" + a.line);
-
-                if (line == a.line) {
-                    foundAddr = a;
-                    break;
-                } else if (line > a.line) {
-                    l = m + 1;
-                } else {
-                    r = m - 1;
-                }
-            }
-
-        }
-
-        return foundAddr;
     }
 
     async start(continueExecution) { // jshint ignore:line
@@ -334,7 +127,9 @@ class Emulator extends CPU6502 {
             reason: Constants.InterruptReason.UNKNOWN
         };
 
-        var breakpoints = this._breakpoints;
+        var session = this._session;
+
+        var breakpoints = session._breakpoints;
         var breakpointIndex = 0;
         var nextBreakpoint = -1;
 
@@ -374,7 +169,6 @@ class Emulator extends CPU6502 {
                     } else {
                         this.fireEvent('breakpoint', breakpoint);
                         result.reason = Constants.InterruptReason.BREAKPOINT;
-                        result.breakpoint = breakpoint;
                         break;
                     }
                 }
@@ -386,9 +180,8 @@ class Emulator extends CPU6502 {
             this.step();
 
             if (this.B) {
-                Utils.debuggerLog("BREAK at $" + this.fmtAddress(pc));
-                result.reason = Constants.InterruptReason.BREAKPOINT;
-                result.breakpoint = this.getAddressInfo(pc);
+                this.fireEvent('break', pc);
+                result.reason = Constants.InterruptReason.BREAK;
                 break;
             }
 
@@ -496,6 +289,53 @@ class Emulator extends CPU6502 {
         this._memory[addr] = (value & 0xFF);
     }
 
+    loadProgram(filename, autoOffsetCorrection) {
+
+        var prg = null;
+
+        try {
+            prg = fs.readFileSync(filename);
+        } catch (err) {
+            if (err.code == 'ENOENT') {
+                throw("file " + filename + " does not exist");
+            } else {
+                throw("unable to read file '" + filename + "'");
+            }
+        }
+
+        this._prg = prg;
+
+        this.injectProgram(prg, autoOffsetCorrection);
+    }
+
+    injectProgram(prg, autoOffsetCorrection) {
+
+        var addr = ((prg[1] << 8) | prg[0]);
+        var data = prg.slice(2);
+
+        var addrOffset = 0;
+
+        if (true == autoOffsetCorrection) {
+
+            // skip if...
+            // starts with valid next statement address
+            //        and SYS basic comment
+            //        and end of statement zero bytes
+            //        !byte $0c,$08,$b5,$07,$9e,$20,$32,$30,$36,$32,$00,$00,$00
+
+            var addr2 = ((data[1] << 8) | data[0]);
+            var delta = (addr2-addr);
+            if (delta > 0 && delta < 32 && 
+                (data[3] == 0x9e || data[4] == 0x9e) &&
+                data[delta] == 0x0 && data[delta+1] == 0x0) {
+                addrOffset = delta + 2;
+            }
+        }
+
+        this.reset(addr + addrOffset||0);
+        this._memory.set(data, addr);
+        this.opcode = this.read( this.PC );
+    }
 }
 
 //-----------------------------------------------------------------------------------------------//

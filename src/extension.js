@@ -169,6 +169,31 @@ class Extension {
             this._debugger.start();
         }
 
+        vscode.debug.onDidStartDebugSession(function(debugSession) {
+            thisInstance.onDidStartDebugSession(debugSession);
+        });
+
+        vscode.window.onDidChangeActiveTextEditor(function(textEditor) {
+            thisInstance.onDidChangeActiveTextEditor(textEditor);
+        });
+
+    }
+
+    onDidChangeActiveTextEditor(textEditor) {
+        if (null == textEditor || null == textEditor.document) {
+            return;
+        }
+
+        if (textEditor.document.languageId !== Constants.AssemblerLanguageId) {
+            return;
+        }
+
+        if (this._settings.backgroundBuild) {
+            this.commandBuild();
+        }
+    }
+
+    onDidStartDebugSession(debugSession) {
     }
 
     clear() {
@@ -188,12 +213,7 @@ class Extension {
     }
 
     updateDiagnostics(procInfo) {
-
-        if (null != vscode.window.activeTextEditor) {
-            var diagnosticsData = this._diagnostics.update(procInfo);
-            this._diagnostics.collection.set(vscode.window.activeTextEditor.document.uri, diagnosticsData);
-        }
-
+        this._diagnostics.update(procInfo);
     }
 
     deactivate() {
@@ -203,34 +223,87 @@ class Extension {
         }
     }
 
+    getSessionState() {
+
+        var settings = this._settings;
+        var state = this._state;
+
+        var s = {};
+
+        if (state.assemblerProcess != null && true != state.assemblerProcess.exited) {
+            s.assemblerRunning = true;
+        }
+
+        if (false == settings.assemblerEnabled) {
+            s.assemblerDisabled = true;
+        }
+
+        if (state.emulatorProcess != null && true != state.emulatorProcess.exited) {
+            s.emulatorRunning = true;
+        }
+
+        if (false == settings.emulatorEnabled) {
+            s.emulatorDisabled = true;
+        }
+
+        if (state.debuggerProcess != null && true != state.debuggerProcess.exited) {
+            s.debuggerRunning = true;
+        }
+
+        s.filename = Utils.getCurrentAsmFile();
+        if (null == s.filename) {
+            s.noSource = true;
+            s.filename = "";
+            s.prgfilename = "";
+            s.reportFilename = "";
+            s.labelsFilename = "";
+        } else {
+            s.prgfilename = Utils.getOutputFilename(s.filename, "prg");
+            s.reportFilename = Utils.getOutputFilename(s.filename, "report");
+            s.labelsFilename = Utils.getOutputFilename(s.filename, "labels");
+    
+            if (Utils.compareFileTime(s.filename, s.prgfilename) >= 0 &&
+                Utils.compareFileTime(s.filename, s.reportFilename) >= 0 &&
+                Utils.compareFileTime(s.filename, s.labelsFilename) >= 0) {
+                s.noBuildNeeded = true;
+            }
+        }
+
+        return s;
+    }
+
+    isBuildRequired() {
+        var sessionState = this.getSessionState();
+        if (null == sessionState) return false;
+        if (sessionState.noBuildNeeded) return false;
+        return true;
+    }
+
     commandBuild(successFunction) {
 
         var settings = this._settings;
         var state = this._state;
         var output = this._output;
 
-        if (false == settings.assemblerEnabled) {
+        var sessionState = this.getSessionState();
+
+        if (sessionState.assemblerDisabled) {
             output.appendLine("please revise your assembler executable settings");
             return;
         }
 
-        var filename = Utils.getCurrentAsmFile();
-        if (null == filename) {
-            output.appendLine("no source");
-            return;
-        }
-
-        if (state.assemblerProcess != null && true != state.assemblerProcess.exited) {
+        if (sessionState.assemblerRunning) {
             output.appendLine("assembler already running...");
             return;
         }
 
-        var prgfilename = Utils.getOutputFilename(filename, "prg");
-        var reportFilename = Utils.getOutputFilename(filename, "report");
+        if (sessionState.noSource) {
+            output.appendLine("no source");
+            return;
+        }
 
-        if (Utils.compareFileTime(filename, prgfilename) >= 0 &&
-            Utils.compareFileTime(filename, reportFilename) >= 0) {
-            output.appendLine("no need to build " + path.basename(filename));
+        if (sessionState.noBuildNeeded) {
+            output.appendLine("no need to build " + path.basename(sessionState.filename));
             if (null != successFunction) {
                 successFunction();
             }
@@ -239,17 +312,18 @@ class Extension {
 
         this.clearDiagnostics();
 
-        output.appendLine("building " + path.basename(filename));
+        output.appendLine("building " + path.basename(sessionState.filename));
 
-        var outDir = path.dirname(prgfilename);
+        var outDir = path.dirname(sessionState.prgfilename);
         Utils.mkdirRecursive(outDir);
 
         var executable = settings.assemblerPath;
         var args = [
             "-f", "cbm",
-            "-o", prgfilename,
-            "-r", reportFilename,
-            filename
+            "-o", sessionState.prgfilename,
+            "-r", sessionState.reportFilename,
+            "--vicelabels", sessionState.labelsFilename,
+            sessionState.filename
         ];
 
         if (settings.verbose) {
@@ -263,10 +337,18 @@ class Extension {
             executable, args, 
             function(procInfo) { // success function
                 thisInstance.updateDiagnostics(procInfo);
-                successFunction();
+                if (null != successFunction) {
+                    successFunction();
+                }
             },
             function(procInfo) { // error function
-                thisInstance.updateDiagnostics(procInfo);
+                if (procInfo.errorInfo) {
+                    thisInstance._state.assemblerProcess = null;
+                    output.appendLine("failed to start assembler - please check your settings!");
+                    vscode.window.showErrorMessage("Failed to start assembler. Please check your settings!");
+                } else {
+                    thisInstance.updateDiagnostics(procInfo);
+                }
             }
         );
     }
@@ -277,29 +359,28 @@ class Extension {
         var state = this._state;
         var output = this._output;
 
-        if (false == settings.emulatorEnabled) {
+        var sessionState = this.getSessionState();
+
+        if (sessionState.emulatorDisabled) {
             output.appendLine("please revise your emulator executable settings");
             return;
         }
 
-        var filename = Utils.getCurrentAsmFile();
-        if (null == filename) {
-            output.appendLine("no source");
-            return;
-        }
-
-        if (state.emulatorProcess != null && true != state.emulatorProcess.exited) {
+        if (sessionState.emulatorRunning) {
             output.appendLine("emulator already running...");
             return;
         }
 
-        var prgfilename = Utils.getOutputFilename(filename, "prg");
+        if (sessionState.noSource) {
+            output.appendLine("no source");
+            return;
+        }
 
-        output.appendLine("running " + path.basename(prgfilename));
+        output.appendLine("running " + path.basename(sessionState.prgfilename));
 
         var executable = settings.emulatorPath;
         var args = [
-            prgfilename
+            sessionState.prgfilename
         ];
 
         if (settings.verbose) {
@@ -314,34 +395,29 @@ class Extension {
     commandDebug() {
 
         var settings = this._settings;
+        var state = this._state;
+        var output = this._output;
 
         if (true != settings.debuggerEnabled || settings.debuggerPath == "") {
             this.commandRun();
             return;
         }
 
-        var state = this._state;
-        var output = this._output;
+        var sessionState = this.getSessionState();
 
-        var filename = Utils.getCurrentAsmFile();
-        if (null == filename) {
+        if (sessionState.noSource) {
             output.appendLine("no source");
             return;
         }
 
-        var debuggerRunning = (state.debuggerProcess != null && true != state.debuggerProcess.exited);
-
-        var prgfilename = Utils.getOutputFilename(filename, "prg");
-        var symbolsFilename = Utils.getOutputFilename(filename, "labels");
-
-        output.appendLine("debugging " + path.basename(prgfilename));
+        output.appendLine("debugging " + path.basename(sessionState.prgfilename));
 
         var executable = settings.debuggerPath;
 
-        if (false == debuggerRunning) {
+        if (false == sessionState.debuggerRunning) {
 
             let args = [
-                prgfilename
+                sessionState.prgfilename
             ];
 
             if (settings.verbose) {
@@ -357,8 +433,8 @@ class Extension {
 
             let args = [
                 "-pass",
-                "-symbols", symbolsFilename,
-                "-prg", prgfilename,
+                "-symbols", sessionState.labelsFilename,
+                "-prg", sessionState.prgfilename,
                 "-autojmp"
             ];
 
@@ -385,7 +461,8 @@ class Extension {
             process: proc,
             exited: false,
             stdout: [],
-            stderr: []
+            stderr: [],
+            errorInfo: null
         };
 
         proc.stdout.on('data', (data) => {
@@ -407,6 +484,17 @@ class Extension {
                     output.appendLine(line);
                     procInfo.stderr.push(line);
                 }
+            }
+        });
+
+        proc.on('error', (err) => {
+            procInfo.exited = true;
+            procInfo.errorInfo = err;
+            if (null != errorFunction) {
+                errorFunction(procInfo);
+            } else {
+                output.appendLine(`failed to start ${executable}`);
+                vscode.window.showErrorMessage("failed to start '" + executable + "'");
             }
         });
         
@@ -454,9 +542,6 @@ class Extension {
         }
 
         settings.assemblerPath = vscode.workspace.getConfiguration().get("c64.assemblerPath")||"";
-        if (settings.assemblerPath == "") {
-            settings.assemblerPath = path.join(env.extensionPath, "tools/acme");
-        }
         settings.assemblerEnabled = (settings.assemblerPath != "");
 
         if (true == settings.verbose) {

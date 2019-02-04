@@ -53,6 +53,12 @@ class Application {
         this.convertRom("../roms/1541.rom");
     }
 
+    patchKernel() {
+        var rom = fs.readFileSync("../roms/kernal.rom");
+        rom[0x1d69] = 0x9f;
+        fs.writeFileSync("../roms/fastkernal.rom", rom);
+    }
+
     convertRom(filename) {
 
         var basename = path.basename(filename, ".rom");
@@ -92,7 +98,6 @@ class Application {
 function main() {
     var app = new Application();
     if (null != app.init) app.init();
-    //app.convertRoms();
     app.run();
     if (null != app.shutdown) app.shutdown();
 }
