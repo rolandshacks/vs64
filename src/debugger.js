@@ -130,7 +130,10 @@ class Debugger {
 
             } else {
                 if (!fs.existsSync(config.binary)) {
-                    config.binary = this.findPrg(config.binary);
+                    var foundBinary = this.findPrg(config.binary);
+                    if (null != foundBinary && foundBinary != "") {
+                        config.binary = foundBinary;
+                    }
                 }
             }
 
