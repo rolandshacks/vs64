@@ -21,6 +21,7 @@ BIND(module);
 
 var Constants = require('src/constants');
 var Utils = require('src/utils');
+var DebugInfo = require('src/debug_info');
 var Emulator = require('src/emulator');
 
 //-----------------------------------------------------------------------------------------------//
@@ -171,13 +172,19 @@ class DebugSession extends debug.LoggingDebugSession {
         this._server = null;
         this._port = 0;
         this._configurationDone = new Subject();
+        this._debugInfo = null;
+        this._breakpoints = null;
         this._launchBinary = null;
-        this._emulator = new Emulator();
+        this._emulator = new Emulator(this);
 
         var thisInstance = this;
 
         this._emulator.on('breakpoint', function(breakpoint) {
             thisInstance.onBreakpoint(breakpoint);
+        });
+
+        this._emulator.on('break', function(pc) {
+            thisInstance.onBreak(pc);
         });
 
         this._emulator.on('logpoint', function(breakpoint) {
@@ -277,7 +284,7 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
        
         try {
-            emu.init(true);
+            emu.init();
             emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection);
         } catch (err) {
             response.success = false;
@@ -305,6 +312,8 @@ class DebugSession extends debug.LoggingDebugSession {
 
         var binaryPath = args.binary;
 
+        this._debugInfo = null;
+        this._breakpoints = null;
         this._launchBinary = null;
 
         var emu = this._emulator;
@@ -312,9 +321,10 @@ class DebugSession extends debug.LoggingDebugSession {
         try {
             emu.init();
             emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection);
-            if (null == emu._debugInfo) {
+
+            if (null == this._debugInfo) {
                 var debugInfoPath = Utils.changeExtension(binaryPath, ".report");
-                emu.loadDebugInfo(debugInfoPath);
+                this.loadDebugInfo(debugInfoPath);
             }
 
             this._launchBinary = binaryPath;
@@ -343,16 +353,16 @@ class DebugSession extends debug.LoggingDebugSession {
         var resultBreakpoints = [];
 
         var emu = this._emulator;
-        if (null != emu._debugInfo) {
+        if (null != this._debugInfo) {
 
-            emu.clearBreakpoints();
+            this.clearBreakpoints();
 
             var source = path.resolve(args.source.path);
             var sourceBreakpoints = args.breakpoints;
 
             for (var i=0, sourceBreakpoint; (sourceBreakpoint=sourceBreakpoints[i]); i++) {
 
-                var breakpoint = emu.addBreakpoint(source, sourceBreakpoint.line, sourceBreakpoint.logMessage);
+                var breakpoint = this.addBreakpoint(source, sourceBreakpoint.line, sourceBreakpoint.logMessage);
 
                 if (null != breakpoint) {
                     resultBreakpoints.push({
@@ -398,12 +408,14 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
         var stats = emu.getStats();
 
+        var addressInfo = this.getAddressInfo(stats.PC);
+
         var source = null;
         
-        if (null != stats.source) {
+        if (null != addressInfo) {
             source = {
-                name: path.basename(stats.source.source),
-                path: stats.source.source,
+                name: path.basename(addressInfo.source),
+                path: addressInfo.source,
                 presentationHint: "normal"
             };
         }
@@ -414,7 +426,7 @@ class DebugSession extends debug.LoggingDebugSession {
             id: Debugger.STACKFRAME_NUMBER,
             name: "global",
             source: source,
-            line: (null != stats.source ? stats.source.line : 0),
+            line: (null != addressInfo ? addressInfo.line : 0),
             presentationHint: "normal"
         });
 
@@ -485,9 +497,9 @@ class DebugSession extends debug.LoggingDebugSession {
 
                 variables = [];
 
-                if (null != emu._debugInfo && null != emu._debugInfo.symbols) {
+                if (null != this._debugInfo && null != this._debugInfo.symbols) {
 
-                    var symbols = emu._debugInfo.symbols;
+                    var symbols = this._debugInfo.symbols;
 
                     for (var i=0, symbol; (symbol=symbols[i]); i++) {
 
@@ -669,6 +681,13 @@ class DebugSession extends debug.LoggingDebugSession {
 
         let e = new debug.StoppedEvent("breakpoint", Debugger.THREAD_ID);
         this.sendEvent(e);        
+
+        var pc = emu.PC;
+        var addressInfo = this.getAddressInfo(pc);
+        if (null != addressInfo) {
+            this.showCode(addressInfo.source, addressInfo.line);
+        }
+
 	}
 
     onEmulatorStopped(exitInfo) {
@@ -681,18 +700,16 @@ class DebugSession extends debug.LoggingDebugSession {
         if (reason == Constants.InterruptReason.EXIT) {
             this.sendEvent(new debug.TerminatedEvent());
         } else {
-            var eventReason = (reason == Constants.InterruptReason.BREAK) ? "breakpoint" : "stopped";
+            var eventReason = (reason == Constants.InterruptReason.BREAKPOINT) ? "breakpoint" : "stopped";
             let e = new debug.StoppedEvent(eventReason, Debugger.THREAD_ID);
-            if (reason == Constants.InterruptReason.BREAK) {
+            if (reason == Constants.InterruptReason.BREAKPOINT) {
                 e.body.description = "Paused on breakpoint";
             }
             this.sendEvent(e);
         }
     }
 
-    showCode(breakpoint) {
-        var filename = breakpoint.path;
-        var line = breakpoint.line;
+    showCode(filename, line) {
         vscode.workspace.openTextDocument(filename).then(textDocument => {
             var documentLine = textDocument.lineAt(line-1);
             if (null != documentLine) {
@@ -703,18 +720,34 @@ class DebugSession extends debug.LoggingDebugSession {
         });
     }
 
+    onBreak(pc) {
+
+        var emu = this._emulator;
+
+        var msg = "BREAK at $" + this.fmtAddress(pc);
+
+        var addressInfo = this.getAddressInfo(pc);
+        if (null != addressInfo) {
+            msg += ", line " + addressInfo.line;
+            this.showCode(addressInfo.source, addressInfo.line);
+        }
+
+        Utils.debuggerLog(msg);
+
+    }
+
     onBreakpoint(breakpoint) {
 
         var emu = this._emulator;
 
         Utils.debuggerLog(
             "BREAKPOINT at $" + 
-            emu.fmtAddress(breakpoint.address.address) +
+            this.fmtAddress(breakpoint.address.address) +
             ", line " +
             breakpoint.line
         );
 
-        this.showCode(breakpoint);
+        this.showCode(breakpoint.path, breakpoint.line);
 
     }
 
@@ -776,6 +809,158 @@ class DebugSession extends debug.LoggingDebugSession {
         return info;
     }
 
+    clearBreakpoints() {
+        this._breakpoints = null;
+    }
+
+    addBreakpoint(path, line, logMessage) {
+
+        var foundAddr = this.findNearestCodeLine(path, line);
+        if (null == foundAddr) return null;
+
+        if (null == this._breakpoints) {
+            this._breakpoints = [];
+        }
+
+        var breakpoint = { 
+            path: path,
+            line: line,
+            address: foundAddr,
+            logMessage: logMessage
+        };
+
+        this._breakpoints.push(breakpoint);
+
+        return breakpoint;
+    }
+
+    findNearestCodeLine(path, line) {
+
+        var debugInfo = this._debugInfo;
+        if (null == debugInfo) return null;
+
+        var addr = debugInfo.sourceRef[path];
+        if (null == addr || addr.length == 0) {
+            addr = debugInfo.addresses;
+        }
+
+        if (null == addr || addr.length == 0) return null;
+
+        var foundAddr = null;
+
+        var firstLine = addr[0].line;
+        var lastLine = addr[addr.length-1].line;
+
+        if (line <= firstLine) {
+            foundAddr = addr[0];
+        } else if (line >= lastLine) {
+            foundAddr = addr[addr.length-1];
+        } else { 
+            
+            // perform binary search
+
+            var l = 0;
+            var r = addr.length-1;
+
+            while (null == foundAddr && l <= r) {
+                var m = Math.floor((l+r)/2);
+                var a = addr[m];
+
+                //console.log("OFS: " + ofs + " " + line + ":" + a.line);
+
+                if (line == a.line) {
+                    foundAddr = a;
+                    break;
+                } else if (line > a.line) {
+                    l = m + 1;
+                } else {
+                    r = m - 1;
+                }
+            }
+
+        }
+
+        return foundAddr;
+    }
+
+    getSymbol(name) {
+        if (null == this._debugInfo || null == this._debugInfo.symbols) {
+            return null;
+        }
+
+        var symbols = this._debugInfo.symbols;
+
+        for (var i=0, symbol; (symbol=symbols[i]); i++) {
+            if (symbol.name == name) {
+                return symbol;
+            }
+        }
+
+        return null;
+    }
+
+    getLabel(name) {
+        if (null == this._debugInfo || null == this._debugInfo.labels) {
+            return null;
+        }
+
+        var labels = this._debugInfo.labels;
+
+        for (var i=0, label; (label=labels[i]); i++) {
+            if (label.name == name) {
+                return label;
+            }
+        }
+
+        return null;
+    }
+
+    loadDebugInfo(filename) {
+        this._debugInfo = DebugInfo.load(filename);
+    }
+
+    getAddressInfo(address) {
+
+        var debugInfo = this._debugInfo;
+
+        if (null == debugInfo) return null;
+
+        var addr = debugInfo.addresses;
+        if (addr.length < 1) return null;
+
+        if (address < addr[0].address ||
+            address > addr[addr.length-1].addr) {
+            return null;
+        }
+
+        // perform binary search
+
+        var foundAddr = null;
+        var l = 0;
+        var r = addr.length-1;
+
+        while (null == foundAddr && l <= r) {
+            var m = Math.floor((l+r)/2);
+            var a = addr[m];
+
+            //console.log("OFS: " + ofs + " " + line + ":" + a.line);
+
+            if (address == a.address) {
+                foundAddr = a;
+                break;
+            } else if (address > a.address) {
+                l = m + 1;
+            } else {
+                r = m - 1;
+            }
+        }
+
+        return foundAddr;
+    }
+
+    fmtAddress(a) {
+        return ("0000"+a.toString(16)).substr(-4);
+    }
 }
 
 //-----------------------------------------------------------------------------------------------//

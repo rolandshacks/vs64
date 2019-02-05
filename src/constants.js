@@ -26,7 +26,8 @@ var Constants = {
         EXIT: 1,
         YIELD: 2,
         INTERRUPTED: 3,
-        BREAKPOINT: 4
+        BREAKPOINT: 4,
+        BREAK: 5
     }
 };
 
