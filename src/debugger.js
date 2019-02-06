@@ -175,19 +175,21 @@ class DebugSession extends debug.LoggingDebugSession {
         this._debugInfo = null;
         this._breakpoints = null;
         this._launchBinary = null;
-        this._emulator = new Emulator(this);
+
+        var emu = new Emulator(this);
+        this._emulator = emu;
 
         var thisInstance = this;
 
-        this._emulator.on('breakpoint', function(breakpoint) {
+        emu.on('breakpoint', function(breakpoint) {
             thisInstance.onBreakpoint(breakpoint);
         });
 
-        this._emulator.on('break', function(pc) {
+        emu.on('break', function(pc) {
             thisInstance.onBreak(pc);
         });
 
-        this._emulator.on('logpoint', function(breakpoint) {
+        emu.on('logpoint', function(breakpoint) {
             thisInstance.onLogpoint(breakpoint);
         });
 
@@ -587,6 +589,9 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
         var evals = [];
 
+        var stats = emu.getStats();
+        var registers = stats.registers;
+
         var value = null;
 
         if (null != args && null != args.expression && Debugger.STACKFRAME_NUMBER === args.frameId) {
@@ -603,22 +608,22 @@ class DebugSession extends debug.LoggingDebugSession {
                 var numValue = parseInt(expr.substr(1), 16);
                 value = "(const) " + this.formatByte(numValue);
             } else if (expr.toUpperCase() == "A") {
-                value = "(accumulator) A = " + this.formatByte(emu.A);
+                value = "(accumulator) A = " + this.formatByte(registers.A);
             } else if (expr.toUpperCase() == "X") {
-                value = "(register) X = " + this.formatByte(emu.X);
+                value = "(register) X = " + this.formatByte(registers.X);
             } else if (expr.toUpperCase() == "Y") {
-                value = "(register) Y = " + this.formatByte(emu.Y);
+                value = "(register) Y = " + this.formatByte(registers.Y);
             } else if (expr.toUpperCase() == "PC") {
-                value = "(program counter) PC = " + this.formatAddress(emu.PC);
+                value = "(program counter) PC = " + this.formatAddress(stats.PC);
             } else if (expr.toUpperCase() == "SP") {
-                value = "(stack pointer) SP = " + this.formatByte(emu.S);
+                value = "(stack pointer) SP = " + this.formatByte(registers.S);
             } else {
-                var symbol = emu.getSymbol(expr);
+                var symbol = this.getSymbol(expr);
                 if (null != symbol) {
                     var info = this.formatSymbol(symbol);
                     value = info.label + " = " + info.value;
                 } else {
-                    var label = emu.getLabel(expr);
+                    var label = this.getLabel(expr);
                     if (null != label) {
                         value = label.name + ": " + this.formatAddress(label.address) + ", line " + label.line;
                     }
@@ -680,9 +685,10 @@ class DebugSession extends debug.LoggingDebugSession {
         emu.step();
 
         let e = new debug.StoppedEvent("breakpoint", Debugger.THREAD_ID);
-        this.sendEvent(e);        
-
-        var pc = emu.PC;
+        this.sendEvent(e);    
+        
+        var stats = emu.getStats();
+        var pc = stats.PC;
         var addressInfo = this.getAddressInfo(pc);
         if (null != addressInfo) {
             this.showCode(addressInfo.source, addressInfo.line);
@@ -757,7 +763,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
         Utils.debuggerLog(
             "LOGPOINT at $" +
-            emu.fmtAddressbreakpoint.address.address +
+            this.fmtAddress(breakpoint.address.address) +
             ", line " +
             breakpoint.line +
             ": " +

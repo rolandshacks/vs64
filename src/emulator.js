@@ -16,7 +16,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 var Constants = require('src/constants');
-var Utils = require('src/utils');
 var CPU6502 = require('src/6502/cpu');
 
 var CPU6510 = false;
