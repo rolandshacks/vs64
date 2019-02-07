@@ -23,6 +23,7 @@ var Constants = require('src/constants');
 var Utils = require('src/utils');
 var DebugInfo = require('src/debug_info');
 var Emulator = require('src/emulator');
+var ViceEmulator = require('src/viceemu');
 
 //-----------------------------------------------------------------------------------------------//
 // Debugger
@@ -176,7 +177,10 @@ class DebugSession extends debug.LoggingDebugSession {
         this._breakpoints = null;
         this._launchBinary = null;
 
-        var emu = new Emulator(this);
+        var emu = null;
+        
+        //emu = new Emulator(this);
+        emu = new ViceEmulator(this);
         this._emulator = emu;
 
         var thisInstance = this;
