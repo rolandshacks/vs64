@@ -1,0 +1,19 @@
+{
+    "body": {
+        "prefix": "BODY",
+        "body": [
+            ";",
+            "; $TM_FILENAME_BASE",
+            ";",
+            "",
+            "*=\\$0801",
+            "!byte \\$0c,\\$08,\\$b5,\\$07,\\$9e,\\$20,\\$32,\\$30,\\$36,\\$32,\\$00,\\$00,\\$00",
+            "jmp start",
+            "",
+            "start",
+            "    rts",
+            ""
+        ],
+        "description": "Assembler file body"
+    }
+}

@@ -81,16 +81,22 @@
 					".a",
 					".h"
 				],
-				"configuration": "./syntaxes/language-configuration.json"
+                "configuration": "./language/asm.language.json"
 			}
 		],
 		"grammars": [
 			{
 				"language": "asm",
 				"scopeName": "source.asm",
-				"path": "./syntaxes/asm.tmLanguage.json"
+				"path": "./language/asm.grammar.json"
 			}
-		],
+        ],
+        "snippets": [
+            {
+                "language": "asm",
+                "path": "./language/asm.snippets.json"
+            }
+        ],
 		"configuration": {
 			"type": "object",
 			"title": "C64 tools configuration",
