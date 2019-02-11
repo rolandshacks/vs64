@@ -342,7 +342,13 @@ class Extension {
                 }
             },
             function(procInfo) { // error function
-                thisInstance.updateDiagnostics(procInfo);
+                if (procInfo.errorInfo) {
+                    thisInstance._state.assemblerProcess = null;
+                    output.appendLine("failed to start assembler - please check your settings!");
+                    vscode.window.showErrorMessage("Failed to start assembler. Please check your settings!");
+                } else {
+                    thisInstance.updateDiagnostics(procInfo);
+                }
             }
         );
     }
@@ -455,7 +461,8 @@ class Extension {
             process: proc,
             exited: false,
             stdout: [],
-            stderr: []
+            stderr: [],
+            errorInfo: null
         };
 
         proc.stdout.on('data', (data) => {
@@ -477,6 +484,17 @@ class Extension {
                     output.appendLine(line);
                     procInfo.stderr.push(line);
                 }
+            }
+        });
+
+        proc.on('error', (err) => {
+            procInfo.exited = true;
+            procInfo.errorInfo = err;
+            if (null != errorFunction) {
+                errorFunction(procInfo);
+            } else {
+                output.appendLine(`failed to start ${executable}`);
+                vscode.window.showErrorMessage("failed to start '" + executable + "'");
             }
         });
         
@@ -524,9 +542,6 @@ class Extension {
         }
 
         settings.assemblerPath = vscode.workspace.getConfiguration().get("c64.assemblerPath")||"";
-        if (settings.assemblerPath == "") {
-            settings.assemblerPath = path.join(env.extensionPath, "tools/acme");
-        }
         settings.assemblerEnabled = (settings.assemblerPath != "");
 
         if (true == settings.verbose) {

@@ -112,12 +112,12 @@
 				},
 				"c64.assemblerPath": {
 					"type": "string",
-					"default": "",
+					"default": "acme",
 					"description": "Path to assembler executable"
 				},
 				"c64.emulatorPath": {
 					"type": "string",
-					"default": "",
+					"default": "x64",
 					"description": "Path to emulator executable"
 				},
 				"c64.debuggerEnabled": {
@@ -127,7 +127,7 @@
 				},
 				"c64.debuggerPath": {
 					"type": "string",
-					"default": "",
+					"default": "c64debugger",
 					"description": "Path to C64 debugger executable"
 				}
 			}
