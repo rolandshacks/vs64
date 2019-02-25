@@ -314,6 +314,8 @@ class DebugSession extends debug.LoggingDebugSession {
             return;
         }
 
+        this.clearBreakpoints();
+
         var binaryPath = args.binary;
 
         this._debugInfo = null;
@@ -358,8 +360,6 @@ class DebugSession extends debug.LoggingDebugSession {
 
         var emu = this._emulator;
         if (null != this._debugInfo) {
-
-            this.clearBreakpoints();
 
             var source = path.resolve(args.source.path);
             var sourceBreakpoints = args.breakpoints;
@@ -837,7 +837,18 @@ class DebugSession extends debug.LoggingDebugSession {
             logMessage: logMessage
         };
 
-        this._breakpoints.push(breakpoint);
+        var idx = this._breakpoints.length;
+        while (idx > 0) {
+            if (breakpoint.address.address < this._breakpoints[idx-1].address.address) {
+                idx--;
+            } else {
+                break;
+            }
+        }
+
+        // insert
+        this._breakpoints.splice(idx, 0, breakpoint);
+        // this._breakpoints.push(breakpoint);
 
         return breakpoint;
     }

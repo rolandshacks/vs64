@@ -65,6 +65,8 @@ class DebugInfo {
 
         var labelStatements = [];
 
+        var baseDir = null;
+
         var debugInfo = {
             labels: [],
             symbols: [],
@@ -83,6 +85,13 @@ class DebugInfo {
                 if (statement.type == StatementType.SOURCE) {
 
                     source = statement.path;
+
+                    if (null == baseDir) {
+                        baseDir = path.dirname(source);
+                    } else if (!path.isAbsolute(source)) {
+                        source = path.resolve(baseDir, source);
+                    }
+
                     addressRefs = debugInfo.sourceRef[source];
                     if (null == addressRefs) {
                         addressRefs = [];
@@ -176,8 +185,10 @@ class DebugInfo {
 
                     var j = line.indexOf("Source:", i+1);
                     if (j >= 0) {
-                        source = path.normalize(path.resolve(line.substr(j+7).trim()));
-                        if (source.charAt(1) == ':') source = source.substr(0, 1).toUpperCase() + source.substr(1);
+                        source = path.normalize(line.substr(j+7).trim());
+                        if (source.charAt(1) == ':') {
+                            source = source.substr(0, 1).toUpperCase() + source.substr(1);
+                        }
                     } else {
                         comment = line.substr(i+1);
                     }

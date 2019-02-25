@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -81,11 +81,7 @@
 					".a",
 					".h"
 				],
-<<<<<<< HEAD
-                "configuration": "./language/asm.language.json"
-=======
 				"configuration": "./language/asm.language.json"
->>>>>>> e9724170430034da8777bd50dbabbf99a29f6a04
 			}
 		],
 		"grammars": [
@@ -93,23 +89,14 @@
 				"language": "asm",
 				"scopeName": "source.asm",
 				"path": "./language/asm.grammar.json"
-<<<<<<< HEAD
-=======
 			}
 		],
 		"snippets": [
 			{
 				"language": "asm",
 				"path": "./language/asm.snippets.json"
->>>>>>> e9724170430034da8777bd50dbabbf99a29f6a04
 			}
-        ],
-        "snippets": [
-            {
-                "language": "asm",
-                "path": "./language/asm.snippets.json"
-            }
-        ],
+		],
 		"configuration": {
 			"type": "object",
 			"title": "C64 tools configuration",

@@ -17,3 +17,8 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Minor bug fixes
 - Improved robustness and error handling
 - Improved integration of external tools
+
+## 0.1.5 Minor Update _(preview)_
+- Added directory of main source file as default search path for acme assembler
+- Improved debugger handling of basic header
+- Improved handling of multi-source sessions

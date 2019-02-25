@@ -314,6 +314,8 @@ class Extension {
 
         output.appendLine("building " + path.basename(sessionState.filename));
 
+        var sourceDir = path.dirname(sessionState.filename);
+
         var outDir = path.dirname(sessionState.prgfilename);
         Utils.mkdirRecursive(outDir);
 
@@ -323,6 +325,7 @@ class Extension {
             "-o", sessionState.prgfilename,
             "-r", sessionState.reportFilename,
             "--vicelabels", sessionState.labelsFilename,
+            "-I", sourceDir,
             sessionState.filename
         ];
 

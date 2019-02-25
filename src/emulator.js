@@ -312,8 +312,7 @@ class Emulator extends CPU6502 {
 
         var addr = ((prg[1] << 8) | prg[0]);
         var data = prg.slice(2);
-
-        var addrOffset = 0;
+        var startAddr = addr;
 
         if (true == autoOffsetCorrection) {
 
@@ -322,17 +321,44 @@ class Emulator extends CPU6502 {
             //        and SYS basic comment
             //        and end of statement zero bytes
             //        !byte $0c,$08,$b5,$07,$9e,$20,$32,$30,$36,$32,$00,$00,$00
+            //                              SYS       2   0   6   2
 
-            var addr2 = ((data[1] << 8) | data[0]);
-            var delta = (addr2-addr);
-            if (delta > 0 && delta < 32 && 
-                (data[3] == 0x9e || data[4] == 0x9e) &&
-                data[delta] == 0x0 && data[delta+1] == 0x0) {
-                addrOffset = delta + 2;
+            var addrNextBasic = ((data[1] << 8) | data[0]);
+            var maxHeaderBytes = 32;
+            var delta = (addrNextBasic - addr);
+
+            if (delta > 0 && delta < maxHeaderBytes) {
+
+                // skip 2 address bytes of next basic token
+                var ofs = 2;
+
+                // scanning for "SYS" command 0x9e
+                while (ofs < maxHeaderBytes) {
+                    if (data[ofs] == 0x9e) break;
+                    ofs++;
+                }
+
+                ofs++;
+
+                // skip optional spaces
+                while (data[ofs] == 0x20) {
+                    ofs++;
+                }
+
+                // parse call address
+                var addressCalc = 0;
+                while (ofs < maxHeaderBytes) {
+                    var c = data[ofs];
+                    if (c < 0x30 || c > 0x39) break;
+                    addressCalc = addressCalc * 10 + (data[ofs]-0x30);
+                    ofs++;
+                }
+                
+                startAddr = addressCalc;
             }
         }
 
-        this.reset(addr + addrOffset||0);
+        this.reset(startAddr||0);
         this._memory.set(data, addr);
         this.opcode = this.read( this.PC );
     }
