@@ -27,7 +27,7 @@ Support for ACME assember syntax is provided.
 
 ### Background Compilation
 
-Whenever a `.asm` source file is modified and saved, it is automaticall compiled to a C64 (cbm) `.prg` program file.
+Whenever a `.asm` source file is modified and saved, it is automatically compiled to a C64 (cbm) `.prg` program file.
 
 If compilation is successful, that program file can either be run/debugged with the embedded debugger based on a defined launch configuration (see *Debugger Launch Configuration*), or it can be loaded into a VICE emulator session or a C64 Debugger session.
 

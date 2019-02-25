@@ -10,8 +10,10 @@ All notable changes to the **VS64 Development Environment** extension will be do
 ## 0.1.2 Minor Update _(preview)_
 - Minor bug fixes
 
-### Added
-* Syntax highlighting
-* Debugging for MOS 6502 cpu
-* VICE Emulator integration
-* C64-Debugger integration
+## 0.1.3 Minor Update _(preview)_
+- Minor bug fixes
+
+## 0.1.4 Minor Update _(preview)_
+- Minor bug fixes
+- Improved robustness and error handling
+- Improved integration of external tools
