@@ -121,6 +121,11 @@
 					"default": "acme",
 					"description": "Path to assembler executable"
 				},
+				"c64.assemblerSearchPath": {
+					"type": "string",
+					"default": "./",
+					"description": "Assembler search path"
+				},
 				"c64.emulatorPath": {
 					"type": "string",
 					"default": "x64",

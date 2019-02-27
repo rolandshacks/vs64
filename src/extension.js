@@ -316,6 +316,22 @@ class Extension {
 
         var sourceDir = path.dirname(sessionState.filename);
 
+        var searchDirs = null;
+
+        if (null != settings.assemblerSearchPath) {
+            searchDirs = [];
+            var dirs = settings.assemblerSearchPath.split(",").map(item => item.trim());
+            for (var i=0, dir; dir=dirs[i]; i++) {
+                if (path.isAbsolute(dir)) {
+                    searchDirs.push(dir);
+                } else {
+                    searchDirs.push(path.resolve(sourceDir, dir));
+                }
+            }
+        } else {
+            searchDirs = [ sourceDir ];
+        }
+
         var outDir = path.dirname(sessionState.prgfilename);
         Utils.mkdirRecursive(outDir);
 
@@ -324,10 +340,15 @@ class Extension {
             "-f", "cbm",
             "-o", sessionState.prgfilename,
             "-r", sessionState.reportFilename,
-            "--vicelabels", sessionState.labelsFilename,
-            "-I", sourceDir,
-            sessionState.filename
+            "--vicelabels", sessionState.labelsFilename
         ];
+
+        for (var i=0, searchDir; searchDir=searchDirs[i]; i++) {
+            args.push("-I");
+            args.push(searchDir);
+        }
+
+        args.push(sessionState.filename);
 
         if (settings.verbose) {
             var cmd = executable + " " + args.join(" ");
@@ -545,6 +566,7 @@ class Extension {
         }
 
         settings.assemblerPath = vscode.workspace.getConfiguration().get("c64.assemblerPath")||"";
+        settings.assemblerSearchPath = vscode.workspace.getConfiguration().get("c64.assemblerSearchPath");
         settings.assemblerEnabled = (settings.assemblerPath != "");
 
         if (true == settings.verbose) {
