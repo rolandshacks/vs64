@@ -22,3 +22,7 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Added directory of main source file as default search path for acme assembler
 - Improved debugger handling of basic header
 - Improved handling of multi-source sessions
+
+## 0.1.6 Minor Update _(preview)_
+- Added configurable acme assembler search path
+

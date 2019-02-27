@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -124,7 +124,7 @@
 				"c64.assemblerSearchPath": {
 					"type": "string",
 					"default": "./",
-					"description": "Assembler search path"
+					"description": "Assembler source search path (use comma to separate items)"
 				},
 				"c64.emulatorPath": {
 					"type": "string",
