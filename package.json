@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -26,10 +26,10 @@
 	},
 	"devDependencies": {
 		"@types/mocha": "^2.2.42",
-		"@types/node": "^8.10.25",
+		"@types/node": "^8.10.49",
 		"eslint": "^4.11.0",
-		"typescript": "^3.1.4",
-		"vscode": "^1.1.25"
+		"typescript": "^3.5.1",
+		"vscode": "^1.1.34"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -164,6 +164,11 @@
 								"type": "string",
 								"description": "Path to C64 binary",
 								"default": ""
+							},
+							"pc": {
+								"type": "string",
+								"description": "Initial program counter (PC)",
+								"default": "$0000"
 							}
 						}
 					}

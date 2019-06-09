@@ -26,3 +26,7 @@ All notable changes to the **VS64 Development Environment** extension will be do
 ## 0.1.6 Minor Update _(preview)_
 - Added configurable acme assembler search path
 
+## 0.1.7 Minor Update _(preview)_
+- Added configurable possibility to set initial program counter in debug configurations
+- Improved debugger handling of registers
+- Minor bug fixes

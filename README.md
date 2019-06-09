@@ -102,6 +102,7 @@ In order to run a compiled C64 program (`.prg`) using the embedded 6502 CPU emul
                 "type": "asm",
                 "request": "launch",
                 "name": "Launch Program",
+                "pc": "$1000",
                 "binary": "C:\\Work\\c64\\demo1\\.cache\\src\\test.prg"
             }
         ]
@@ -119,9 +120,14 @@ Always use "launch" here.
 
 Any name you want to use is fine.
 
-> `binary`: Path to a compiled C64 program.
+> `binary`: Path to a compiled C64 program
 
 The default build output path is ".cache" within the workspace root folder.
+
+> `pc`: Optional parameter to overwrite the start address of the C64 program
+
+A 16-bit address in decimal or $hexadecimal form.
+
 
 ## Commands
 

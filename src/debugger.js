@@ -175,6 +175,7 @@ class DebugSession extends debug.LoggingDebugSession {
         this._debugInfo = null;
         this._breakpoints = null;
         this._launchBinary = null;
+        this._launchPC = null;
 
         var emu = null;
         
@@ -289,7 +290,7 @@ class DebugSession extends debug.LoggingDebugSession {
        
         try {
             emu.init();
-            emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection);
+            emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection, this._launchPC);
         } catch (err) {
             response.success = false;
             response.message = err.toString();
@@ -305,6 +306,28 @@ class DebugSession extends debug.LoggingDebugSession {
 		this.sendResponse(response);
     }
 
+    parseAddressString(str) {
+
+        if (null == str) return null;
+        
+        str = str.trim();
+        if (str == "") return null;
+
+        var value = 0x0;
+
+        if (str.charAt(0) == "$") {
+            value = parseInt(str.substr(1), 16);
+        } else if (str.substr(0, 2) == "0x") {
+            value = parseInt(str.substr(2), 16);
+        } else {
+            value = parseInt(str);
+        }
+
+        if (isNaN(value)) return null;
+
+        return value;
+    }
+
     async launchRequest(response, args) { // jshint ignore:line
 
         if (args.type != "asm") {
@@ -317,16 +340,18 @@ class DebugSession extends debug.LoggingDebugSession {
         this.clearBreakpoints();
 
         var binaryPath = args.binary;
+        var forcedStartAddress = this.parseAddressString(args.pc);
 
         this._debugInfo = null;
         this._breakpoints = null;
         this._launchBinary = null;
+        this._launchPC = null;
 
         var emu = this._emulator;
 
         try {
             emu.init();
-            emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection);
+            emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
 
             if (null == this._debugInfo) {
                 var debugInfoPath = Utils.changeExtension(binaryPath, ".report");
@@ -334,6 +359,7 @@ class DebugSession extends debug.LoggingDebugSession {
             }
 
             this._launchBinary = binaryPath;
+            this._launchPC = forcedStartAddress;
 
         } catch (err) {
             response.success = false;
@@ -370,7 +396,10 @@ class DebugSession extends debug.LoggingDebugSession {
 
                 if (null != breakpoint) {
                     resultBreakpoints.push({
-                        source: source,
+                        source: {
+                            path: source,
+                            presentationHint: 'normal'
+                        },
                         line: breakpoint.line,
                         verified: true 
                     });
@@ -451,6 +480,8 @@ class DebugSession extends debug.LoggingDebugSession {
                 new debug.Scope("Statistics", Debugger.VARIABLES_STATS,     false),
                 new debug.Scope("Stack",      Debugger.VARIABLES_STACK,     false)
             ];
+
+            scopes[0].presentationHint = 'registers';
 
             response.body = {
                 scopes: scopes

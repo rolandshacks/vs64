@@ -289,7 +289,7 @@ class Emulator extends CPU6502 {
         this._memory[addr] = (value & 0xFF);
     }
 
-    loadProgram(filename, autoOffsetCorrection) {
+    loadProgram(filename, autoOffsetCorrection, forcedStartAddress) {
 
         var prg = null;
 
@@ -305,16 +305,20 @@ class Emulator extends CPU6502 {
 
         this._prg = prg;
 
-        this.injectProgram(prg, autoOffsetCorrection);
+        this.injectProgram(prg, autoOffsetCorrection, forcedStartAddress);
     }
 
-    injectProgram(prg, autoOffsetCorrection) {
+    injectProgram(prg, autoOffsetCorrection, forcedStartAddress) {
 
         var addr = ((prg[1] << 8) | prg[0]);
         var data = prg.slice(2);
         var startAddr = addr;
 
-        if (true == autoOffsetCorrection) {
+        if (null != forcedStartAddress) {
+
+            startAddr = forcedStartAddress;
+            
+        } else if (true == autoOffsetCorrection) {
 
             // skip if...
             // starts with valid next statement address
