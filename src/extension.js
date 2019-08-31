@@ -335,7 +335,7 @@ class Extension {
         var outDir = path.dirname(sessionState.prgfilename);
         Utils.mkdirRecursive(outDir);
 
-        var executable = settings.assemblerPath;
+        var executable = Utils.getAbsoluteFilename(settings.assemblerPath);
         var args = [
             "-f", "cbm",
             "-o", sessionState.prgfilename,
@@ -402,7 +402,7 @@ class Extension {
 
         output.appendLine("running " + path.basename(sessionState.prgfilename));
 
-        var executable = settings.emulatorPath;
+        var executable = Utils.getAbsoluteFilename(settings.emulatorPath);
         var args = [
             sessionState.prgfilename
         ];
@@ -436,7 +436,7 @@ class Extension {
 
         output.appendLine("debugging " + path.basename(sessionState.prgfilename));
 
-        var executable = settings.debuggerPath;
+        var executable = Utils.getAbsoluteFilename(settings.debuggerPath);
 
         if (false == sessionState.debuggerRunning) {
 

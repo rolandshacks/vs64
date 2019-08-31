@@ -166,8 +166,19 @@ var Utils = {
                 return filePath;
             }
         }
-    }
+    },
 
+    getAbsoluteFilename: function(filename) {
+        if(filename) {
+            if (path.isAbsolute(filename)) {
+                return filename;
+            } else {
+                return path.resolve(vscode.workspace.rootPath, filename);
+            }
+        } else {
+            return filename;
+        }
+    }
 };
 
 //-----------------------------------------------------------------------------------------------//
