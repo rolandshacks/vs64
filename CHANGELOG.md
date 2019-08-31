@@ -30,3 +30,8 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Added configurable possibility to set initial program counter in debug configurations
 - Improved debugger handling of registers
 - Minor bug fixes
+
+## 0.1.8 Minor Update _(preview)_
+- Security fixes
+- Improved relative path handling
+- Added settings verification and logging

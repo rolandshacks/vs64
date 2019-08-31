@@ -3,6 +3,8 @@
 //
 
 const path = require('path');
+const fs = require('fs');
+
 const { spawn } = require('child_process');
 const vscode = require('vscode');
 
@@ -544,6 +546,46 @@ class Extension {
         return procInfo;
     }
 
+    getExecutableState(filename) {
+
+        if (null == filename || filename == "") return " [NOT SET]";
+
+        var path = Utils.getAbsoluteFilename(filename);
+
+        if (null == path || path == "") return " [INVALID]";
+
+        try {
+            var stat = fs.lstatSync(path);
+            if (stat.isDirectory()) {
+                return " [MISMATCH: directory instead of file name specified]";
+            }
+        } catch (err) {
+            if (err.code == 'ENOENT') {
+                return " [ERROR: file not found]";
+            }
+            return " [" + err.message + "]";
+        }        
+
+        try {
+            fs.accessSync(path, fs.constants.X_OK);
+        } catch (err) {
+            return " [" + err.message + "]";
+        }
+
+        return null;
+    }
+
+    logExecutableState(filename, format) {
+
+        var state = this.getExecutableState(filename);
+        if (null == state) {
+            console.log(format + " [OK]");
+            return;
+        }
+
+        console.error(format + state);
+    }
+
     updateSettings() {
 
         var env = this._env;
@@ -570,14 +612,14 @@ class Extension {
         settings.assemblerEnabled = (settings.assemblerPath != "");
 
         if (true == settings.verbose) {
-            console.log("[C64] assembler path: " + settings.assemblerPath);
+            this.logExecutableState(settings.assemblerPath, "[C64] assembler path: " + settings.assemblerPath);
         }
 
         settings.emulatorPath = vscode.workspace.getConfiguration().get("c64.emulatorPath")||"";
         settings.emulatorEnabled = (settings.emulatorPath != "");
 
         if (true == settings.verbose) {
-            console.log("[C64] emulator path: " + settings.emulatorPath);
+            this.logExecutableState(settings.emulatorPath, "[C64] emulator path: " + settings.emulatorPath);
         }
 
         settings.debuggerEnabled = vscode.workspace.getConfiguration().get("c64.debuggerEnabled")||false;
@@ -588,14 +630,12 @@ class Extension {
 
         if (true == settings.verbose) {
             if (settings.debuggerEnabled) {
-                console.log("[C64] debugger path: " + settings.debuggerPath);
+                this.logExecutableState(settings.debuggerPath, "[C64] debugger path: " + settings.debuggerPath);
             } else {
                 console.log("[C64] using emulator for debugging (c64 debugger disabled)");
             }
         }
-
     }
-
 }
 
 //-----------------------------------------------------------------------------------------------//
