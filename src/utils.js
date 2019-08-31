@@ -169,12 +169,8 @@ var Utils = {
     },
 
     getAbsoluteFilename: function(filename) {
-        if(filename) {
-            if (path.isAbsolute(filename)) {
-                return filename;
-            } else {
-                return path.resolve(vscode.workspace.rootPath, filename);
-            }
+        if(filename && !path.isAbsolute(filename)) {
+            return path.resolve(vscode.workspace.rootPath, filename);
         } else {
             return filename;
         }
