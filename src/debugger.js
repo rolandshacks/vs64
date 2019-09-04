@@ -412,11 +412,9 @@ class DebugSession extends debug.LoggingDebugSession {
             }
         }
 
-        if (resultBreakpoints.length > 0) {
-            response.body = {
-                breakpoints: resultBreakpoints
-            };
-        }
+        response.body = {
+            breakpoints: resultBreakpoints
+        };
 
         this.sendResponse(response);
     }

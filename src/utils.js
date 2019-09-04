@@ -138,17 +138,25 @@ var Utils = {
     getOutputFilename: function(filename, extension) {
 
         var fileDir = path.dirname(filename);
-        var workspacePath = vscode.workspace.rootPath;
-        var outDir = path.join(workspacePath, Constants.OutputDirectory);
+        if (null != vscode.workspace.rootPath) {
 
-        var relFilePath = path.relative(workspacePath, fileDir);
+            var workspacePath = vscode.workspace.rootPath;
+            var outDir = path.join(workspacePath, Constants.OutputDirectory);
+            var relFilePath = path.relative(workspacePath, fileDir);
+            var basename = path.basename(filename, path.extname(filename));
+            var outputFilename = path.join(outDir, relFilePath, basename + "." + extension);
+            return outputFilename;
+    
+        } else {
 
-        var basename = path.basename(filename, path.extname(filename));
-        //var basename = path.basename(filename); // keep .asm extension
+            // in case no folder is open, put output file next to source file
+            var outDir = path.dirname(filename);
+            var basename = path.basename(filename, path.extname(filename));
+            var outputFilename = path.join(outDir, basename + "." + extension);
+            return outputFilename;
 
-        var outputPath = path.join(outDir, relFilePath, basename + "." + extension);
+        }
 
-        return outputPath;
     },
 
     findFile: function(baseDir, filename) {
@@ -169,7 +177,7 @@ var Utils = {
     },
 
     getAbsoluteFilename: function(filename) {
-        if(filename && !path.isAbsolute(filename)) {
+        if(filename && !path.isAbsolute(filename) && null != vscode.workspace.rootPath) {
             return path.resolve(vscode.workspace.rootPath, filename);
         } else {
             return filename;

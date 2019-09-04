@@ -41,7 +41,6 @@ class Extension {
         this._context = context;
         this._output = null;
         this._settings = {};
-        this._env = {};
         this._debugger = null;
 
         this._state = {
@@ -54,24 +53,17 @@ class Extension {
         return this._settings;
     }
 
-    get env() {
-        return this._env;
+    hasWorkspace() {
+        return (null != vscode.workspace.rootPath);
     }
 
     activate() {
 
         var thisInstance = this;
         var context = this._context;
-        var env = this._env;
         var settings = this._settings;
         var state = this._state;
-
-        { // load environment info
-            env.extensionPath = context.extensionPath;
-            env.workspacePath = vscode.workspace.rootPath;
-            env.outputDir = Constants.OutputDirectory;
-            env.outputPath = path.join(env.workspacePath, env.outputDir);
-        }
+        var hasWorkspace = this.hasWorkspace();
 
         { // load settings
             settings.extensionPath = context.extensionPath;
@@ -92,6 +84,12 @@ class Extension {
 
         { // register command: build
             let disposable = vscode.commands.registerCommand('c64.build', function() {
+
+                if (!hasWorkspace) {
+                    vscode.window.showErrorMessage("No folder open in workspace");
+                    return;
+                }
+
                 if (Constants.AlwaysShowOutputChannel) output.show(true);
                 output.clear();
                 thisInstance.commandBuild();
@@ -101,6 +99,12 @@ class Extension {
 
         { // register command: run
             let disposable = vscode.commands.registerCommand('c64.run', function() {
+
+                if (!hasWorkspace) {
+                    vscode.window.showErrorMessage("No folder open in workspace");
+                    return;
+                }
+
                 if (Constants.AlwaysShowOutputChannel) output.show(true);
                 output.clear();
                 if (true == settings.autoBuild) {
@@ -114,6 +118,12 @@ class Extension {
 
         { // register command: debug
             let disposable = vscode.commands.registerCommand('c64.debug', function() {
+
+                if (!hasWorkspace) {
+                    vscode.window.showErrorMessage("No folder open in workspace");
+                    return;
+                }
+
                 if (Constants.AlwaysShowOutputChannel) output.show(true);
                 output.clear();
                 if (true == settings.autoBuild) {
@@ -161,23 +171,27 @@ class Extension {
             }
         });
 
-        if (this._settings.backgroundBuild) {
-            this.commandBuild();
+        if (this.hasWorkspace()) {
+
+            if (this._settings.backgroundBuild) {
+                this.commandBuild();
+            }
+
+            // start debugger adapter
+            {
+                this._debugger = new Debugger(this);
+                this._debugger.start();
+            }
+
+            vscode.debug.onDidStartDebugSession(function(debugSession) {
+                thisInstance.onDidStartDebugSession(debugSession);
+            });
+
+            vscode.window.onDidChangeActiveTextEditor(function(textEditor) {
+                thisInstance.onDidChangeActiveTextEditor(textEditor);
+            });
+
         }
-
-        // start debugger adapter
-        {
-            this._debugger = new Debugger(this);
-            this._debugger.start();
-        }
-
-        vscode.debug.onDidStartDebugSession(function(debugSession) {
-            thisInstance.onDidStartDebugSession(debugSession);
-        });
-
-        vscode.window.onDidChangeActiveTextEditor(function(textEditor) {
-            thisInstance.onDidChangeActiveTextEditor(textEditor);
-        });
 
     }
 
@@ -205,6 +219,7 @@ class Extension {
     }
 
     onSave(textDocument) {
+        if (!this.hasWorkspace()) return;
         if (this._settings.backgroundBuild) {
             this.commandBuild();
         }
@@ -588,7 +603,6 @@ class Extension {
 
     updateSettings() {
 
-        var env = this._env;
         var settings = this._settings;
 
         settings.verbose = vscode.workspace.getConfiguration().get("c64.verbose")||false;

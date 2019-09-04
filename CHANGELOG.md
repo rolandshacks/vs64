@@ -35,3 +35,6 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Security fixes
 - Improved relative path handling
 - Added settings verification and logging
+
+## 0.1.9 Minor Update _(preview)_
+- Fixed handling of empty workspace
