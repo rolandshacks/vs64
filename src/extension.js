@@ -360,6 +360,15 @@ class Extension {
             "--vicelabels", sessionState.labelsFilename
         ];
 
+        if (settings.definitions) {
+            var defs = settings.definitions.split(",");
+            if (defs.length > 0) {
+                for (var i = 0; i < defs.length; i++) {
+                    args.push("-D" + defs[i].trim());
+                }
+            }
+        }
+
         for (var i=0, searchDir; searchDir=searchDirs[i]; i++) {
             args.push("-I");
             args.push(searchDir);
@@ -615,6 +624,8 @@ class Extension {
         if (true == settings.verbose && true == settings.autoBuild) {
             console.log("[C64] auto build enabled");
         }
+
+        settings.definitions = vscode.workspace.getConfiguration().get("c64.definitions") || "";
 
         settings.backgroundBuild = vscode.workspace.getConfiguration().get("c64.backgroundBuild")||true;
         if (true == settings.verbose && true == settings.backgroundBuild) {
