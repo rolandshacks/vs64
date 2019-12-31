@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.9",
+	"version": "0.1.10",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -126,6 +126,11 @@
 					"default": "acme",
 					"description": "Path to assembler executable"
 				},
+				"c64.assemblerArgs": {
+					"type": "string",
+					"default": "",
+					"description": "Additional assembler command line options"
+				},
 				"c64.assemblerSearchPath": {
 					"type": "string",
 					"default": "./",
@@ -136,6 +141,11 @@
 					"default": "x64",
 					"description": "Path to emulator executable"
 				},
+				"c64.emulatorArgs": {
+					"type": "string",
+					"default": "",
+					"description": "Additional emulator command line options"
+				},
 				"c64.debuggerEnabled": {
 					"type": "boolean",
 					"default": true,
@@ -145,6 +155,11 @@
 					"type": "string",
 					"default": "c64debugger",
 					"description": "Path to C64 debugger executable"
+				},
+				"c64.debuggerArgs": {
+					"type": "string",
+					"default": "",
+					"description": "Additional C64 debugger command line options"
 				}
 			}
 		},

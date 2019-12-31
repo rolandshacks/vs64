@@ -11,13 +11,12 @@ start
     pla
     ldx #$ff                ; load counter
 
-loop
+loop 
     sta $0400-1,X           ; poke to screen
     dex                     ; dec counter
     bne loop                ; loops
 
 end
     rts                     ; exit
-
 
 .string		!pet "Dumb example", 13, 0

@@ -23,6 +23,32 @@ BIND(module);
 var Constants = require('src/constants');
 var Emulator = require('src/emulator');
 
+var Utils = {
+    
+    getAbsoluteFilename: function(filename) {
+        return filename;
+    },
+
+    findExecutable: function (filename) {
+
+        if (null == filename || filename == "") return filename;
+        
+        if ("win32" == process.platform) {
+            
+            let ext = path.extname(filename);
+            if (ext == "") {
+                filename += ".exe";
+            } else if (ext == ".") {
+                filename += "exe";
+            }
+
+        }
+
+        return filename;
+    }    
+}
+
+
 //-----------------------------------------------------------------------------------------------//
 // Application
 //-----------------------------------------------------------------------------------------------//
@@ -31,19 +57,34 @@ class Application {
         this._emulator = new Emulator();
     }
 
+    testFn() {
+
+        let input = "C:\\tools\\c64\\vice\\x64sc";
+        
+        console.log(Utils.findExecutable(input));
+        console.log(Utils.findExecutable("abc.exe"));
+        console.log(Utils.findExecutable("abc.com"));
+        console.log(Utils.findExecutable("abc"));
+        console.log(Utils.findExecutable("abc."));
+        
+    }
+
     run() {
 
-        var emu = this._emulator;
+        //var emu = this._emulator;
 
         //emu.loadProgram('./programs/.cache/src/test.prg', Constants.ProgramAddressCorrection);
         //emu.loadReport('./programs/.cache/src/test.report');
-        emu.loadDebugInfo("./example.report");
+        //emu.loadDebugInfo("./example.report");
 
         //emu.clearBreakpoints();
         //emu.addBreakpoint(11);
 
         //emu.start();
         //setTimeout(function() { emu.stop(); }, 1000);
+
+        this.testFn();
+
     }
 
     convertRoms() {

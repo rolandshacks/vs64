@@ -63,6 +63,10 @@ Path to assembler executable.
 
 Example: `C:\Tools\c64\acme\acme.exe`
 
+> C64: Assembler Arguments
+
+Additional assembler command line options.
+
 > C64: Auto Build
 
 Enable auto build before running or debugging.
@@ -81,11 +85,19 @@ Path to C64 debugger executable.
 
 Example: `C:\Tools\c64\C64Debugger\C64Debugger.exe`
 
+> C64: Debugger Arguments
+
+Additional debugger command line options.
+
 > C64: Emulator Path
 
 Path to emulator executable.
 
 Example: `C:\Tools\c64\vice\x64sc.exe`
+
+> C64: Emulator Arguments
+
+Additional emulator command line options.
 
 > C64: Verbose
 

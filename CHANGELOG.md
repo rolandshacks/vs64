@@ -38,3 +38,8 @@ All notable changes to the **VS64 Development Environment** extension will be do
 
 ## 0.1.9 Minor Update _(preview)_
 - Fixed handling of empty workspace
+
+## 0.1.10 Minor Update _(preview)_
+- Added custom command line settings for assembler, emulator and debugger
+- Minor fixes
+- Security updates

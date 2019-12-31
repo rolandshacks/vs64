@@ -177,13 +177,67 @@ var Utils = {
     },
 
     getAbsoluteFilename: function(filename) {
-        if(filename && !path.isAbsolute(filename) && null != vscode.workspace.rootPath) {
+        if (filename && !path.isAbsolute(filename) && null != vscode.workspace.rootPath) {
             return path.resolve(vscode.workspace.rootPath, filename);
         } else {
             return filename;
         }
+    },
+
+    splitQuotedString: function (str) {
+        let output = [];
+
+        if (null == str) return output;
+
+        let token = "";
+        let inside_quotes = false;
+        for (let c,i=0; c=str[i]; i++) {
+
+            if ('"' == c) {
+                if (inside_quotes) {
+                    inside_quotes = false;
+                    if (token.length > 0) output.push(token);
+                    token = "";
+                } else {
+                    inside_quotes = true;
+                }
+            } else if (" \t\r\n".indexOf(c) != -1) {
+                if (inside_quotes) {
+                    token += c;
+                } else {
+                    if (token.length > 0) output.push(token);
+                    token = "";
+                }
+            } else {
+                token += c;
+            }
+
+            //console.log("[" + c + "] >" + token + "<");
+        }
+
+        if (token.length > 0) output.push(token);
+
+        return output;
+    },
+
+    findExecutable: function(filename) {
+
+        if (null == filename || filename == "") return filename;
+        
+        if ("win32" == process.platform) {
+            
+            let ext = path.extname(filename);
+            if (ext == "") {
+                filename += ".exe";
+            } else if (ext == ".") {
+                filename += "exe";
+            }
+
+        }
+
+        return filename;
     }
-};
+}
 
 //-----------------------------------------------------------------------------------------------//
 // Module Exports

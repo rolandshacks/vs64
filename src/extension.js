@@ -374,6 +374,8 @@ class Extension {
             args.push(searchDir);
         }
 
+        args.push(... Utils.splitQuotedString(settings.assemblerArgs));
+
         args.push(sessionState.filename);
 
         if (settings.verbose) {
@@ -429,9 +431,9 @@ class Extension {
         output.appendLine("running " + path.basename(sessionState.prgfilename));
 
         var executable = Utils.getAbsoluteFilename(settings.emulatorPath);
-        var args = [
-            sessionState.prgfilename
-        ];
+        var args = [];
+        args.push(...Utils.splitQuotedString(settings.emulatorArgs));
+        args.push(sessionState.prgfilename);
 
         if (settings.verbose) {
             var cmd = executable + " " + args.join(" ");
@@ -487,6 +489,8 @@ class Extension {
                 "-prg", sessionState.prgfilename,
                 "-autojmp"
             ];
+
+            args.push(...Utils.splitQuotedString(settings.debuggerArgs));
 
             if (settings.verbose) {
                 let cmd = executable + " " + args.join(" ");
@@ -612,43 +616,48 @@ class Extension {
 
     updateSettings() {
 
-        var settings = this._settings;
+        let settings = this._settings;
 
-        settings.verbose = vscode.workspace.getConfiguration().get("c64.verbose")||false;
+        let workspaceConfig = vscode.workspace.getConfiguration();
+
+        settings.verbose = workspaceConfig.get("c64.verbose")||false;
 
         if (true == settings.verbose) {
             console.log("[C64] extension verbose mode enabled");
         }
 
-        settings.autoBuild = vscode.workspace.getConfiguration().get("c64.autoBuild")||true;
+        settings.autoBuild = workspaceConfig.get("c64.autoBuild")||true;
         if (true == settings.verbose && true == settings.autoBuild) {
             console.log("[C64] auto build enabled");
         }
 
-        settings.definitions = vscode.workspace.getConfiguration().get("c64.definitions") || "";
+        settings.definitions = workspaceConfig.get("c64.definitions") || "";
 
-        settings.backgroundBuild = vscode.workspace.getConfiguration().get("c64.backgroundBuild")||true;
+        settings.backgroundBuild = workspaceConfig.get("c64.backgroundBuild")||true;
         if (true == settings.verbose && true == settings.backgroundBuild) {
             console.log("[C64] background build enabled");
         }
 
-        settings.assemblerPath = vscode.workspace.getConfiguration().get("c64.assemblerPath")||"";
-        settings.assemblerSearchPath = vscode.workspace.getConfiguration().get("c64.assemblerSearchPath");
+        settings.assemblerPath = Utils.findExecutable(workspaceConfig.get("c64.assemblerPath")||"");
+        settings.assemblerArgs = workspaceConfig.get("c64.assemblerArgs")||"";
+        settings.assemblerSearchPath = workspaceConfig.get("c64.assemblerSearchPath");
         settings.assemblerEnabled = (settings.assemblerPath != "");
 
         if (true == settings.verbose) {
             this.logExecutableState(settings.assemblerPath, "[C64] assembler path: " + settings.assemblerPath);
         }
 
-        settings.emulatorPath = vscode.workspace.getConfiguration().get("c64.emulatorPath")||"";
+        settings.emulatorPath = Utils.findExecutable(workspaceConfig.get("c64.emulatorPath")||"");
+        settings.emulatorArgs = workspaceConfig.get("c64.emulatorArgs")||"";
         settings.emulatorEnabled = (settings.emulatorPath != "");
 
         if (true == settings.verbose) {
             this.logExecutableState(settings.emulatorPath, "[C64] emulator path: " + settings.emulatorPath);
         }
 
-        settings.debuggerEnabled = vscode.workspace.getConfiguration().get("c64.debuggerEnabled")||false;
-        settings.debuggerPath = vscode.workspace.getConfiguration().get("c64.debuggerPath")||"";
+        settings.debuggerEnabled = workspaceConfig.get("c64.debuggerEnabled")||false;
+        settings.debuggerPath = Utils.findExecutable(workspaceConfig.get("c64.debuggerPath")||"");
+        settings.debuggerArgs = workspaceConfig.get("c64.debuggerArgs")||"";
         if (settings.debuggerPath == "") {
             settings.debuggerEnabled = false;
         }
