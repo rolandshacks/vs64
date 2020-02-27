@@ -834,7 +834,7 @@ class DebugSession extends debug.LoggingDebugSession {
             var addrStr = "$" + Utils.fmt(symbol.value.toString(16), 4);
             info.label = "(" + addrStr + ") " + symbol.name;
 
-            var memValue = (symbol.data_size == 16) ? emu.read(symbol.value) : emu.read(symbol.value) | (emu.read(symbol.value+1)<<8);
+            var memValue = (symbol.data_size == 16) ? emu.read(symbol.value) | (emu.read(symbol.value+1)<<8) : emu.read(symbol.value);
             info.value = (symbol.data_size == 16) ? this.formatWord(memValue) : this.formatByte(memValue);
 
         } else {
