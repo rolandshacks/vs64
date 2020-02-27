@@ -458,6 +458,7 @@ class DebugSession extends debug.LoggingDebugSession {
             name: "global",
             source: source,
             line: (null != addressInfo ? addressInfo.line : 0),
+            column: 0,
             presentationHint: "normal"
         });
 
