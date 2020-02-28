@@ -120,7 +120,7 @@ class DebugInfo {
 
                     if (statement.symbol) {
                         debugInfo.symbols.push({
-                            name: statement.symbol,
+                            name: statement.symbol.replace(':',''),
                             value: statement.value,
                             isAddress: true,
                             source: source,
@@ -132,7 +132,7 @@ class DebugInfo {
                     for (var j=0, label; (label=labelStatements[j]); j++) {
                         label.address = statement.value;
                         debugInfo.labels.push({
-                            name: label.name,
+                            name: label.name.replace(':',''),
                             address: label.address,
                             source: source,
                             line: label.line
@@ -144,7 +144,7 @@ class DebugInfo {
                 } else if (statement.type == StatementType.SYMBOL) {
 
                     debugInfo.symbols.push({
-                        name: statement.name,
+                        name: statement.name.replace(':',''),
                         value: statement.value,
                         isAddress: statement.isAddress,
                         source: source,
@@ -262,7 +262,7 @@ class DebugInfo {
                             element = { type: ElementType.ADDRESS, value: DebugInfo.parseNumber(token, true), desc: "address" };
                         } else if ( 3 == i && isCodeLine) {
                             element = { type: ElementType.DATA, value: token, desc: "data" };
-                        } else if ( 4 == i && isCodeLine && token.charAt(0) == '.') {
+                        } else if ( 4 == i && isCodeLine && DebugInfo.isValidSymbol(token)) {
                             element = { type: ElementType.SYMBOL, name: token, desc: "symbol" };
                         } else {
                             element = { type: ElementType.UNKNOWN, value: token, desc: "unknown" };
@@ -381,6 +381,10 @@ class DebugInfo {
         }
         
         return statement;
+    }
+
+    static isValidSymbol(token) {
+        return token.charAt(0) == '.' || token.endsWith(':');
     }
 
     static parseNumber(s, hex) {
