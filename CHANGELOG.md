@@ -44,7 +44,7 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Minor fixes
 - Security updates
 
-## 0.1.11 Minor Update _(preview)_
-- Fixed unexpected closing .asm windows with "invalid arguments" erros in 1.42
+## 0.1.12 Minor Update _(preview)_
+- Fixed unexpected closing .asm windows with "invalid arguments" errors in 1.42
 - Fixed display of 16-bit watches
 - Added support for labels ending with ':'
