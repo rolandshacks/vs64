@@ -178,7 +178,7 @@ class DebugSession extends debug.LoggingDebugSession {
         this._launchPC = null;
 
         var emu = null;
-        
+
         emu = new Emulator(this);
         this._emulator = emu;
 
@@ -227,7 +227,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
             thisInstance.setRunAsServer(true);
             thisInstance.start(socket, socket);
-            
+
         }).listen(port);
 
         if (0 == port) {
@@ -263,7 +263,7 @@ class DebugSession extends debug.LoggingDebugSession {
         }
         return super.sendEvent(event);
     }
-    
+
     initializeRequest(response, args) {
 
         response.body = response.body || {};
@@ -287,7 +287,7 @@ class DebugSession extends debug.LoggingDebugSession {
     restartRequest(response, args) {
 
         var emu = this._emulator;
-       
+
         try {
             emu.init();
             emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection, this._launchPC);
@@ -309,7 +309,7 @@ class DebugSession extends debug.LoggingDebugSession {
     parseAddressString(str) {
 
         if (null == str) return null;
-        
+
         str = str.trim();
         if (str == "") return null;
 
@@ -379,7 +379,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
 		this.sendResponse(response);
     }
-    
+
     setBreakPointsRequest(response, args) {
 
         var resultBreakpoints = [];
@@ -388,6 +388,10 @@ class DebugSession extends debug.LoggingDebugSession {
         if (null != this._debugInfo) {
 
             var source = path.resolve(args.source.path);
+            // Fixup path to match capitalization in DebugInfo
+            if (source.charAt(1) == ':') {
+                source = source.substr(0, 1).toUpperCase() + source.substr(1);
+            }
             var sourceBreakpoints = args.breakpoints;
 
             for (var i=0, sourceBreakpoint; (sourceBreakpoint=sourceBreakpoints[i]); i++) {
@@ -401,12 +405,21 @@ class DebugSession extends debug.LoggingDebugSession {
                             presentationHint: 'normal'
                         },
                         line: breakpoint.line,
-                        verified: true 
+                        verified: true
                     });
                     if (this._settings.verbose) {
                         Utils.debuggerLog("set breakpoint at line " + breakpoint.line);
                     }
                 } else {
+                    resultBreakpoints.push({
+                        source: {
+                            path: source,
+                            presentationHint: 'deemphasize'
+                        },
+                        line: sourceBreakpoint.line,
+                        verified: false, // not found
+                        message: 'No code found on this line'
+                    });
                     Utils.debuggerLog("could not set breakpoint at line " + sourceBreakpoint.line);
                 }
             }
@@ -442,7 +455,7 @@ class DebugSession extends debug.LoggingDebugSession {
         var addressInfo = this.getAddressInfo(stats.PC);
 
         var source = null;
-        
+
         if (null != addressInfo) {
             source = {
                 name: path.basename(addressInfo.source),
@@ -540,8 +553,8 @@ class DebugSession extends debug.LoggingDebugSession {
                         var info = this.formatSymbol(symbol);
 
                         if (symbol.isAddress) {
-                            variables.push( 
-                                { 
+                            variables.push(
+                                {
                                     name: info.label,
                                     type: "address symbol",
                                     value: info.value,
@@ -549,15 +562,15 @@ class DebugSession extends debug.LoggingDebugSession {
                                 }
                             );
                         } else {
-                            variables.push( 
-                                { 
+                            variables.push(
+                                {
                                     name: info.label,
                                     type: "symbol",
                                     value: info.value,
                                     variablesReference: 0
                                 }
                             );
-    
+
                         }
                     }
                 }
@@ -573,12 +586,12 @@ class DebugSession extends debug.LoggingDebugSession {
                 let stackUsage = 255-stats.registers.S;
 
                 variables = [
-                    { 
+                    {
                         name: "Stack",
                         type: "stack",
                         value: "(" + (stackUsage) + ")",
                         indexedVariables: stackUsage,
-                        variablesReference: Debugger.VARIABLES_STACK+1000 
+                        variablesReference: Debugger.VARIABLES_STACK+1000
                     }
                 ];
 
@@ -598,7 +611,7 @@ class DebugSession extends debug.LoggingDebugSession {
                 for (let i=ofs; i<ofs+count; i++) {
                     var addr = 0xff-i;
                     var value = emu.read(0x100+addr);
-                    variables.push( { 
+                    variables.push( {
                         name: "$" + Utils.fmt(addr.toString(16), 2),
                         type: "stack",
                         value: this.formatByte(value),
@@ -672,7 +685,7 @@ class DebugSession extends debug.LoggingDebugSession {
             response.success = false;
             response.message = "invalid expression";
         }
-    
+
         this.sendResponse(response);
 
     }
@@ -690,7 +703,7 @@ class DebugSession extends debug.LoggingDebugSession {
 
     continueRequest(response, args) {
         this.sendResponse(response);
-        
+
         var thisInstance = this;
 
         var emu = this._emulator;
@@ -699,7 +712,7 @@ class DebugSession extends debug.LoggingDebugSession {
         });
 
         this.sendEvent(new debug.ContinuedEvent(1, true));
-        
+
     }
 
     stepInRequest(response, args) {
@@ -717,8 +730,8 @@ class DebugSession extends debug.LoggingDebugSession {
         emu.step();
 
         let e = new debug.StoppedEvent("breakpoint", Debugger.THREAD_ID);
-        this.sendEvent(e);    
-        
+        this.sendEvent(e);
+
         var stats = emu.getStats();
         var pc = stats.PC;
         var addressInfo = this.getAddressInfo(pc);
@@ -779,7 +792,7 @@ class DebugSession extends debug.LoggingDebugSession {
         var emu = this._emulator;
 
         Utils.debuggerLog(
-            "BREAKPOINT at $" + 
+            "BREAKPOINT at $" +
             this.fmtAddress(breakpoint.address.address) +
             ", line " +
             breakpoint.line
@@ -860,7 +873,7 @@ class DebugSession extends debug.LoggingDebugSession {
             this._breakpoints = [];
         }
 
-        var breakpoint = { 
+        var breakpoint = {
             path: path,
             line: line,
             address: foundAddr,
@@ -904,8 +917,8 @@ class DebugSession extends debug.LoggingDebugSession {
             foundAddr = addr[0];
         } else if (line >= lastLine) {
             foundAddr = addr[addr.length-1];
-        } else { 
-            
+        } else {
+
             // perform binary search
 
             var l = 0;
