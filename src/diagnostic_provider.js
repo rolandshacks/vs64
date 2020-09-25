@@ -48,6 +48,7 @@ class DiagnosticProvider {
         }
     }
 
+    // Serious error - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 46 (Zone <untitled>): Missing '{'.
     // Error - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 12 (Zone <untitled>): Value not defined (qloop).
     // Warning - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 16 (Zone <untitled>): Label name not in leftmost column.
 
@@ -67,6 +68,9 @@ class DiagnosticProvider {
         if (s.indexOf("error - file ") == 0) {
             err.isError = true;
             pos += 13;
+        } else if (s.indexOf("serious error - file ") == 0) {
+            err.isError = true;
+            pos += 21;
         } else if (s.indexOf("warning - file ") == 0) {
             err.isWarning = true;
             pos += 15;
@@ -151,7 +155,7 @@ class DiagnosticProvider {
                 err.text,
                 err.isWarning ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Error
             ));
-    
+
         }
 
         return diagnostics;
