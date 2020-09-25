@@ -118,7 +118,7 @@
 				},
 				{
 					"include": "#keywords-assignment-text"
-				},								
+				},
 				{
 					"include": "#keywords-control"
 				},
@@ -151,7 +151,7 @@
 			"patterns": [
 				{
 					"name": "keyword.instructions",
-					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|align|fill|fi)\\b"
+					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|wo|word|align|fill|fi)\\b"
 				}
 			]
 		},
@@ -162,7 +162,7 @@
 					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text)\\b"
 				}
 			]
-		},				
+		},
 		"keywords-control": {
 			"patterns": [
 				{
@@ -207,6 +207,6 @@
 				}
 			]
 		}
-	},	
+	},
 	"scopeName": "source.asm"
 }
