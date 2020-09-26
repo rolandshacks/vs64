@@ -97,7 +97,7 @@ class DebugInfo {
                         addressRefs = [];
                         debugInfo.sourceRef[source] = addressRefs;
                     }
-                    
+
                     continue;
 
                 } else if (statement.type == StatementType.LABEL) {
@@ -106,7 +106,7 @@ class DebugInfo {
 
                 } else if (statement.type == StatementType.ADDRESS) {
 
-                    var addressInfo = { 
+                    var addressInfo = {
                         address: statement.value,
                         source: source,
                         line: statement.line
@@ -169,7 +169,7 @@ class DebugInfo {
     }
 
     static parseReport(line) {
-        
+
         var tokens = [];
         var comment = null;
         var source = null;
@@ -232,7 +232,7 @@ class DebugInfo {
                 } else if (token == '!addr') {
                     element = { type: ElementType.KEYWORD_ADDR, desc: "keyword-addr" };
                 } else if (token == '!pet') {
-                    element = { type: ElementType.KEYWORD_PET, desc: "keyword-pet" };
+                    element = { type: ElementType.DATA_SIZE, value: 8, desc: "data-size" };
                 } else if (token == '!byte') {
                     element = { type: ElementType.DATA_SIZE, value: 8, desc: "data-size" };
                 } else if (token == '!08') {
@@ -297,14 +297,14 @@ class DebugInfo {
                 type: StatementType.LABEL,
                 name: elements[1].value,
                 line: elements[0].value,
-                desc: "label" 
+                desc: "label"
             };
-            
+
         } else if (elements.length >= 4 &&
             elements[1].type == ElementType.UNKNOWN &&
             elements[2].type == ElementType.EQUALS &&
             elements[3].type == ElementType.UNKNOWN) {
-       
+
             let num = DebugInfo.parseNumber(elements[3].value);
             if (null != num) {
 
@@ -318,13 +318,13 @@ class DebugInfo {
                 };
 
             }
-                
+
         } else if (elements.length >= 5 &&
             elements[1].type == ElementType.KEYWORD_ADDR &&
             elements[2].type == ElementType.UNKNOWN &&
             elements[3].type == ElementType.EQUALS &&
             elements[4].type == ElementType.UNKNOWN) {
-       
+
             let num = DebugInfo.parseNumber(elements[4].value);
             if (null != num) {
                 statement = {
@@ -333,10 +333,10 @@ class DebugInfo {
                     value: num,
                     isAddress: true,
                     line: elements[0].value,
-                    desc: "symbol" 
+                    desc: "symbol"
                 };
             }
-                
+
         } else if (elements.length >= 2 &&
                    elements[1].type == ElementType.UNKNOWN) {
 
@@ -379,7 +379,7 @@ class DebugInfo {
                 elements: elements
             };
         }
-        
+
         return statement;
     }
 
@@ -391,22 +391,22 @@ class DebugInfo {
 
         if (null == s) return null; // empty
         if (s.length > 16) return null; // overflow
-    
+
         var value = 0;
         var hexValue = 0;
-    
+
         var isHex = hex;
         var isNegative = false;
-    
+
         var i = 0;
-    
+
         if (s[i] == '-') {
             isNegative = true;
             i++;
         } else if (s[i] == '+') {
             i++;
         }
-    
+
         if (s[i] == '$') {
             isHex = true;
             i++;
@@ -414,13 +414,13 @@ class DebugInfo {
             isHex = true;
             i+=2;
         }
-    
+
         while (i<s.length) {
-    
+
             let c = s[i++];
-    
+
             var digit = 0;
-    
+
             if (c >= '0' && c <= '9') {
                 digit = (c-'0');
             } else if (c >= 'a' && c <= 'f') {
@@ -432,15 +432,15 @@ class DebugInfo {
             } else {
                 return null; // illegal character
             }
-    
+
             if (!isHex) value = (value * 10) + digit;
             hexValue = (hexValue * 16) + digit;
-    
+
         }
-    
+
         var result = (isHex ? hexValue : value);
         if (isNegative) result = -result;
-    
+
         return result;
     }
 
