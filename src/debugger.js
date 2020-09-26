@@ -647,8 +647,8 @@ class DebugSession extends debug.LoggingDebugSession {
                 value = "(const) " + this.formatByte(exprValue);
             } else if ("$" == expr.charAt(0) && expr.length == 5) {
                 var addr = parseInt(expr.substr(1), 16);
-                var memValue = emu.read(addr);
-                value = "(address) " + expr + " = " + this.formatByte(memValue);
+                var symbolinfo = this.formatSymbol({ value: addr, isAddress:true });
+                value = "(address) " + expr + " = " + symbolinfo.value;
             } else if ("$" == expr.charAt(0) && expr.length == 3) {
                 var numValue = parseInt(expr.substr(1), 16);
                 value = "(const) " + this.formatByte(numValue);
@@ -847,8 +847,13 @@ class DebugSession extends debug.LoggingDebugSession {
             var addrStr = "$" + Utils.fmt(symbol.value.toString(16), 4);
             info.label = "(" + addrStr + ") " + symbol.name;
 
-            var memValue = (symbol.data_size == 16) ? emu.read(symbol.value) | (emu.read(symbol.value+1)<<8) : emu.read(symbol.value);
-            info.value = (symbol.data_size == 16) ? this.formatWord(memValue) : this.formatByte(memValue);
+            if (symbol.data_size == 8 || symbol.value == 0xFFFF) { // avoids emu.read from 0x10000
+                var memValue = emu.read(symbol.value);
+                info.value = this.formatByte(memValue);
+            } else {
+                var memValue = emu.read(symbol.value) | (emu.read(symbol.value+1)<<8);
+                info.value = (symbol.data_size == 16) ? this.formatWord(memValue) : this.formatByte(memValue & 255) + " / " + this.formatWord(memValue);
+            }
 
         } else {
 

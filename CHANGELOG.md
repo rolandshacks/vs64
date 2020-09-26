@@ -56,3 +56,4 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Fixed setting breakpoints
 - Fixed handling acme 'serious error' diagnostics
 - Added '!word' syntax highlighting
+- Added 16-bit values to address watches
