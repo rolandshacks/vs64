@@ -201,6 +201,16 @@ class DebugInfo {
                 } else {
                     var pos1 = i;
                     while (i<line.length && " \t\r\n,=;".indexOf(line[i])<0) { i++; }
+
+                    // break after '...' in long code line to find label
+                    //    22  081b c4554d4220455841....string  !pet "Dumb example", 13, 0
+                    if (tokens.length == 2) {
+                        var posDots = line.indexOf('...',pos1);
+                        if (posDots > 0 && posDots < i) {
+                            i = posDots + 3;
+                        }
+                    }
+
                     var pos2 = i;
                     if (pos2>pos1) {
                         tokens.push(line.substr(pos1, pos2-pos1));
