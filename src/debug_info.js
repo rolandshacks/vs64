@@ -120,7 +120,7 @@ class DebugInfo {
 
                     if (statement.symbol) {
                         debugInfo.symbols.push({
-                            name: statement.symbol.replace(':',''),
+                            name: statement.symbol,
                             value: statement.value,
                             isAddress: true,
                             source: source,
@@ -132,7 +132,7 @@ class DebugInfo {
                     for (var j=0, label; (label=labelStatements[j]); j++) {
                         label.address = statement.value;
                         debugInfo.labels.push({
-                            name: label.name.replace(':',''),
+                            name: label.name,
                             address: label.address,
                             source: source,
                             line: label.line
@@ -144,7 +144,7 @@ class DebugInfo {
                 } else if (statement.type == StatementType.SYMBOL) {
 
                     debugInfo.symbols.push({
-                        name: statement.name.replace(':',''),
+                        name: statement.name,
                         value: statement.value,
                         isAddress: statement.isAddress,
                         source: source,
@@ -198,9 +198,11 @@ class DebugInfo {
                 if ("=,".indexOf(line[i]) >= 0) {
                     tokens.push(line[i]);
                     i++;
+                } else if (line[i] == ':') {
+                    i++; // ignore any ':'
                 } else {
                     var pos1 = i;
-                    while (i<line.length && " \t\r\n,=;".indexOf(line[i])<0) { i++; }
+                    while (i<line.length && " \t\r\n,=;:".indexOf(line[i])<0) { i++; }
 
                     // break after '...' in long code line to find label
                     //    22  081b c4554d4220455841....string  !pet "Dumb example", 13, 0
@@ -394,7 +396,21 @@ class DebugInfo {
     }
 
     static isValidSymbol(token) {
-        return token.charAt(0) == '.' || token.endsWith(':');
+        if (token.charAt(0) == '.' || token.charAt(0) == '@' || token.charAt(0) == '_') {
+            return true;
+        }
+        var firstChar = token.charAt(0).toLowerCase();
+        if (firstChar < 'a' || firstChar > 'z') {
+            return false;
+        }
+        // instructions cannot be symbols or labels
+        if (token.length == 3
+            &&  ("adc,and,asl,bcc,bcs,beq,bit,bmi,bne,bpl,brk,bvc,bvs,clc,cld,cli,clv,cmp,cpx,cpy,dec,dex,"+
+                "dey,eor,inc,inx,iny,jmp,jsr,lda,ldx,ldy,lsr,nop,ora,pha,php,pla,plp,rol,ror,rti,rts,sbc,"+
+                "sec,sed,sei,sta,stx,sty,tax,tay,tsx,txa,txs,tya,").indexOf(token.toLowerCase()) >= 0) {
+            return false;
+        }
+        return true;
     }
 
     static parseNumber(s, hex) {
