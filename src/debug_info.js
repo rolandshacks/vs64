@@ -269,7 +269,9 @@ class DebugInfo {
                         element = { type: ElementType.NUMBER, value: num, desc: "number" };
                     } else {
 
-                        if (2 == i && null != num) {
+                        // Note: The check for i<tokens.length (for labels) and "=" (for symbols) will make
+                        //  a hex letters only token like 'cafe' be detected as unknown instead of address
+                        if (2 == i && null != num && i < tokens.length && tokens[i] != "=") {
                             isCodeLine = true;
                             element = { type: ElementType.ADDRESS, value: DebugInfo.parseNumber(token, true), desc: "address" };
                         } else if ( 3 == i && isCodeLine) {
