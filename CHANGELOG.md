@@ -52,3 +52,9 @@ All notable changes to the **VS64 Development Environment** extension will be do
 ## 0.1.12 Minor Update _(preview)_
 - Fixed dependencies
 
+## 0.1.13 Minor Update _(preview)_
+- Fixed setting breakpoints
+- Fixed handling acme 'serious error' diagnostics
+- Improved symbol and label detection
+- Added '!word' syntax highlighting
+- Show both 8- and 16-bit values of address symbols when their size is unknown

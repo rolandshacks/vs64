@@ -97,7 +97,7 @@ class DebugInfo {
                         addressRefs = [];
                         debugInfo.sourceRef[source] = addressRefs;
                     }
-                    
+
                     continue;
 
                 } else if (statement.type == StatementType.LABEL) {
@@ -106,7 +106,7 @@ class DebugInfo {
 
                 } else if (statement.type == StatementType.ADDRESS) {
 
-                    var addressInfo = { 
+                    var addressInfo = {
                         address: statement.value,
                         source: source,
                         line: statement.line
@@ -120,7 +120,7 @@ class DebugInfo {
 
                     if (statement.symbol) {
                         debugInfo.symbols.push({
-                            name: statement.symbol.replace(':',''),
+                            name: statement.symbol,
                             value: statement.value,
                             isAddress: true,
                             source: source,
@@ -132,7 +132,7 @@ class DebugInfo {
                     for (var j=0, label; (label=labelStatements[j]); j++) {
                         label.address = statement.value;
                         debugInfo.labels.push({
-                            name: label.name.replace(':',''),
+                            name: label.name,
                             address: label.address,
                             source: source,
                             line: label.line
@@ -144,7 +144,7 @@ class DebugInfo {
                 } else if (statement.type == StatementType.SYMBOL) {
 
                     debugInfo.symbols.push({
-                        name: statement.name.replace(':',''),
+                        name: statement.name,
                         value: statement.value,
                         isAddress: statement.isAddress,
                         source: source,
@@ -169,7 +169,7 @@ class DebugInfo {
     }
 
     static parseReport(line) {
-        
+
         var tokens = [];
         var comment = null;
         var source = null;
@@ -198,9 +198,21 @@ class DebugInfo {
                 if ("=,".indexOf(line[i]) >= 0) {
                     tokens.push(line[i]);
                     i++;
+                } else if (line[i] == ':') {
+                    i++; // ignore any ':'
                 } else {
                     var pos1 = i;
-                    while (i<line.length && " \t\r\n,=;".indexOf(line[i])<0) { i++; }
+                    while (i<line.length && " \t\r\n,=;:".indexOf(line[i])<0) { i++; }
+
+                    // break after '...' in long code line to find label
+                    //    22  081b c4554d4220455841....string  !pet "Dumb example", 13, 0
+                    if (tokens.length == 2) {
+                        var posDots = line.indexOf('...',pos1);
+                        if (posDots > 0 && posDots < i) {
+                            i = posDots + 3;
+                        }
+                    }
+
                     var pos2 = i;
                     if (pos2>pos1) {
                         tokens.push(line.substr(pos1, pos2-pos1));
@@ -232,7 +244,7 @@ class DebugInfo {
                 } else if (token == '!addr') {
                     element = { type: ElementType.KEYWORD_ADDR, desc: "keyword-addr" };
                 } else if (token == '!pet') {
-                    element = { type: ElementType.KEYWORD_PET, desc: "keyword-pet" };
+                    element = { type: ElementType.DATA_SIZE, value: 8, desc: "data-size" };
                 } else if (token == '!byte') {
                     element = { type: ElementType.DATA_SIZE, value: 8, desc: "data-size" };
                 } else if (token == '!08') {
@@ -257,7 +269,9 @@ class DebugInfo {
                         element = { type: ElementType.NUMBER, value: num, desc: "number" };
                     } else {
 
-                        if (2 == i && null != num) {
+                        // Note: The check for i<tokens.length (for labels) and "=" (for symbols) will make
+                        //  a hex letters only token like 'cafe' be detected as unknown instead of address
+                        if (2 == i && null != num && i < tokens.length && tokens[i] != "=") {
                             isCodeLine = true;
                             element = { type: ElementType.ADDRESS, value: DebugInfo.parseNumber(token, true), desc: "address" };
                         } else if ( 3 == i && isCodeLine) {
@@ -297,14 +311,14 @@ class DebugInfo {
                 type: StatementType.LABEL,
                 name: elements[1].value,
                 line: elements[0].value,
-                desc: "label" 
+                desc: "label"
             };
-            
+
         } else if (elements.length >= 4 &&
             elements[1].type == ElementType.UNKNOWN &&
             elements[2].type == ElementType.EQUALS &&
             elements[3].type == ElementType.UNKNOWN) {
-       
+
             let num = DebugInfo.parseNumber(elements[3].value);
             if (null != num) {
 
@@ -318,13 +332,13 @@ class DebugInfo {
                 };
 
             }
-                
+
         } else if (elements.length >= 5 &&
             elements[1].type == ElementType.KEYWORD_ADDR &&
             elements[2].type == ElementType.UNKNOWN &&
             elements[3].type == ElementType.EQUALS &&
             elements[4].type == ElementType.UNKNOWN) {
-       
+
             let num = DebugInfo.parseNumber(elements[4].value);
             if (null != num) {
                 statement = {
@@ -333,10 +347,10 @@ class DebugInfo {
                     value: num,
                     isAddress: true,
                     line: elements[0].value,
-                    desc: "symbol" 
+                    desc: "symbol"
                 };
             }
-                
+
         } else if (elements.length >= 2 &&
                    elements[1].type == ElementType.UNKNOWN) {
 
@@ -366,6 +380,10 @@ class DebugInfo {
 
                 if (elements[4] && elements[4].type == ElementType.DATA_SIZE) {
                     statement.data_size = elements[4].value;
+                } else if (!elements[4] || elements[4].token.charAt(0) != '!') {
+                    // no data and no pseudo opcode so probably a label pointing at code
+                    statement.type = StatementType.LABEL;
+                    statement.name = statement.symbol;
                 }
             }
 
@@ -379,34 +397,48 @@ class DebugInfo {
                 elements: elements
             };
         }
-        
+
         return statement;
     }
 
     static isValidSymbol(token) {
-        return token.charAt(0) == '.' || token.endsWith(':');
+        if (token.charAt(0) == '.' || token.charAt(0) == '@' || token.charAt(0) == '_') {
+            return true;
+        }
+        var firstChar = token.charAt(0).toLowerCase();
+        if (firstChar < 'a' || firstChar > 'z') {
+            return false;
+        }
+        // instructions cannot be symbols or labels
+        if (token.length == 3
+            &&  ("adc,and,asl,bcc,bcs,beq,bit,bmi,bne,bpl,brk,bvc,bvs,clc,cld,cli,clv,cmp,cpx,cpy,dec,dex,"+
+                "dey,eor,inc,inx,iny,jmp,jsr,lda,ldx,ldy,lsr,nop,ora,pha,php,pla,plp,rol,ror,rti,rts,sbc,"+
+                "sec,sed,sei,sta,stx,sty,tax,tay,tsx,txa,txs,tya,").indexOf(token.toLowerCase()) >= 0) {
+            return false;
+        }
+        return true;
     }
 
     static parseNumber(s, hex) {
 
         if (null == s) return null; // empty
         if (s.length > 16) return null; // overflow
-    
+
         var value = 0;
         var hexValue = 0;
-    
+
         var isHex = hex;
         var isNegative = false;
-    
+
         var i = 0;
-    
+
         if (s[i] == '-') {
             isNegative = true;
             i++;
         } else if (s[i] == '+') {
             i++;
         }
-    
+
         if (s[i] == '$') {
             isHex = true;
             i++;
@@ -414,13 +446,13 @@ class DebugInfo {
             isHex = true;
             i+=2;
         }
-    
+
         while (i<s.length) {
-    
+
             let c = s[i++];
-    
+
             var digit = 0;
-    
+
             if (c >= '0' && c <= '9') {
                 digit = (c-'0');
             } else if (c >= 'a' && c <= 'f') {
@@ -432,15 +464,15 @@ class DebugInfo {
             } else {
                 return null; // illegal character
             }
-    
+
             if (!isHex) value = (value * 10) + digit;
             hexValue = (hexValue * 16) + digit;
-    
+
         }
-    
+
         var result = (isHex ? hexValue : value);
         if (isNegative) result = -result;
-    
+
         return result;
     }
 
