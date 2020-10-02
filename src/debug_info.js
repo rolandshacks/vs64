@@ -380,10 +380,6 @@ class DebugInfo {
 
                 if (elements[4] && elements[4].type == ElementType.DATA_SIZE) {
                     statement.data_size = elements[4].value;
-                } else if (!elements[4] || elements[4].token.charAt(0) != '!') {
-                    // no data and no pseudo opcode so probably a label pointing at code
-                    statement.type = StatementType.LABEL;
-                    statement.name = statement.symbol;
                 }
             }
 
