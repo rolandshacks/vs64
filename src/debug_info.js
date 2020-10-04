@@ -41,6 +41,11 @@ const StatementType = {
     ADDRESS: 3
 };
 
+const OPCODES =
+    "adc,and,asl,bcc,bcs,beq,bit,bmi,bne,bpl,brk,bvc,bvs,clc,cld,cli,clv,cmp,cpx,cpy,dec,dex,"+
+    "dey,eor,inc,inx,iny,jmp,jsr,lda,ldx,ldy,lsr,nop,ora,pha,php,pla,plp,rol,ror,rti,rts,sbc,"+
+    "sec,sed,sei,sta,stx,sty,tax,tay,tsx,txa,txs,tya,";
+
 //-----------------------------------------------------------------------------------------------//
 // Debug Info
 //-----------------------------------------------------------------------------------------------//
@@ -398,19 +403,11 @@ class DebugInfo {
     }
 
     static isValidSymbol(token) {
-        if (token.charAt(0) == '.' || token.charAt(0) == '@' || token.charAt(0) == '_') {
-            return true;
-        }
-        var firstChar = token.charAt(0).toLowerCase();
-        if (firstChar < 'a' || firstChar > 'z') {
-            return false;
-        }
-        // instructions cannot be symbols or labels
-        if (token.length == 3
-            &&  ("adc,and,asl,bcc,bcs,beq,bit,bmi,bne,bpl,brk,bvc,bvs,clc,cld,cli,clv,cmp,cpx,cpy,dec,dex,"+
-                "dey,eor,inc,inx,iny,jmp,jsr,lda,ldx,ldy,lsr,nop,ora,pha,php,pla,plp,rol,ror,rti,rts,sbc,"+
-                "sec,sed,sei,sta,stx,sty,tax,tay,tsx,txa,txs,tya,").indexOf(token.toLowerCase()) >= 0) {
-            return false;
+        if (token.charAt(0) != '.' && token.charAt(0) != '_') {
+            let ch = token.charAt(0).toLowerCase();
+            if (ch < 'a' || ch > 'z' || (token.length == 3 && OPCODES.indexOf(token.toLowerCase()) >= 0)) {
+                return false;
+            }
         }
         return true;
     }
