@@ -2,6 +2,7 @@ var CPU6502op = require('./opcodes');
 
 /**
  * A 6502 processor emulator
+ * Commits on Apr 25, 2019 febc5517e7d4841194980cbb54ae723e28402a4e
  */
 class CPU6502{
     constructor(){
@@ -19,11 +20,11 @@ class CPU6502{
 	    this.opcode = 0; // Current opcode
 	    this.cycles = 0; // Cycles counter
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     // CPU control
     ////////////////////////////////////////////////////////////////////////////////
-    
+
     /**
      * Reset the processor
      */
@@ -38,7 +39,7 @@ class CPU6502{
         this.PC = (this.read(0xFFFD) << 8) | this.read(0xFFFC);
         this.opcode = this.read( this.PC );
     }
-    
+
     /**
      * Execute a single opcode
      */
@@ -51,7 +52,7 @@ class CPU6502{
         var s = "00"+value.toString(16).toUpperCase();
         return "$" + s.substring(s.length-2);
     }
-    
+
     /**
      * Log the current cycle count and all registers to console.log
      */
@@ -72,7 +73,7 @@ class CPU6502{
 	    msg += " S=" + this.S.toString(16);
 	    console.log(msg);
     }
-    
+
     /**
      * Read a memory location. This function must be overridden with a custom implementation.
      * @param {number} addr - The address to read from.
@@ -80,7 +81,7 @@ class CPU6502{
      read(addr){
         throw new Error('The read method must be overridden');
      }
-     
+
      /**
      * Writa a value to a memory location. This function must be overridden with a custom implementation.
      * @param {number} addr - The address to write to.
@@ -89,7 +90,7 @@ class CPU6502{
      write(addr, value){
         throw new Error('The read method must be overridden');
      }
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     // Subroutines - addressing modes & flags
     ////////////////////////////////////////////////////////////////////////////////
@@ -99,6 +100,13 @@ class CPU6502{
 	    this.addr = (this.read(a+1) << 8) | this.read(a);
 	    this.cycles += 6;
     }
+
+	izyp() {
+	    var a = this.read(this.PC++);
+	    var paddr = (this.read((a+1) & 0xFF) << 8) | this.read(a);
+	    this.addr = (paddr + this.Y);
+		  this.cycles += 6;
+	}
 
     izy() {
 	    var a = this.read(this.PC++);
@@ -112,11 +120,11 @@ class CPU6502{
     }
 
     ind() {
-	    var a = this.read(this.PC);
-	    a |= this.read( (this.PC & 0xFF00) | ((this.PC + 1) & 0xFF) ) << 8;
+	    var a = this.read(this.PC++);
+	    a |= (this.read(this.PC++) << 8);
 	    this.addr = this.read(a);
-	    this.addr |= (this.read(a+1) << 8);
-	    this.cycles += 5;
+	    this.addr |= (this.read( (a & 0xFF00) | ((a + 1) & 0xFF) ) << 8);
+	    this.cycles += 6;
     }
 
     zp() {
@@ -149,6 +157,13 @@ class CPU6502{
 	    this.cycles += 4;
     }
 
+	abxp() {
+	    var paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this.addr = (paddr + this.X);
+		  this.cycles += 5;
+    }
+
     abx() {
 	    var paddr = this.read(this.PC++);
 	    paddr |= (this.read(this.PC++) << 8);
@@ -169,6 +184,13 @@ class CPU6502{
 	    } else {
 		    this.cycles += 4;
 	    }
+    }
+
+	abyp() {
+	    var paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this.addr = (paddr + this.Y);
+      this.cycles += 5;
     }
 
     rel() {
