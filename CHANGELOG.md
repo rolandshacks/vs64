@@ -58,3 +58,8 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Improved symbol and label detection
 - Added '!word' syntax highlighting
 - Show both 8- and 16-bit values of address symbols when their size is unknown
+
+## 0.1.14 Minor Update _(preview)_
+- Fixed 6502 emulator cycle correctness
+  (pull from https://github.com/Torlus/6502.js, thanks to Éric Bissonnette!)
+
