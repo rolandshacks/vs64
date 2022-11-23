@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.14",
+	"version": "0.1.2",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -12,7 +12,7 @@
 	},
 	"private": true,
 	"engines": {
-		"vscode": "^1.30.0"
+		"vscode": "^1.73.0"
 	},
 	"main": "./main.js",
 	"bin": "main.js",
@@ -21,15 +21,16 @@
 		"url": "https://github.com/rosc77/vs64.git"
 	},
 	"scripts": {
-		"postinstall": "node ./node_modules/vscode/bin/install",
-		"test": "node ./node_modules/vscode/bin/test"
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "node ./test/runTest.js"
 	},
 	"devDependencies": {
+		"@types/vscode": "^1.73.0",
 		"@types/mocha": "^2.2.42",
 		"@types/node": "^8.10.53",
 		"eslint": "^4.11.0",
-		"typescript": "^3.6.2",
-		"vscode": "^1.1.36"
+		"typescript": "^3.6.2"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -212,6 +213,6 @@
 	},
 	"dependencies": {
 		"await-notify": "^1.0.1",
-		"vscode-debugadapter": "^1.36.0"
+		"@vscode/debugprotocol": "^1.51.0"
 	}
 }
