@@ -1,0 +1,9 @@
+{
+    "name": "testprog",
+    "description": "",
+    "main": "data/test.asm",
+    "definitions": [],
+    "includes": ["data"],
+    "args": [],
+    "compiler": ""
+  }

@@ -1,0 +1,9 @@
+{
+    "name": "example",
+    "description": "Example project",
+    "main": "src/example.asm",
+    "definitions": [],
+    "includes": ["src/includes"],
+    "args": [],
+    "compiler": ""
+  }

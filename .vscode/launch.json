@@ -1,18 +1,11 @@
 {
 	"version": "0.2.0",
 	"configurations": [
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Launch Program",
-            "program": "${workspaceFolder}/test/standalone.js",
-            "cwd": "${workspaceFolder}/test"
-        },
 		{
-			"name": "Extension",
+			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
-			"runtimeExecutable": "${execPath}",
+			//"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			]
@@ -21,11 +14,38 @@
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",
-			"runtimeExecutable": "${execPath}",
+			//"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"--extensionTestsPath=${workspaceFolder}/test"
 			]
-		}
+		},
+        {
+            "name": "Test Vice Debug",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_vice_debug.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Test Emu Debug",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/test_emu_debug.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Unit Tests",
+            "type": "node",
+            "request": "launch",
+			"console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+            "cwd": "${workspaceFolder}/test",
+			"args": [
+				"--runInBand",
+				"--config", "${workspaceFolder}/test/jest.config.js",
+				"-t", "debug_info"
+			]
+        }
 	]
 }

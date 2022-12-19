@@ -2,7 +2,7 @@
 // Opcode table
 ////////////////////////////////////////////////////////////////////////////////
 
-var CPU6502op = new Array();
+const CPU6502op = new Array();
 
 /*  BRK     */ CPU6502op[0x00] = function(m) { m.imp(); m.brk(); };
 /*  ORA izx */ CPU6502op[0x01] = function(m) { m.izx(); m.ora(); };

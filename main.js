@@ -1,28 +1,30 @@
-/** 
- * 
+/**
+ *
  * VS64 Extension
- * 
+ *
  */
 
 //-----------------------------------------------------------------------------------------------//
 // Check host environment
 //-----------------------------------------------------------------------------------------------//
 
-var VSCodePluginHost = null;
+const process = require('process');
+
+let VSCodePluginHost = null;
 try {
     VSCodePluginHost = require("vscode");
 } catch (e) { ; }
 
 if (null == VSCodePluginHost) {
     console.log("running outside vscode is not supported.");
-    return -1;
+    process.exit(1);
 }
 
 //-----------------------------------------------------------------------------------------------//
 // Bind extension code
 //-----------------------------------------------------------------------------------------------//
 
-var Extension = require("./src/extension.js");
+const Extension = require("./src/extension/extension.js");
 
 //-----------------------------------------------------------------------------------------------//
 // Module exports

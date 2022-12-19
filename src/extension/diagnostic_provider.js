@@ -13,8 +13,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-var Constants = require('src/constants');
-var Utils = require('src/utils');
+const { Constants } = require('settings/settings');
 
 //-----------------------------------------------------------------------------------------------//
 // Diagnostic Provider
@@ -24,7 +23,7 @@ class DiagnosticProvider {
 
     constructor(extension) {
         this._extension = extension;
-        this._context = extension._context;
+        this._context = extension._extensionContext;
         this._diagnostics = null;
 
         {
@@ -54,14 +53,15 @@ class DiagnosticProvider {
 
     parseError(str) {
 
-        var WHITESPACES = " \t\r\n";
+        const WHITESPACES = " \t\r\n";
 
-        var err = {};
-        err.raw = str;
+        const err = {
+            raw: str
+        };
 
-        var pos = 0;
+        let pos = 0;
 
-        var s = str.toLowerCase();
+        let s = str.toLowerCase();
 
         while (WHITESPACES.indexOf(s.charAt(pos)) >= 0) { pos++; }
 
@@ -78,7 +78,7 @@ class DiagnosticProvider {
             return null; // invalid start
         }
 
-        var pos2 = s.indexOf(',' , pos);
+        let pos2 = s.indexOf(',' , pos);
         if (pos2 < pos + 3) {
             return null; // no filename
         }
@@ -142,7 +142,7 @@ class DiagnosticProvider {
 
         let diagnostics = [];
 
-        for (var i=0, err; (err=set[i]); i++) {
+        for (let i=0, err; (err=set[i]); i++) {
 
             let line = document.lineAt(err.line);
 
@@ -166,4 +166,6 @@ class DiagnosticProvider {
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
 
-module.exports = DiagnosticProvider;
+module.exports = {
+    DiagnosticProvider: DiagnosticProvider
+}

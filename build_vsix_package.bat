@@ -6,5 +6,5 @@ REM *
 
 SETLOCAL
 call npm install
-vsce package
+vsce package --no-yarn --dependencies
 ENDLOCAL
