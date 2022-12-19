@@ -63,3 +63,16 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Fixed 6502 emulator cycle correctness
   (pull from https://github.com/Torlus/6502.js, thanks to Éric Bissonnette!)
 
+## 2.0.0 Major Update _(preview)_
+- Added project configuration
+- Added integrated build system to task system
+- Added launch configuration for 6502 emulation and Vice emulator
+- Added debugger support for Vice emulator binary monitor protocol
+- Massively improved integrated 6502 cpu debugging implementation
+- Extended C64 specific debugger information
+- Added on-the-fly disassembly of C64 program files
+- Added ACME problem matcher
+- Improved handling of ACME code during debugging
+- Improved general robustness, quality and testability
+- Removed support for C64 debugger
+

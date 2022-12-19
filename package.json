@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "0.1.14",
+	"version": "2.0.0",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -12,35 +12,40 @@
 	},
 	"private": true,
 	"engines": {
-		"vscode": "^1.30.0"
+		"vscode": "^1.73.0"
 	},
 	"main": "./main.js",
 	"bin": "main.js",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/rosc77/vs64.git"
+		"url": "https://github.com/rolandshacks/vs64"
 	},
 	"scripts": {
-		"postinstall": "node ./node_modules/vscode/bin/install",
-		"test": "node ./node_modules/vscode/bin/test"
+		"lint": "eslint .",
+		"pretest": "npm run lint",
+		"test": "cd test && jest --runInBand --config ./jest.config.js"
+	},
+	"dependencies": {
+		"@vscode/debugadapter": "1.51.0",
+		"await-notify": "^1.0.1"
 	},
 	"devDependencies": {
-		"@types/mocha": "^2.2.42",
-		"@types/node": "^8.10.53",
-		"eslint": "^4.11.0",
-		"typescript": "^3.6.2",
-		"vscode": "^1.1.36"
+		"@types/node": "^18.11.11",
+		"@types/vscode": "^1.73.0",
+		"eslint": "^8.29.0",
+		"jest": "^29.3.1",
+		"typescript": "^3.6.2"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
 		"theme": "light"
 	},
 	"activationEvents": [
+		"onStartupFinished",
 		"onLanguage:asm",
 		"onCommand:c64.build",
-		"onCommand:c64.run",
-		"onCommand:c64.debug",
-		"onDebug"
+		"onDebug",
+		"onCommand:workbench.action.tasks.runTask"
 	],
 	"categories": [
 		"Programming Languages",
@@ -50,21 +55,21 @@
 		"Formatters"
 	],
 	"contributes": {
-		"commands": [
+		"problemMatchers": [
 			{
-				"command": "c64.build",
-				"title": "build",
-				"category": "C64"
-			},
-			{
-				"command": "c64.run",
-				"title": "run",
-				"category": "C64"
-			},
-			{
-				"command": "c64.debug",
-				"title": "debug",
-				"category": "C64"
+				"name": "acme",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^\\s*(\\w*)\\s*-\\s*\\w*\\s*([\\w:\\\\/\\.]*)\\s*,\\s*\\w*\\s*(\\d*)\\s*(\\(.*\\))?\\s*:\\s*(.*)$",
+					"severity": 1,
+					"file": 2,
+					"location": 3,
+					"message": 5
+				}
 			}
 		],
 		"languages": [
@@ -77,9 +82,7 @@
 				],
 				"extensions": [
 					".asm",
-					".acme",
-					".a",
-					".h"
+					".acme"
 				],
 				"configuration": "./language/asm.language.json"
 			}
@@ -97,48 +100,49 @@
 				"path": "./language/asm.snippets.json"
 			}
 		],
+		"customEditors": [
+			{
+				"viewType": "vs64.prg",
+				"displayName": "C64 Program",
+				"selector": [
+					{
+						"filenamePattern": "*.prg"
+					}
+				]
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "C64 tools configuration",
 			"properties": {
-				"c64.verbose": {
-					"type": "boolean",
-					"default": false,
-					"description": "Flag to enable verbose output of extension"
-				},
-				"c64.definitions": {
-					"type": "string",
-					"default": "",
-					"description": "Comma-separated list of symbols to define, e.g. A=1,B=4"
-				},
 				"c64.autoBuild": {
 					"type": "boolean",
 					"default": true,
-					"description": "Enable automatic build before running or debugging"
+					"description": "Enable automatic build after save"
 				},
-				"c64.backgroundBuild": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable automatic background build after source changes"
-				},
-				"c64.assemblerPath": {
+				"c64.compilerExecutable": {
 					"type": "string",
 					"default": "acme",
-					"description": "Path to assembler executable"
+					"description": "Path to compiler executable"
 				},
-				"c64.assemblerArgs": {
+				"c64.compilerDefines": {
 					"type": "string",
 					"default": "",
-					"description": "Additional assembler command line options"
+					"description": "Global compiler defines"
 				},
-				"c64.assemblerSearchPath": {
+				"c64.compilerIncludePaths": {
 					"type": "string",
-					"default": "./",
-					"description": "Assembler source search path (use comma to separate items)"
+					"default": "",
+					"description": "Global compiler include paths"
 				},
-				"c64.emulatorPath": {
+				"c64.compilerArgs": {
 					"type": "string",
-					"default": "x64",
+					"default": "",
+					"description": "Global additional compiler command line options"
+				},
+				"c64.emulatorExecutable": {
+					"type": "string",
+					"default": "x64sc",
 					"description": "Path to emulator executable"
 				},
 				"c64.emulatorArgs": {
@@ -146,20 +150,24 @@
 					"default": "",
 					"description": "Additional emulator command line options"
 				},
-				"c64.debuggerEnabled": {
-					"type": "boolean",
-					"default": true,
-					"description": "Flag to enable C64 debugger instead of emulator"
-				},
-				"c64.debuggerPath": {
+				"c64.loglevel": {
 					"type": "string",
-					"default": "c64debugger",
-					"description": "Path to C64 debugger executable"
-				},
-				"c64.debuggerArgs": {
-					"type": "string",
-					"default": "",
-					"description": "Additional C64 debugger command line options"
+					"default": "info",
+					"enum": [
+						"error",
+						"warn",
+						"info",
+						"debug",
+						"trace"
+					],
+					"enumDescriptions": [
+						"Set logging level to ERROR",
+						"Set logging level to WARNING",
+						"Set logging level to INFO (default)",
+						"Set logging level to DEBUG. Use this to show debugging information",
+						"Set logging level to TRACE. This is the maximum verbosity setting."
+					],
+					"description": "Set console output verbosity level"
 				}
 			}
 		},
@@ -168,26 +176,41 @@
 				"language": "asm"
 			}
 		],
+		"taskDefinitions": [
+			{
+				"type": "vs64",
+				"required": [],
+				"properties": {
+					"action": {
+						"type": "string",
+						"description": "Task action to be performed. 'build', 'rebuild' and 'clean' is supported."
+					},
+					"project": {
+						"type": "string",
+						"description": "Optional project file if not using the default 'project-config.json'."
+					}
+				}
+			}
+		],
 		"debuggers": [
 			{
-				"type": "asm",
-				"label": "C64 Debugger",
-				"program": "./src/debugger.js",
+				"type": "6502",
+				"label": "6502 Cpu Debugger",
 				"runtime": "node",
 				"configurationAttributes": {
 					"launch": {
 						"required": [
-							"binary"
+							"program"
 						],
 						"properties": {
-							"binary": {
+							"program": {
 								"type": "string",
-								"description": "Path to C64 binary",
+								"description": "Path to compiled program",
 								"default": ""
 							},
 							"pc": {
 								"type": "string",
-								"description": "Initial program counter (PC)",
+								"description": "Override initial program counter (PC)",
 								"default": "$0000"
 							}
 						}
@@ -196,22 +219,83 @@
 				"initialConfigurations": [],
 				"configurationSnippets": [
 					{
-						"label": "C64 Debugger: Launch",
-						"description": "A new configuration for launching the C64 debugger.",
+						"label": "Launch 6502 program",
+						"description": "A new configuration for the 6502 debugger.",
 						"body": {
-							"type": "asm",
+							"type": "6502",
 							"request": "launch",
 							"name": "Launch Program",
-							"binary": ""
+							"program": "${workspaceFolder}/build/program.prg"
+						}
+					}
+				],
+				"variables": {}
+			},
+			{
+				"type": "vice",
+				"label": "Debugger for Vice Emulator",
+				"runtime": "node",
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"program"
+						],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "Path to compiled program",
+								"default": ""
+							},
+							"hostname": {
+								"type": "string",
+								"description": "Hostname or IP address of VICE host process",
+								"default": "localhost"
+							},
+							"port": {
+								"type": "number",
+								"description": "Port of VICE host process",
+								"default": "6502"
+							}
+						}
+					},
+					"attach": {
+						"required": [
+							"program"
+						],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "Path to compiled program",
+								"default": ""
+							},
+							"hostname": {
+								"type": "string",
+								"description": "Hostname or IP address of VICE host process",
+								"default": "localhost"
+							},
+							"port": {
+								"type": "number",
+								"description": "Port of VICE host process",
+								"default": "6502"
+							}
+						}
+					}
+				},
+				"initialConfigurations": [],
+				"configurationSnippets": [
+					{
+						"label": "Launch in Vice Emulator",
+						"description": "A new configuration for the Vice debugger.",
+						"body": {
+							"type": "vice",
+							"request": "launch",
+							"name": "Launch Program",
+							"program": "${workspaceFolder}/build/program.prg"
 						}
 					}
 				],
 				"variables": {}
 			}
 		]
-	},
-	"dependencies": {
-		"await-notify": "^1.0.1",
-		"vscode-debugadapter": "^1.36.0"
 	}
 }

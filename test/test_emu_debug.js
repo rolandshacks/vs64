@@ -9,7 +9,7 @@ const fs = require('fs');
 // Init module and lookup path
 //-----------------------------------------------------------------------------------------------//
 
-global._sourcebase = path.resolve(__dirname, "..");
+global._sourcebase = path.resolve(__dirname, "../src");
 global.BIND = function(_module) {
     _module.paths.push(global._sourcebase);
 };
@@ -20,11 +20,13 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-var Constants = require('src/constants');
-var Emulator = require('src/emulator');
+const { Logger } = require('utilities/logger');
+const { Emulator } = require('emulator/emu');
 
-var Utils = {
-    
+const logger = new Logger("InternalEmu");
+
+const Utils = {
+
     getAbsoluteFilename: function(filename) {
         return filename;
     },
@@ -32,9 +34,9 @@ var Utils = {
     findExecutable: function (filename) {
 
         if (null == filename || filename == "") return filename;
-        
+
         if ("win32" == process.platform) {
-            
+
             let ext = path.extname(filename);
             if (ext == "") {
                 filename += ".exe";
@@ -45,9 +47,8 @@ var Utils = {
         }
 
         return filename;
-    }    
+    }
 }
-
 
 //-----------------------------------------------------------------------------------------------//
 // Application
@@ -60,31 +61,17 @@ class Application {
     testFn() {
 
         let input = "C:\\tools\\c64\\vice\\x64sc";
-        
-        console.log(Utils.findExecutable(input));
-        console.log(Utils.findExecutable("abc.exe"));
-        console.log(Utils.findExecutable("abc.com"));
-        console.log(Utils.findExecutable("abc"));
-        console.log(Utils.findExecutable("abc."));
-        
+
+        logger.info(Utils.findExecutable(input));
+        logger.info(Utils.findExecutable("abc.exe"));
+        logger.info(Utils.findExecutable("abc.com"));
+        logger.info(Utils.findExecutable("abc"));
+        logger.info(Utils.findExecutable("abc."));
+
     }
 
     run() {
-
-        //var emu = this._emulator;
-
-        //emu.loadProgram('./programs/.cache/src/test.prg', Constants.ProgramAddressCorrection);
-        //emu.loadReport('./programs/.cache/src/test.report');
-        //emu.loadDebugInfo("./example.report");
-
-        //emu.clearBreakpoints();
-        //emu.addBreakpoint(11);
-
-        //emu.start();
-        //setTimeout(function() { emu.stop(); }, 1000);
-
         this.testFn();
-
     }
 
     convertRoms() {
@@ -95,17 +82,17 @@ class Application {
     }
 
     patchKernel() {
-        var rom = fs.readFileSync("../roms/kernal.rom");
+        let rom = fs.readFileSync("../roms/kernal.rom");
         rom[0x1d69] = 0x9f;
         fs.writeFileSync("../roms/fastkernal.rom", rom);
     }
 
     convertRom(filename) {
 
-        var basename = path.basename(filename, ".rom");
-        var romname = basename.toUpperCase();
-        var outfilename = path.join(path.dirname(filename), basename) + ".js";
-        var rom = null;
+        let basename = path.basename(filename, ".rom");
+        let romname = basename.toUpperCase();
+        let outfilename = path.join(path.dirname(filename), basename) + ".js";
+        let rom = null;
 
         try {
             rom = fs.readFileSync(filename);
@@ -117,11 +104,11 @@ class Application {
             }
         }
 
-        var romString = rom.toString("base64");
+        let romString = rom.toString("base64");
 
-        var s = "";
-        
-        s += "var _" + romname + " = Buffer.from(\n";
+        let s = "";
+
+        s += "let _" + romname + " = Buffer.from(\n";
         s += "\"" + romString + "\", \"base64\");\n";
         s += "module.exports = _" + romname + ";\n";
 
@@ -137,7 +124,7 @@ class Application {
 // Application entry
 //-----------------------------------------------------------------------------------------------//
 function main() {
-    var app = new Application();
+    let app = new Application();
     if (null != app.init) app.init();
     app.run();
     if (null != app.shutdown) app.shutdown();

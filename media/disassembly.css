@@ -1,0 +1,94 @@
+
+/* Statement Line */
+
+.statement {
+	font-size: var(--vscode-editor-font-size);
+	font-family: var(--vscode-editor-font-family);
+	color: var(--vscode-editor-foreground);
+}
+
+/* Empty */
+
+.empty {
+}
+
+.space {
+}
+
+/* General Comments */
+
+.linenumber {
+	user-select: none;
+	color: var(--vscode-editorLineNumber-foreground);
+	margin-right: 2.0em;
+}
+
+.linecomment {
+	color: var(--vscode-editorInfo-foreground);
+}
+
+.comment {
+	color: var(--vscode-editorHint-foreground);
+	background: var(--vscode-badge-background);
+	border-radius: 4px;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+/* Labels */
+
+.label {
+	color: var(--vscode-button-foreground);
+	background: var(--vscode-button-background);
+
+	border-radius: 4px;
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+/* Instructions */
+
+.address {
+	color: var(--vscode-editorLineNumber-foreground);
+}
+
+.opcode {
+}
+
+.hex {
+	border-left: 1px solid;
+	border-left-color: var(--vscode-input-border);
+	padding-left: 0.5em;
+
+	color: var(--vscode-editorLineNumber-foreground);
+}
+
+/* Buffers */
+
+.prefix {
+	color: var(--vscode-editorHint-foreground);
+}
+
+.data {
+	color: var(--vscode-editorLineNumber-foreground);
+}
+
+.indentedspaces {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+}
+
+.jumplabel {
+	color: var(--vscode-editorHint-foreground);
+	background: var(--vscode-badge-background);
+	padding-left: 0.3em;
+	padding-right: 0.3em;
+	border-radius: 4px;
+}
+
+.params {
+	color: var(--vscode-editorLineNumber-foreground);
+	padding-left: 0.3em;
+	padding-right: 0.3em;
+	border-radius: 4px;
+}

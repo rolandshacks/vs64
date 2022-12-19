@@ -1,10 +1,10 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"target": "es6",
+		"target": "ES2022",
 		"checkJs": false,  /* Typecheck .js files. */
 		"lib": [
-			"es6"
+			"ES2022"
 		]
 	},
 	"exclude": [
