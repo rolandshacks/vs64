@@ -198,10 +198,15 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._emulatorProcess = new ViceProcess();
 
         await this._emulatorProcess.spawn(
-            VscodeUtils.getAbsoluteFilename(settings.emulatorExecutable),
+            settings.emulatorExecutable,
             settings.emulatorArgs,
             (proc) => {
-                // exit function
+                if (proc) {
+                    if (proc.exitCode != 0) {
+                        const output = proc.stdout.join("\n");
+                        console.log(output);
+                    }
+                }
                 instance._emulatorProcess = null;
                 instance.sendEvent(new DebugAdapter.TerminatedEvent());
             }
@@ -335,8 +340,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const emuPort = args.port||6502;
 
         let emu = null;
-        emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort)
-        .catch((err) => {});
+        emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort);
 
         if (!emu) {
             response.success = false;

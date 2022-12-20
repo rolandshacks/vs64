@@ -100,8 +100,6 @@ class Emulator extends DebugRunner {
         const callStackDepth = cpu._callStack.length;
 
         if (debugStepType == DebugStepType.STEP_OVER) {
-            console.log("STEP OVER");
-
             if (debugInfo) {
                 if (cpu._opcode == 0x20) { // JSR
                     runFlags.stopAtStackDepth = callStackDepth;
@@ -109,7 +107,6 @@ class Emulator extends DebugRunner {
             }
 
         } else if (debugStepType == DebugStepType.STEP_OUT) {
-            console.log("STEP OUT");
             runFlags.stopAtStackDepth = (callStackDepth > 0) ? callStackDepth - 1 : null;
         }
 

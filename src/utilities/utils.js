@@ -322,11 +322,7 @@ let Utils = {
             proc.on('exit', (code) => {
                 procInfo.exited = true;
                 procInfo.exitCode = code;
-                if (0 == code) {
-                    if (exitFunction) exitFunction(procInfo);
-                } else {
-                    reject(procInfo);
-                }
+                if (exitFunction) exitFunction(procInfo);
             });
 
         });

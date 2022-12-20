@@ -141,7 +141,7 @@ Can be either "6502" to run the integrated 6502 cpu emulator or "vice" to run a 
 > `request`: Request type
 
 Use "launch" here to run a new emulation session. In case "vice" is selected as debugger type, then a new VICE process is started.
-Use "attach" to attach to a running VICE process. VICE needs to have the binary monitor interface enabled, or has to be started with the `-binarymonitor` command line argument.
+Use "attach" to attach to a running VICE process. VICE needs to have the binary monitor interface enabled, or has to be started with the `-binarymonitor` and `-autostartprgmode 1` command line arguments.
 
 > `name`: Launch configuration name
 

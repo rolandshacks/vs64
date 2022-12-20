@@ -1013,6 +1013,7 @@ class ViceProcess {
 
         const args = [];
         args.push("-binarymonitor");
+        args.push("-autostartprgmode"); args.push("1");
         if (params) {
             args.push(...Utils.splitQuotedString(params));
         }

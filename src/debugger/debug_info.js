@@ -661,10 +661,6 @@ class DebugInfo {
             }
         }
 
-        if (!foundAddressInfo) {
-            console.log("NOT FOUND");
-        }
-
         return foundAddressInfo;
     }
 

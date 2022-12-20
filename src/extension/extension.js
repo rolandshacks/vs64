@@ -269,7 +269,6 @@ class Extension {
         for (const task of tasks) {
             const definition = task.definition;
             if (!definition) continue;
-            console.log("task: " + definition.action);
             if (definition.action == 'build') {
                 vscode.tasks.executeTask(task);
             }
