@@ -75,4 +75,3 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Improved handling of ACME code during debugging
 - Improved general robustness, quality and testability
 - Removed support for C64 debugger
-

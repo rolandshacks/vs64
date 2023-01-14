@@ -141,7 +141,7 @@ Can be either "6502" to run the integrated 6502 cpu emulator or "vice" to run a 
 > `request`: Request type
 
 Use "launch" here to run a new emulation session. In case "vice" is selected as debugger type, then a new VICE process is started.
-Use "attach" to attach to a running VICE process. VICE needs to have the binary monitor interface enabled, or has to be started with the `-binarymonitor` command line argument.
+Use "attach" to attach to a running VICE process. VICE needs to have the binary monitor interface enabled, or has to be started with the `-binarymonitor` and `-autostartprgmode 1` command line arguments.
 
 > `name`: Launch configuration name
 
@@ -163,23 +163,29 @@ Optional task name, can be `${defaultBuildTask}` to use the currently configured
 
 To setup the C64 development environment, go to Preferences>Settings and check the following settings:
 
-> C64: Compiler Executable
+> C64: Assembler Executable
 
 Path to assembler executable.
 
 Example: `C:\Tools\c64\acme\acme.exe`
 
-> C64: Compiler Defines
+> C64: Compiler Executable
 
-Global compiler defines.
+Path to compiler executable.
 
-> C64: Compiler Includes
+Example: `C:\Tools\c64\cc65\bin\cc65`
 
-Global compiler include paths.
+> C64: Build Defines
 
-> C64: Compiler Args
+Global build defines.
 
-Global compiler command line options.
+> C64: Build Includes
+
+Global build include paths.
+
+> C64: Build Args
+
+Global build command line options.
 
 > C64: Auto Build
 

@@ -137,17 +137,17 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     }
 
     dispatchRequest(request) {
-        logger.trace(`dispatch request: ${request.command}(${JSON.stringify(request.arguments) })`);
+        //logger.trace(`dispatch request: ${request.command}(${JSON.stringify(request.arguments) })`);
         return super.dispatchRequest(request);
     }
 
     sendResponse(response) {
-        logger.trace(`send response: ${response.command}(${JSON.stringify(response.body) })`);
+        //logger.trace(`send response: ${response.command}(${JSON.stringify(response.body) })`);
         return super.sendResponse(response);
     }
 
     sendEvent(event) {
-        logger.trace(`send event: ${event.event}(${JSON.stringify(event) })`);
+        //logger.trace(`send event: ${event.event}(${JSON.stringify(event) })`);
         return super.sendEvent(event);
     }
 
@@ -159,6 +159,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsLogPoints = true;
         response.body.supportsReadMemoryRequest = true;
+        response.body.supportsMemoryReferences = true;
 
 		this.sendResponse(response);
 
@@ -198,10 +199,15 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._emulatorProcess = new ViceProcess();
 
         await this._emulatorProcess.spawn(
-            VscodeUtils.getAbsoluteFilename(settings.emulatorExecutable),
+            settings.emulatorExecutable,
             settings.emulatorArgs,
             (proc) => {
-                // exit function
+                if (proc) {
+                    if (proc.exitCode != 0) {
+                        const output = proc.stdout.join("\n");
+                        console.log(output);
+                    }
+                }
                 instance._emulatorProcess = null;
                 instance.sendEvent(new DebugAdapter.TerminatedEvent());
             }
@@ -335,8 +341,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const emuPort = args.port||6502;
 
         let emu = null;
-        emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort)
-        .catch((err) => {});
+        emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort);
 
         if (!emu) {
             response.success = false;
@@ -347,8 +352,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         try {
 
-            let debugInfoPath = Utils.changeExtension(binaryPath, ".report");
-            this._debugInfo = new DebugInfo(debugInfoPath, this._project);
+            const project = this._project;
+
+            let debugInfoPath = project.outdebug;
+            this._debugInfo = new DebugInfo(debugInfoPath, project);
             await this.syncBreakpoints();
 
             await emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
@@ -389,7 +396,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             const codeRef = breakpoint.location;
             if (!codeRef) continue;
 
-            const location = debugInfo.findNearestCodeLine(codeRef.uri.fsPath, codeRef.range.start.line+1);
+            const fileToFind = codeRef.uri.fsPath;
+            const lineToFind = codeRef.range.start.line+1;
+
+            const location = debugInfo.findNearestCodeLine(fileToFind, lineToFind);
             if (!location) continue;
 
             this._breakpoints.add(new Breakpoint(
@@ -548,14 +558,28 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const stackFrames = [];
 
         for (const addressInfo of addressInfos) {
+
             const source = {
                 name: path.basename(addressInfo.source),
                 path: addressInfo.source,
                 presentationHint: "normal"
             };
 
-            const debugLabel = addressInfo.findLabel();
-            const frameName = debugLabel ? debugLabel.name : "frame " + stackFrameNumber;
+            const addr = addressInfo.address;
+            let frameName = debugInfo.getScopeName(addr);
+
+            if (null == frameName) {
+                const debugLabel = addressInfo.findLabel();
+                if (debugLabel) {
+                    frameName = debugLabel.name;
+                } else {
+                    if (stackFrameNumber > 0) {
+                        frameName = "current";
+                    } else {
+                        "caller " + stackFrameNumber;
+                    }
+                }
+            }
 
             stackFrames.push({
                 id: stackFrameNumber,
@@ -630,6 +654,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             return;
         }
 
+        const debugInfo = this._debugInfo;
+
         args = args||{};
 
         const cpuState = emu.getCpuState();
@@ -670,11 +696,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
                 variables = [];
 
-                if (null != this._debugInfo && null != this._debugInfo.symbols) {
+                if (null != debugInfo && null != debugInfo._symbols) {
 
-                    let symbols = this._debugInfo.symbols;
+                    let symbols = debugInfo._symbols.values();
 
-                    for (let i=0, symbol; (symbol=symbols[i]); i++) {
+                    for (const symbol of symbols) {
 
                         let info = await this.formatSymbol(symbol);
 
@@ -821,6 +847,22 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     }
                 ];
 
+                if (debugInfo.hasCStack) {
+
+                    const mem = await emu.readMemory(0x02, 0x03);
+                    const stackPointer = (mem[1] << 8) + mem[0];
+
+                    variables.push(
+                        {
+                            name: "C-Stack",
+                            type: "stack",
+                            value: Formatter.formatAddress(stackPointer),
+                            variablesReference: 0,
+                            memoryReference: stackPointer
+                        }
+                    );
+                }
+
             }
         } else if (args.filter == "indexed") {
             if (DebugConstants.VARIABLES_STACK + 1000 == args.variablesReference) {
@@ -877,17 +919,30 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         let value = null;
         let address = null;
 
-        if ("#$" == expr.substr(0, 2) && expr.length == 4) {
-            let exprValue = parseInt(expr.substr(2), 16);
+        if ("#$" == expr.substr(0, 2) && expr.length >= 5) {
+            const exprValue = parseInt(expr.substr(2), 16);
+            value = "(const) " + Formatter.formatWord(exprValue);
+        } else if ("#$" == expr.substr(0, 2) && expr.length >= 3) {
+            const exprValue = parseInt(expr.substr(2), 16);
             value = "(const) " + Formatter.formatByte(exprValue);
-        } else if ("$" == expr.charAt(0) && expr.length == 5) {
-            let addr = parseInt(expr.substr(1), 16);
-            let symbolinfo = await this.formatSymbol({ value: addr, isAddress:true });
-            value = "(address) " + expr + " = " + symbolinfo.value;
+        } else if ("$" == expr.charAt(0) && expr.length > 1) {
+            let addr = null;
+            let args = null;
+            let data_size = null;
+
+            const pos = expr.indexOf(',');
+            if (pos >= 0) {
+                addr = parseInt(expr.substr(1, pos), 16);
+                args = expr.substr(pos+1);
+                data_size = parseInt(args);
+                value = await this.formatMemory(addr, data_size);
+            } else {
+                addr = parseInt(expr.substr(1), 16);
+                let info = await this.formatSymbol({ value: addr, isAddress: true });
+                value = info.value;
+            }
+
             address = addr;
-        } else if ("$" == expr.charAt(0) && expr.length == 3) {
-            let numValue = parseInt(expr.substr(1), 16);
-            value = "(const) " + Formatter.formatByte(numValue);
         } else if (expr.toUpperCase() == "A") {
             value = "(accumulator) A = " + Formatter.formatByte(registers.A);
         } else if (expr.toUpperCase() == "X") {
@@ -900,10 +955,43 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else if (expr.toUpperCase() == "SP") {
             value = "(stack pointer) SP = " + Formatter.formatByte(registers.S);
         } else {
-            let symbol = debugInfo.getSymbol(expr);
+
+            const pos = expr.indexOf(',');
+            let symbolName = null;
+            let dataSize = null;
+            if (pos >= 0) {
+                symbolName = expr.substr(0, pos);
+                args = expr.substr(pos+1);
+                dataSize = parseInt(args);
+            } else {
+                symbolName = expr;
+            }
+
+            let symbol = null;
+
+            if (debugInfo.supportsScopes) {
+                const pc = cpuState.cpuRegisters.PC;
+                symbol = debugInfo.getScopedSymbol(pc, symbolName);
+                if (symbol) {
+                    const relativeAddress = symbol.value;
+                    const mem = await emu.readMemory(0x02, 0x03);
+                    const stackPointerMem = (mem[1] << 8) + mem[0];
+                    const address = stackPointerMem + relativeAddress;
+                    symbol.value = address;
+                }
+            }
+
+            if (null == symbol) {
+                symbol = debugInfo.getSymbol(symbolName);
+            }
+
             if (null != symbol) {
-                let info = await this.formatSymbol(symbol);
-                value = info.label + " = " + info.value;
+                if (symbol.isAddress && dataSize) {
+                    value = await this.formatMemory(symbol.value, dataSize);
+                } else {
+                    let info = await this.formatSymbol(symbol);
+                    value = info.value;
+                }
             } else {
                 let label = debugInfo.getLabel(expr);
                 if (null != label) {
@@ -978,7 +1066,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     }
 
     async readMemoryRequest(response, args) {
-        logger.trace("readMemoryRequest");
+        //logger.trace("readMemoryRequest");
 
         const emu = this._emulator;
 
@@ -995,28 +1083,34 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (startAddress < 0 || startAddress > 0xffff) {
             response.body = {
                 address: startAddress.toString(),
-                data: '',
+                data: null,
                 unreadableBytes: count
             };
             this.sendResponse(response);
             return;
         }
 
-        const endAddress = Math.min(0xffff, startAddress + count - ((count > 0) ? 1 : 0));
+        const requestedEndAddress = startAddress + count - ((count > 0) ? 1 : 0);
+        const endAddress = Math.min(0xffff, requestedEndAddress);
         const memorySnapshot = await this.getMemorySnapshot();
         const mem = memorySnapshot.subarray(startAddress, endAddress);
+        const bytesRead = endAddress - startAddress + 1;
 
         response.body = {
             address: startAddress.toString(),
             data: Utils.toBase64(mem),
-            unreadableBytes: (endAddress < 0xffff) ? (0xffff - endAddress) : 0
+            unreadableBytes: count - bytesRead
         };
 
 		this.sendResponse(response);
 
     }
 
-    showCode(filename, line) {
+    showCode(addressInfo) {
+
+        const filename = addressInfo.source;
+        const line = addressInfo.line;
+
         logger.debug("show code " + filename + ":" + line);
 
         vscode.workspace.openTextDocument(filename)
@@ -1095,7 +1189,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             breakpoint.line
         );
 
-        this.showCode(breakpoint.source, breakpoint.line);
+        this.showCode(breakpoint);
 
     }
 
@@ -1110,7 +1204,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             let addressInfo = debugInfo.getAddressInfo(pc);
             if (null != addressInfo) {
                 msg += ", line " + addressInfo.line;
-                this.showCode(addressInfo.source, addressInfo.line);
+                this.showCode(addressInfo);
             }
         }
 
@@ -1138,9 +1232,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             let addrStr = "$" + Utils.fmt(symbol.value.toString(16), 4);
             info.label = "(" + addrStr + ") " + symbol.name;
 
-            const readSize = (symbol.data_size == 16 && symbol.value != 0xFFFF) ? 2 : 1;
+            const readSize = (symbol.data_size == 16 && symbol.value != 0xffff) ? 2 : 1;
             const memValue = await emu.read(symbol.value, readSize);
-
             if (readSize == 1) {
                 info.value = Formatter.formatByte(memValue);
             } else {
@@ -1155,6 +1248,14 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         return info;
+    }
+
+    async formatMemory(address, memorySize) {
+        const emu = this._emulator;
+        if (!memorySize) memorySize = 1;
+        const readSize = Math.min(256, memorySize);
+        const memBuffer = await emu.readMemory(address, address + readSize - 1);
+        return Utils.formatMemory(memBuffer, readSize, ' ');
     }
 
 }

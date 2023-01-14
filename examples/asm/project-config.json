@@ -1,9 +1,11 @@
 {
     "name": "example",
     "description": "Example project",
-    "main": "src/example.asm",
+    "toolkit": "acme",
+    "main": "src/main.asm",
+    "build": "debug",
     "definitions": [],
     "includes": ["src/includes"],
     "args": [],
     "compiler": ""
-  }
+}

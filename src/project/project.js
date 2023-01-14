@@ -66,6 +66,35 @@ class Project {
         this._modificationTime = null;
     }
 
+    get name() { return this._name; }
+    get toolkit() { return this._toolkit; }
+    get sources() { return this._sources; }
+    get description() { return this._description_; }
+    get basedir() { return this._basedir; }
+    get builddir() { return this._builddir; }
+    get files() { return this._files||[]; }
+    get outname() { return this._outname; }
+    get outfile() { return this._outfile; }
+    get outmap() { return this._outmap; }
+    get outlabels() { return this._outlabels; }
+    get outdebug() { return this._outdebug; }
+    get outlisting() { return this._outlisting; }
+    get cachefile() { return this._cachefile; }
+    get compilecommandsfile() { return this._compilecommandsfile; }
+    get buildfiles() { return this._buildfiles; }
+    get includes() { return this._includes; }
+    get definitions() { return this._definitions; }
+    get libraries() { return this._libraries; }
+    get args() { return this._args; }
+    get configfile() { return this._configfile; }
+    get settings() { return this._settings; }
+    get compiler() { return this._compiler; }
+    get assembler() { return this._assembler; }
+    get linker() { return this._linker; }
+    get command() { return this._command; }
+    get startAddress() { return this._startAddress; }
+    get buildType() { return this._buildType; }
+
     fromFileIfChanged(filename) {
 
         let modificationTime = null;
@@ -119,18 +148,32 @@ class Project {
         this._basedir = path.dirname(this._configfile);
         this._builddir = path.resolve(this._basedir, "build");
         this._cachefile = path.resolve(this._builddir, "project-cache.json");
+        this._compilecommandsfile = path.resolve(this._builddir, "compile_commands.json");
 
         this.#load();
 
         this._outname = this._name + ".prg";
         this._outfile = path.resolve(this._builddir, this._outname);
-        this._outreport = path.resolve(this._builddir, this._name + ".report");
-        this._outlabel = path.resolve(this._builddir, this._name + ".label");
 
-        this._buildfiles = [
-            this._outreport,
-            this._outlabel
-        ];
+        const toolkit = this._toolkit;
+        let toolkitInitialized = false;
+
+        if (!toolkitInitialized && (!toolkit || toolkit == "acme")) {
+            toolkitInitialized = true;
+            this._outdebug = path.resolve(this._builddir, this._name + ".report");
+        }
+
+        this._buildfiles = [];
+
+        if (!toolkitInitialized && (!toolkit || toolkit == "cc65")) {
+            this._outmap = path.resolve(this._builddir, this._name + ".map");
+            this._outlabels = path.resolve(this._builddir, this._name + ".labels");
+            this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
+        }
+
+        if (this._outdebug) {
+            this._buildfiles.push(this._outdebug);
+        }
 
         this._files = null;
     }
@@ -142,20 +185,41 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme' or 'cc65')"); }
+        this._toolkit = data.toolkit.toLowerCase();
+        if (this._toolkit != "acme" && this._toolkit != "cc65") { throw("property 'toolkit' needs to be either 'acme' or 'cc65'"); }
+
         const settings = this._settings;
         const projectDir = this.basedir;
 
-        if (!data.main) { throw("property 'main' is missing."); }
-        this._main = path.resolve(this._basedir, data.main);
+        if (!data.main && !data.sources) { throw("properties 'main' and 'sources' are missing."); }
+
+        const srcs = [];
+
+        if (data.main) {
+            srcs.push(path.resolve(this._basedir, data.main));
+        }
+
+        if (data.sources) {
+            for (const src of data.sources) {
+                const filename = path.resolve(this._basedir, src);
+                if (srcs.indexOf(filename) == -1) srcs.push(filename);
+            }
+        }
+
+        this._sources = srcs;
 
         this._description = data.description||"";
 
         this._compiler = data.compiler;
+        this._assembler = data.assembler;
+        this._linker = data.linker;
+        this._buildType = data.build;
 
         { // definitions
             const definitions = [];
-            if (settings.compilerDefines) {
-                const defs = settings.compilerDefines.split(",");
+            if (settings.buildDefines) {
+                const defs = settings.buildDefines.split(",");
                 for (const def of defs) {
                     definitions.push(def.trim());
                 }
@@ -169,13 +233,14 @@ class Project {
         { // includes
             const includes = [];
 
-            includes.push(path.dirname(this.main))
+            // includes.push(path.dirname(this.main))
+            includes.push(this._basedir);
 
             if (data.includes) {
                 includes.push(...data.includes);
             }
-            if (settings.compilerIncludePaths) {
-                const dirs = settings.compilerIncludePaths.split(",").map(item => item.trim());
+            if (settings.buildIncludePaths) {
+                const dirs = settings.buildIncludePaths.split(",").map(item => item.trim());
                 includes.push(...dirs);
             }
 
@@ -191,6 +256,20 @@ class Project {
 
         }
 
+        { // libraries
+            const libraries = [];
+            if (settings.buildDefines) {
+                const libs = settings.buildLibraries.split(",");
+                for (const lib of libs) {
+                    libraries.push(lib.trim());
+                }
+            }
+            if (data.libraries) {
+                libraries.push(...data.libraries);
+            }
+            this._libraries = libraries;
+        }
+
         { // args
 
             const args = [];
@@ -198,11 +277,15 @@ class Project {
                 args.push(...data.args);
             }
 
-            if (settings.compilerArgs) {
-                args.push(... Utils.splitQuotedString(settings.compilerArgs));
+            if (settings.buildArgs) {
+                args.push(... Utils.splitQuotedString(settings.buildArgs));
             }
 
             this._args = args;
+        }
+
+        { // additional settings
+            this._startAddress = data.startAddress;
         }
 
     }
@@ -213,9 +296,9 @@ class Project {
         const configfile = this.configfile;
         this.#addFile(configfile);
 
-        const filename = path.resolve(this._main);
-
-        this.#scanFile(filename);
+        for (const source of this._sources) {
+            this.#scanFile(source);
+        }
     }
 
     #clearFiles() {
@@ -232,12 +315,31 @@ class Project {
         return (this._files.indexOf(filename) >= 0);
     }
 
+    isSource(filename) {
+        if (!filename) return false;
+
+        const normalizedFilename = Utils.normalizePath(filename);
+
+        const srcs = this._sources;
+        if (!srcs || srcs.length < 1) return false;
+
+        for (const src of srcs) {
+            const srcPath = Utils.normalizePath(src);
+            if (srcPath == normalizedFilename) return true;
+        }
+
+        return false;
+    }
+
     resolveFile(filename, refdir) {
 
         const projectDir = this.basedir;
 
         if (refdir) {
             const absFilename = path.resolve(refdir, filename);
+            if (absFilename && fs.existsSync(absFilename)) return absFilename;
+        } else {
+            const absFilename = path.resolve(filename);
             if (absFilename && fs.existsSync(absFilename)) return absFilename;
         }
 
@@ -376,26 +478,6 @@ class Project {
 
         return token;
     }
-
-
-    get name() { return this._name; }
-    get main() { return this._main; }
-    get description() { return this._description_; }
-    get basedir() { return this._basedir; }
-    get builddir() { return this._builddir; }
-    get files() { return this._files||[]; }
-    get outname() { return this._outname; }
-    get outfile() { return this._outfile; }
-    get outreport() { return this._outreport; }
-    get outlabel() { return this._outlabel; }
-    get cachefile() { return this._cachefile; }
-    get buildfiles() { return this._buildfiles; }
-    get includes() { return this._includes; }
-    get definitions() { return this._definitions; }
-    get args() { return this._args; }
-    get compiler() { return this._compiler; }
-    get configfile() { return this._configfile; }
-    get settings() { return this._settings; }
 
 }
 

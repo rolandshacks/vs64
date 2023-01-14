@@ -1,0 +1,22 @@
+@ECHO OFF
+
+SETLOCAL
+
+SET NAME=ctest
+SET OUTDIR=build
+
+SET SYSTEM=c64
+SET DEBUG_FLAGS=-g
+SET RELEASE_FLAGS=-g -Oirs
+
+SET FLAGS=%RELEASE_FLAGS%
+
+SET START_ADDR=$801
+
+if NOT EXIST %OUTDIR% ( MKDIR %OUTDIR% )
+
+C:\tools\c64\cc65\bin\cl65 -o %OUTDIR%\%NAME%.prg -t %SYSTEM% %FLAGS% --start-addr %START_ADDR%   -T -l %OUTDIR%\%NAME%.lst -vm -m %OUTDIR%\%NAME%.map -Ln %OUTDIR%\%NAME%.labels %NAME%.c helper.c
+
+ENDLOCAL
+
+ECHO DONE

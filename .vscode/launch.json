@@ -21,17 +21,31 @@
 			]
 		},
         {
-            "name": "Test Vice Debug",
+            "name": "Run Vice Debug",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/test_vice_debug.js",
+            "program": "${workspaceFolder}/test/vice_debug.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {
-            "name": "Test Emu Debug",
+            "name": "Run Emu Debug",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/test_emu_debug.js",
+            "program": "${workspaceFolder}/test/emu_debug.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Run Builder",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/builder.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Run DebugInfo",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/debug_info.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {
@@ -44,7 +58,7 @@
 			"args": [
 				"--runInBand",
 				"--config", "${workspaceFolder}/test/jest.config.js",
-				"-t", "debug_info"
+				"-t", "sorted_array"
 			]
         }
 	]

@@ -414,7 +414,7 @@ class CpuState {
 
 class Breakpoint extends DebugAddressInfo {
     constructor(address, source, line, logMessage) {
-        super(address, source, line);
+        super(address, address, source, line);
         this.logMessage = logMessage;
         this.key = this.generateKey();
     }

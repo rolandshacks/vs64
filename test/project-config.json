@@ -1,9 +1,12 @@
 {
     "name": "testprog",
+    "toolkit": "cc65",
     "description": "",
-    "main": "data/test.asm",
+    "sources": [
+      "data/ctest.c",
+      "data/cmodule.c"
+    ],
     "definitions": [],
     "includes": ["data"],
-    "args": [],
-    "compiler": ""
+    "args": []
   }

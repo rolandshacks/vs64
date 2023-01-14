@@ -12,20 +12,27 @@
 .running        !08 $0
 
 ; -------------------------------------------------
-; main
-; -------------------------------------------------
-
-main
-    jsr init
-    jsr run
-    rts
-
-; -------------------------------------------------
 ; init
 ; -------------------------------------------------
 
 init
-    jsr std_disable_kernal_and_basic
+    jsr system_init
+    jsr system_disable_kernal_and_basic
+
+    jsr video_init
+    jsr sprite_init
+
+    jsr video_clear
+
+    lda #1
+    jsr video_set_colors
+
+    lda #0
+    jsr video_set_background
+
+    lda #6
+    jsr video_set_border
+
     rts
 
 ; -------------------------------------------------
@@ -52,8 +59,26 @@ runend
     rts
 
 ; -------------------------------------------------
+; main
+; -------------------------------------------------
+
+main
+    jsr init
+
+    +mv16im video_screen_base,addr0
+    ldy #0
+    lda #$4
+    sta (addr0),Y
+
+    jsr run
+    rts
+
+; -------------------------------------------------
 ; application data
 ; -------------------------------------------------
+
+.hellotext
+    !scr "HELLO WORLD!"
 
 .statebuffer
     !fill 32, $0           ; reserve 32 bytes buffer

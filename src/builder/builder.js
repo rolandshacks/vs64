@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const path = require("path");
+const  process = require("process");
 const { spawn } = require('child_process');
 
 //-----------------------------------------------------------------------------------------------//
@@ -94,10 +95,19 @@ class Build {
         this._project = project;
         this._settings = project.settings||{};
         this._onBuildOutputFn = null;
+        this._compileCommands = null;
     }
 
     onBuildOutput(fn) {
         this._onBuildOutputFn = fn;
+    }
+
+    #writeBuildOutput(txt) {
+        if (this._onBuildOutputFn) {
+            this._onBuildOutputFn(txt);
+        } else {
+            logger.info(txt);
+        }
     }
 
     #validate() {
@@ -159,13 +169,60 @@ class Build {
         }
     }
 
+    #addCompileCommand(compileCommand) {
+        if (!this._compileCommands) {
+            this._compileCommands = [];
+        }
+
+        this._compileCommands.push(compileCommand);
+    }
+
+    #writeCompileCommands() {
+
+        if (!this._compileCommands) return;
+
+        const project = this._project;
+        const filename = project.compilecommandsfile;
+
+        try {
+            const json = (JSON.stringify(this._compileCommands, null, 4) + "\n").replace(/\\\\/g, "/");
+
+            fs.writeFileSync(filename, json, 'utf8');
+        } catch (e) {
+            logger.error("could not write compile commands file: " + e);
+        }
+
+    }
+
+    #clearCompileCommands() {
+
+        this._compileCommands = null;
+
+        const project = this._project;
+        const filename = project.compilecommandsfile;
+
+        try {
+            if (fs.existsSync(filename)) {
+                fs.unlinkSync(filename);
+                logger.debug("build.clean: removed compile commands file");
+            }
+        } catch (e) {;}
+
+
+
+    }
+
     getOutputFiles(buildType) {
         if (!this.#validate()) return [];
 
         const project = this._project;
         const files = [ project.outfile ];
 
-        if (buildType != BuildType.Release) {
+        if (project.toolkit == "cc65" && project.compilecommandsfile != null) {
+            files.push(project.compilecommandsfile);
+        }
+
+        if (buildType != BuildType.Release && project.buildfiles) {
             files.push(...project.buildfiles);
         }
 
@@ -193,6 +250,8 @@ class Build {
                 logger.debug("build.clean: removed project cache file");
             }
         } catch (e) {;}
+
+        this.#clearCompileCommands();
 
         try {
             if (fs.existsSync(project.builddir)) {
@@ -237,6 +296,10 @@ class Build {
         }
 
         const project = this._project;
+
+        if (null == buildType && project.buildType != null) {
+            buildType = (project.buildType.toLowerCase() == "release") ? BuildType.Release : BuildType.Debug;
+        }
 
         try {
             project.scan();
@@ -293,6 +356,8 @@ class Build {
         } catch (err) {
             logger.error("build.run: failed: " + err);
             return { error: BuildResult.Error, description: err };
+        } finally {
+            this.#writeCompileCommands();
         }
 
         for (const outfile of this.getOutputFiles(buildType)) {
@@ -303,40 +368,132 @@ class Build {
         }
 
         const newTimestampOutput = this.#getFileTime(project.outfile);
-        this.#writeCache(newTimestampOutput);
+        this.#writeCache(newTimestampOutput, buildType);
 
         return { error: BuildResult.Success };
+    }
+
+    querySourceByExtension(extensions) {
+        const srcs = this._project.sources;
+        if (!srcs || srcs.length < 1) return null;
+
+        const result = [];
+
+        for (const src of srcs) {
+            const ext = path.extname(src).toLowerCase();
+            if (ext && extensions.indexOf('|' + ext + '|') >= 0) {
+                result.push(src);
+            }
+        }
+
+        if (result.length < 1) return null;
+
+        return result;
     }
 
     async #doBuild(modifiedFiles, buildType) {
         if (!this.#validate()) return;
 
-        const instance = this;
+        const project = this._project;
+        const toolkit = project.toolkit;
 
+        if (!toolkit || toolkit == "acme") {
+            const asmSources = this.querySourceByExtension("|.s|.asm|");
+            if (asmSources) {
+                logger.debug("build.run: assembling files");
+                await this.#doBuildAsmAcme(buildType, true, asmSources);
+                logger.debug("build.run: assembling done");
+            }
+        }
+
+        if (!toolkit || toolkit == "cc65") {
+            const cppSources = this.querySourceByExtension("|.c|.cpp|.cc|");
+            const asmSources = this.querySourceByExtension("|.s|.asm")||[];
+            const objFiles = this.querySourceByExtension("|.o|.obj|")||[];
+
+            if (cppSources) {
+                logger.debug("build.run: compiling files");
+
+                let buildCppError = null;
+
+                for (const cppSource of cppSources) {
+
+                    this.#writeBuildOutput("compiling " + cppSource);
+
+                    const asmSource = path.resolve(project.builddir, path.basename(cppSource, path.extname(cppSource)) + ".s");
+
+                    const buildNeeded = (modifiedFiles.indexOf(cppSource) >= 0);
+
+                    try {
+                        await this.#doBuildCpp(buildType, buildNeeded, cppSource, asmSource);
+                    } catch (e) {
+                        buildCppError = e;
+                    }
+
+                    if (asmSources.indexOf(asmSource) == -1) {
+                        asmSources.push(asmSource);
+                    }
+                }
+
+                if (buildCppError) throw(buildCppError);
+
+                logger.debug("build.run: assembling files");
+
+                let buildAsmError = null;
+
+                for (const asmSource of asmSources) {
+
+                    this.#writeBuildOutput("assembling " + asmSource);
+
+                    const objFile = path.resolve(project.builddir, path.basename(asmSource, path.extname(asmSource)) + ".o");
+
+                    try {
+                        await this.#doBuildAsmCC65(buildType, true, asmSource, objFile);
+                    } catch (e) {
+                        buildAsmError = e;
+                    }
+
+                    if (objFiles.indexOf(objFile) == -1) {
+                        objFiles.push(objFile);
+                    }
+                }
+
+                if (buildAsmError) throw(buildAsmError);
+
+                logger.debug("build.run: linking files");
+
+                await this.#doBuildLink(buildType, true, objFiles);
+
+                logger.debug("build.run: done");
+            }
+        }
+
+    }
+
+    async #doBuildCpp(buildType, buildNeeded, source, output) {
+
+        const instance = this;
         const project = this._project;
         const settings = this._settings;
-
-        logger.debug("build.run: processing file " + project.main);
-
-        const executable = project.compiler || settings.compilerExecutable;
+        const executable = project.compiler || settings.cc65Executable;
 
         const args = [
-            "-f", "cbm",
-            "--cpu", "6510",
-            "-o", project.outfile
+            "-o", output,
+            "-t", "c64",
+            "-g"
         ];
 
-        if (buildType != BuildType.Release) {
-            const additionalFiles = [
-                "-r", project.outreport,
-                "--vicelabels", project.outlabel
-            ];
-            args.push(...additionalFiles);
-        };
+        if (buildType == BuildType.Release) {
+            args.push("-Oirs");
+        }
 
         const definitions = [ ...project.definitions ];
         for (const define of definitions) {
             args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG");
         }
 
         const includes = project.includes;
@@ -347,7 +504,66 @@ class Build {
 
         args.push(...project.args);
 
-        args.push(project.main);
+        args.push(source);
+
+        const compilerIncludes = settings.cc65Includes || path.resolve(path.dirname(executable), "include");
+        const compileArgs = [...args, "-I", compilerIncludes];
+
+        const compileCommand = {
+            directory: process.cwd(),
+            arguments: compileArgs,
+            file: source
+        };
+
+        this.#addCompileCommand(compileCommand);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+    }
+
+    async #doBuildAsmCC65(buildType, buildNeeded, source, output) {
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+
+        const executable = project.assembler || settings.ca65Executable;
+
+        const args = [
+            "-o", output,
+            "-t", "c64",
+            "-g"
+        ];
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG");
+        }
+
+        const includes = project.includes;
+        for (const include of includes) {
+            args.push("-I");
+            args.push(include);
+        }
+
+        args.push(...project.args);
+
+        args.push(source);
+
+        if (!buildNeeded) return;
 
         const result = await BuilderTask.run(
             executable,
@@ -359,15 +575,127 @@ class Build {
             throw("failed with exit code " + result.exitCode);
         }
 
-        logger.debug("build.run: done processing file " + project.main);
+    }
+
+    async #doBuildLink(buildType, buildNeeded, sources) {
+
+        if (!sources || sources.length < 1) return;
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+
+        const executable = project.assembler || settings.ld65Executable;
+
+        const args = [
+            "-o", project.outfile,
+            "-t", "c64",
+            "--dbgfile", project.outdebug
+        ];
+
+        if (project.startAddress) {
+            args.push("-S");
+            args.push(project.startAddress);
+        }
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        args.push(...project.args);
+
+        args.push(...sources);
+
+        const libraries = [ ...project.libraries ];
+        libraries.push("c64.lib");
+        args.push(...libraries);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+    }
+
+    async #doBuildAsmAcme(buildType, buildNeeded, sources) {
+
+        if (!sources || sources.length < 1) return;
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+
+        const executable = project.assembler || settings.acmeExecutable;
+
+        const args = [
+            "--msvc",
+            "--maxerrors", "99",
+            "-f", "cbm",
+            "--cpu", "6510",
+            "-o", project.outfile
+        ];
+
+        if (buildType != BuildType.Release) {
+            const additionalFiles = [
+                "-r", project.outdebug
+            ];
+            args.push(...additionalFiles);
+        };
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG=1");
+        }
+
+        const includes = project.includes;
+        for (const include of includes) {
+            args.push("-I");
+            args.push(include);
+        }
+
+        args.push(...project.args);
+
+        args.push(...sources);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+
     }
 
     buildOutput(txt) {
-        if (this._onBuildOutputFn) {
-            this._onBuildOutputFn(txt);
-        } else {
-            logger.info(txt);
+        if (!txt) return;
+
+        const pos = txt.indexOf('(');
+        if (pos > 0) {
+            const project = this._project;
+            const filename = project.resolveFile(txt.substring(0, pos).trim());
+            if (filename) {
+                txt = filename + txt.substring(pos);
+            }
         }
+
+        this.#writeBuildOutput(txt);
+
     }
 
 }

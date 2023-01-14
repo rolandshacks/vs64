@@ -30,24 +30,6 @@ const Utils = {
     getAbsoluteFilename: function(filename) {
         return filename;
     },
-
-    findExecutable: function (filename) {
-
-        if (null == filename || filename == "") return filename;
-
-        if ("win32" == process.platform) {
-
-            let ext = path.extname(filename);
-            if (ext == "") {
-                filename += ".exe";
-            } else if (ext == ".") {
-                filename += "exe";
-            }
-
-        }
-
-        return filename;
-    }
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -59,15 +41,6 @@ class Application {
     }
 
     testFn() {
-
-        let input = "C:\\tools\\c64\\vice\\x64sc";
-
-        logger.info(Utils.findExecutable(input));
-        logger.info(Utils.findExecutable("abc.exe"));
-        logger.info(Utils.findExecutable("abc.com"));
-        logger.info(Utils.findExecutable("abc"));
-        logger.info(Utils.findExecutable("abc."));
-
     }
 
     run() {

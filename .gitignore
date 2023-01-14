@@ -6,6 +6,5 @@ node_modules
 .clwb
 .cache
 .project
-test/build
-example/build
+build
 *~
