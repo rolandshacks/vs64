@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "6502",
+            "request": "launch",
+            "name": "Launch 6502",
+            "program": "${workspaceFolder}/build/cexample.prg",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "type": "vice",
+            "request": "launch",
+            "name": "Launch Vice",
+            "program": "${workspaceFolder}/build/cexample.prg",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "type": "vice",
+            "request": "attach",
+            "name": "Attach Vice",
+            "hostname": "localhost",
+            "port": 6502,
+            "program": "${workspaceFolder}/build/cexample.prg",
+            "preLaunchTask": "${defaultBuildTask}"
+        }
+    ]
+}

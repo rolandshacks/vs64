@@ -4,18 +4,19 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 
 ## Features
 
-* Syntax highlighting for ACME assembler files
+* Build system for ACME assembler and CC65 compiler toolkit
 * Integrated project setup and configuration
-* Custom task and build system integration
-* Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
+* Task and build system integration to vscode
+* Syntax highlighting for ACME assembler files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
+* Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states and C64 custom chips state information and memory contents
 * On-the-fly disassembly of C64 program files
 
 ## Requirements
 
-* For assembling source files, you need to install and configure the ACME assembler.
+* You need to install either the ACME assembler or the CC65 compiler toolkit.
 * For debugging using VICE, you need to install and configure the VICE C64 emulator.
 
 There are no further requirements or dependencies to operate this extension.
@@ -23,6 +24,8 @@ There are no further requirements or dependencies to operate this extension.
 ## Introduction and Basic Usage
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
+
+For details, please look at the provided example projects for ACME and CC65.
 
 ### Syntax Highlighting
 
@@ -38,12 +41,38 @@ The basic structure of the file is like this:
 {
     "name": "example",
     "description": "Example project",
-    "main": "src/example.asm",
+    "toolkit": "acme",
+    "main": "src/main.asm",
+    "build": "debug",
     "definitions": [],
     "includes": ["src/includes"],
     "args": [],
     "compiler": ""
-  }
+}
+```
+
+A more extensive project file for CC65 could like like this:
+
+```
+{
+    "name": "cexample",
+    "description": "Example for the CC65 compiler",
+    "toolkit": "cc65",
+    "sources": [
+        "src/main.c",
+        "libc64/src/audio.c",
+        "libc64/src/auxiliary.c",
+        "libc64/src/system.c",
+        "libc64/src/video.c",
+        "libc64/src/sprite.c",
+        "resources/sprites.c"
+    ],
+    "build": "release",
+    "definitions": [],
+    "includes": ["libc64/include"],
+    "args": [],
+    "compiler": ""
+}
 ```
 
 > name
@@ -54,9 +83,17 @@ Project name, also defines the name of the output program file `name.prg`.
 
 Project description, for information purposes.
 
+> sources
+
+Defines all used source files. The build system will keep track of changes of these files.
+
 > main
 
-Defines the main source file which is compiled and used as the entry point for recursive dependency scanning.
+Can be used instead of 'sources' in simple projects. Defines the main source file which is compiled and used as the entry point for recursive dependency scanning.
+
+> build
+
+Defines either a "release" or "debug" build. Debug builds are the default if not specified.
 
 > definitions
 
@@ -110,7 +147,6 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
             "type": "6502",
             "request": "launch",
             "name": "Launch 6502",
-            //"pc": "$0801",
             "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         },
@@ -159,27 +195,50 @@ A 16-bit address in decimal or $hexadecimal form.
 
 Optional task name, can be `${defaultBuildTask}` to use the currently configured default build task.
 
+### Debugger Watch Expressions
+
+The debugger supports different kinds of watch expressions: registers, constant values and addresses. Here are a few examples:
+
+- `addr0` : displays the byte value which the label 'addr0' points at.
+
+- `addr0,w` : displays the word value which the label 'addr0' points at.
+
+- `addr0,8` : shows a hex dump of 8 bytes starting at the address of label 'addr0'.
+
+- `y` : shows the value of the Y register
+
+- `$8400` : shows the data at memory address $8400
+
+- `$8400,3` : shows 3 bytes at memory address $8400
+
+
 ## Preferences/Settings Reference
 
 To setup the C64 development environment, go to Preferences>Settings and check the following settings:
 
-> C64: Compiler Executable
+> C64: Acme Install Dir
 
-Path to assembler executable.
+Path to Acme installation.
 
-Example: `C:\Tools\c64\acme\acme.exe`
+Example: `C:\Tools\c64\acme`
 
-> C64: Compiler Defines
+> C64: Cc65 Install Dir
 
-Global compiler defines.
+Path to Cc65 installation.
 
-> C64: Compiler Includes
+Example: `C:\Tools\c64\cc65`
 
-Global compiler include paths.
+> C64: Build Defines
 
-> C64: Compiler Args
+Global build defines.
 
-Global compiler command line options.
+> C64: Build Includes
+
+Global build include paths.
+
+> C64: Build Args
+
+Global build command line options.
 
 > C64: Auto Build
 
@@ -206,11 +265,6 @@ This package includes open source from other developers and I would like to than
 * Gregory Estrade - 6502.js: It was great to have your 6502 emulator to form the core of the debugger. Thank you for compressing the 6502 cpu in such a nice piece of software!
 * Tony Landi - Acme Cross Assembler (C64): I started with the basic syntax definition for ACME from your package. Thanks for starting that!
 * The VICE emulator team.
-
-## Ideas Taken From
-
-* Captain JiNX - VSCode KickAss (C64)
-* Janne Hellsten - c64jasm
 
 ## Links
 

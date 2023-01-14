@@ -62,7 +62,12 @@ class Emulator extends DebugRunner {
                 char: require('./roms/char'),
                 d1541: require('./roms/1541')
             };
+
+            // patch kernal ROM
+            this._roms.kernal[0xffd2 - 0xe000] = 0x60;
         }
+
+        this.reset();
 
     }
 
@@ -82,11 +87,13 @@ class Emulator extends DebugRunner {
 
     async step(debugStepType) {
 
+        /*
         if (debugStepType == DebugStepType.STEP_IN) {
             this._cpu.step();
             this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
             return;
         }
+        */
 
         const cpu = this._cpu;
         const session = this._session;
@@ -94,16 +101,18 @@ class Emulator extends DebugRunner {
 
         const runFlags = {
             debugStepType: debugStepType,
-            stopAtStackDepth: null
+            stopAtStackDepth: null,
+            stackDepthMax: null,
+            stepStartAddress: debugInfo.getAddressInfo(cpu.PC)
         };
 
         const callStackDepth = cpu._callStack.length;
 
         if (debugStepType == DebugStepType.STEP_OVER) {
             if (debugInfo) {
-                if (cpu._opcode == 0x20) { // JSR
+                //if (cpu._opcode == 0x20) { // JSR
                     runFlags.stopAtStackDepth = callStackDepth;
-                }
+                //}
             }
 
         } else if (debugStepType == DebugStepType.STEP_OUT) {
@@ -185,6 +194,10 @@ class Emulator extends DebugRunner {
             cpu.step();
 
             if (runFlags) {
+                if (!runFlags.stackDepthMax || cpu._callStack.length > runFlags.stackDepthMax) {
+                    runFlags.stackDepthMax = cpu._callStack.length;
+                }
+
                 if (runFlags.debugStepType == DebugStepType.STEP_OUT) {
                     if (runFlags.stopAtStackDepth != null) {
                         if (cpu._callStack.length == runFlags.stopAtStackDepth) {
@@ -194,15 +207,36 @@ class Emulator extends DebugRunner {
                 } else if (runFlags.debugStepType == DebugStepType.STEP_OVER) {
                     if (runFlags.stopAtAddress == null) {
                         if (runFlags.stopAtStackDepth != null) {
-                            if (cpu._callStack.length == runFlags.stopAtStackDepth) {
-                                stopRun = true;
+
+                            if (cpu._callStack.length <= runFlags.stopAtStackDepth) {
+
+                                const stepStartAddress = runFlags.stepStartAddress;
+                                const addressInfo = debugInfo.getAddressInfo(cpu.PC);
+
+                                if (stepStartAddress && addressInfo) {
+                                    if (cpu.PC < stepStartAddress.address || cpu.PC > stepStartAddress.address_end) {
+                                        stopRun = true;
+                                    }
+                                } else if (runFlags.stackDepthMax > runFlags.stopAtStackDepth) {
+                                    stopRun = true;
+                                }
                             }
+
                         } else {
                             stopRun = true;
                         }
                     }
                 } else if (runFlags.debugStepType == DebugStepType.STEP_IN) {
-                    stopRun = true;
+                    const stepStartAddress = runFlags.stepStartAddress;
+                    if (stepStartAddress) {
+                        if (cpu.PC < stepStartAddress.address || cpu.PC > stepStartAddress.address_end) {
+                            stopRun = true;
+                        } else {
+                            stopRun = false; // continue as there just was an RTS to the same code line
+                        }
+                    } else {
+                        stopRun = true;
+                    }
                 }
             }
 
@@ -319,11 +353,11 @@ class Emulator extends DebugRunner {
 
             let bankswitching = (this._memory[0x0001] & 0xFF);
 
-            if ((bankswitching & 0x01) && addr >= 0xE000) {
+            if ((bankswitching & 0x02) && addr >= 0xE000) {
                 return this._roms.kernal[addr-0xE000] & 0xFF;
-            } else if ((bankswitching & 0x02) && addr >= 0xD000) {
+            } else if (0 == (bankswitching & 0x04) && addr >= 0xD000) {
                 return this._roms.char[addr-0xD000] & 0xFF;
-            } else if ((bankswitching & 0x04) && addr >= 0xA000 && addr <= 0xBFFF) {
+            } else if ((bankswitching & 0x01) && addr >= 0xA000 && addr <= 0xBFFF) {
                 return this._roms.basic[addr-0xA000] & 0xFF;
             }
 

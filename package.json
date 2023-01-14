@@ -57,18 +57,18 @@
 	"contributes": {
 		"problemMatchers": [
 			{
-				"name": "acme",
+				"name": "builder",
 				"owner": "vs64",
 				"fileLocation": [
 					"autoDetect",
 					"${workspaceFolder}"
 				],
 				"pattern": {
-					"regexp": "^\\s*(\\w*)\\s*-\\s*\\w*\\s*([\\w:\\\\/\\.]*)\\s*,\\s*\\w*\\s*(\\d*)\\s*(\\(.*\\))?\\s*:\\s*(.*)$",
-					"severity": 1,
-					"file": 2,
-					"location": 3,
-					"message": 5
+                    "regexp": "^(\\S*)\\(\\s*(\\d*)\\s*\\)\\s*:\\s*(\\w*).*:\\s*(.*)$",
+					"severity": 3,
+					"file": 1,
+					"location": 2,
+					"message": 4
 				}
 			}
 		],
@@ -82,7 +82,8 @@
 				],
 				"extensions": [
 					".asm",
-					".acme"
+					".acme",
+					".s"
 				],
 				"configuration": "./language/asm.language.json"
 			}
@@ -120,25 +121,30 @@
 					"default": true,
 					"description": "Enable automatic build after save"
 				},
-				"c64.compilerExecutable": {
-					"type": "string",
-					"default": "acme",
-					"description": "Path to compiler executable"
-				},
-				"c64.compilerDefines": {
+				"c64.acmeInstallDir": {
 					"type": "string",
 					"default": "",
-					"description": "Global compiler defines"
+					"description": "Path to ACME assembler installation"
 				},
-				"c64.compilerIncludePaths": {
+				"c64.cc65InstallDir": {
 					"type": "string",
 					"default": "",
-					"description": "Global compiler include paths"
+					"description": "Path to CC65 compiler installation"
 				},
-				"c64.compilerArgs": {
+				"c64.buildDefines": {
 					"type": "string",
 					"default": "",
-					"description": "Global additional compiler command line options"
+					"description": "Global build defines"
+				},
+				"c64.buildIncludePaths": {
+					"type": "string",
+					"default": "",
+					"description": "Global build include paths"
+				},
+				"c64.buildArgs": {
+					"type": "string",
+					"default": "",
+					"description": "Global additional build command line options"
 				},
 				"c64.emulatorExecutable": {
 					"type": "string",
@@ -205,7 +211,7 @@
 						"properties": {
 							"program": {
 								"type": "string",
-								"description": "Path to compiled program",
+								"description": "Path to executable program",
 								"default": ""
 							},
 							"pc": {
@@ -243,7 +249,7 @@
 						"properties": {
 							"program": {
 								"type": "string",
-								"description": "Path to compiled program",
+								"description": "Path to executable program",
 								"default": ""
 							},
 							"hostname": {
@@ -265,7 +271,7 @@
 						"properties": {
 							"program": {
 								"type": "string",
-								"description": "Path to compiled program",
+								"description": "Path to executable program",
 								"default": ""
 							},
 							"hostname": {

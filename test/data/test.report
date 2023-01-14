@@ -1,0 +1,426 @@
+
+; ******** Source: d:\Work\vs64\examples\asm\src\main.asm
+     1                          ;
+     2                          ; C64 Demo
+     3                          ;
+
+; ******** Source: libmacro64.asm
+     1                          ;
+     2                          ; C64 Macro Library
+     3                          ;
+     4
+     5                          ; -------------------------------------------------
+     6                          ; Program Startup
+     7                          ; -------------------------------------------------
+     8
+     9                          ;
+    10                          ; Generate startup BASIC code line (1973 SYS xxxx)
+    11                          ;
+    12                          !macro __startup_basic_code {
+    13                              !word +, 1973                               ; basic line
+    14                              !byte $9e                                   ; 'SYS' command
+    15                              !byte $20                                   ; space character
+    16                              !byte $30+((+ +2)/1000)%10                  ; address digit
+    17                              !byte $30+((+ +2)/100)%10                   ; address digit
+    18                              !byte $30+((+ +2)/10)%10                    ; address digit
+    19                              !byte $30+(+ +2)%10                         ; address digit
+    20                              !byte $0                                    ; end of basic line
+    21                          +   !word $0                                    ; end of basic program
+    22                          }
+    23
+    24                          !macro std_startup .load_address, .jump_address {
+    25                              *=.load_address                              ; set load address
+    26                              +__startup_basic_code                       ; basic startup line
+    27                              jmp .jump_address                           ; jump to label
+    28                          }
+    29
+    30                          !macro std_startup .load_address {
+    31                              *=.load_address                              ; set load address
+    32                              +__startup_basic_code                       ; basic startup line
+    33                          }
+    34
+    35                          !macro std_startup {
+    36                              +__startup_basic_code                        ; basic startup line
+    37                          }
+    38
+    39                          ; -------------------------------------------------
+    40                          ; Common
+    41                          ; -------------------------------------------------
+    42
+    43                          !macro poke .addr, .value {
+    44                              lda #.value
+    45                              sta .addr
+    46                          }
+    47
+    48                          ; -------------------------------------------------
+    49                          ; Zero-Page Registers
+    50                          ; -------------------------------------------------
+    51
+    52                          ; General purpose (always available)
+    53                          !addr reg0 = $fb
+    54                          !addr reg1 = $fc
+    55                          !addr reg2 = $fd
+    56                          !addr reg3 = $fe
+    57
+    58                          !addr byte0 = $fb
+    59                          !addr byte1 = $fc
+    60                          !addr byte2 = $fd
+    61                          !addr byte3 = $fe
+    62
+    63                          ; General purpose (just if no RS232)
+    64                          !addr reg4 = $f7
+    65                          !addr reg5 = $f8
+    66                          !addr reg6 = $f9
+    67                          !addr reg7 = $fa
+    68
+    69                          !addr byte4 = $fb
+    70                          !addr byte5 = $fc
+    71                          !addr byte6 = $fd
+    72                          !addr byte7 = $fe
+    73
+    74                          ; General purpose (just if no BASIC used)
+    75                          !addr addr0 = $62 ; $62+63
+    76                          !addr addr1 = $64 ; $64+65
+    77                          !addr addr2 = $66 ; $66+67
+    78                          !addr addr3 = $68 ; $68+69
+    79
+    80                          !addr short0 = $62 ; $62+63
+    81                          !addr short1 = $64 ; $64+65
+    82                          !addr short2 = $66 ; $66+67
+    83                          !addr short3 = $68 ; $68+69
+    84
+    85                          ; Used for math operations (just if no BASIC used)
+    86                          !addr math0 = $6a
+    87                          !addr math1 = $6b
+    88                          !addr math2 = $6c
+    89                          !addr math3 = $6d
+    90
+    91                          ; -------------------------------------------------
+    92                          ; Math
+    93                          ; -------------------------------------------------
+    94
+    95                          !macro inc16 .t {
+    96                              inc .t
+    97                              bne .j; "*" syntax not used here because size of ".t" is unknown
+    98                              inc .t + 1
+    99                              .j
+   100                          }
+   101
+   102                          !macro mv16im .wort, .mem {
+   103                              lda #<(.wort)
+   104                              sta .mem
+   105                              lda #>(.wort)
+   106                              sta .mem+1
+   107                          }
+   108
+   109                          !macro mv16ab .wort, .mem {
+   110                              lda .wort
+   111                              sta .mem
+   112                              lda .wort+1
+   113                              sta .mem+1
+   114                          }
+   115
+   116                          !macro add8 {
+   117                              clc
+   118                              txa
+   119                              sty result0
+   120                              adc result0
+   121                          }
+   122
+   123                          !macro add16 .a,.b {
+   124                              clc
+   125                              lda #<(.a)
+   126                              adc #<(.b)
+   127                              sta result0
+   128                              lda #>(.a)
+   129                              adc #>(.b)
+   130                              sta result1
+   131                          }
+   132
+   133                          ; -------------------------------------------------
+   134                          ; System
+   135                          ; -------------------------------------------------
+   136
+   137                          !macro system_disable_interrupts {
+   138                              sei
+   139                          }
+   140
+   141                          !macro system_enable_interrupts {
+   142                              cli
+   143                          }
+   144
+   145                          !macro system_mem_map .flags {
+   146                              lda $01
+   147                              and #$f8
+   148                              ora #.flags
+   149                          }
+   150
+   151                          ; -------------------------------------------------
+   152                          ; Video
+   153                          ; -------------------------------------------------
+   154
+   155                          !set video_vic_bank = 2
+   156                          !set video_screen_bank = 1
+   157                          !set video_charset_bank = 1
+   158                          !addr video_vic_base = video_vic_bank * $4000
+   159                          !addr video_screen_base = video_vic_base + video_screen_bank * $400
+   160                          !addr video_bitmap_base = video_vic_base + $2000
+   161                          !addr video_color_base = $d800
+   162                          !addr video_charset_base = video_vic_base + video_charset_bank * $800
+   163                          !addr video_charset_base_origin = $d000
+
+; ******** Source: d:\Work\vs64\examples\asm\src\main.asm
+     4
+     5
+     6  0801 0c08b5079e203230...+std_startup $0801, main
+     7
+     8                          ; declaring variables
+     9  0811 0000               .counter        !16 $0000   ; repeat counter
+    10  0813 00                 .char_counter   !08 $00     ; character output counter
+    11  0814 00                 .mask           !08 $00
+    12  0815 00                 .running        !08 $0
+    13
+    14                          ; -------------------------------------------------
+    15                          ; init
+    16                          ; -------------------------------------------------
+    17
+    18                          init
+    19  0816 208808                 jsr system_init
+    20  0819 208908                 jsr system_disable_kernal_and_basic
+    21
+    22  081c 20b108                 jsr video_init
+    23  081f 204709                 jsr sprite_init
+    24
+    25  0822 201409                 jsr video_clear
+    26
+    27  0825 a901                   lda #1
+    28  0827 202c09                 jsr video_set_colors
+    29
+    30  082a a900                   lda #0
+    31  082c 203e09                 jsr video_set_background
+    32
+    33  082f a906                   lda #6
+    34  0831 204209                 jsr video_set_border
+    35
+    36  0834 60                     rts
+    37
+    38                          ; -------------------------------------------------
+    39                          ; run
+    40                          ; -------------------------------------------------
+    41
+    42                          run
+    43  0835 48                     pha
+    44  0836 8a                     txa
+    45  0837 48                     pha
+    46  0838 a203                   ldx #3
+    47
+    48                          runloop
+    49  083a a901                   lda #1
+    50  083c a902                   lda #2
+    51  083e a903                   lda #3
+    52  0840 ca                     dex
+    53  0841 d0f7                   bne runloop
+    54
+    55                          runend
+    56  0843 68                     pla
+    57  0844 aa                     tax
+    58  0845 68                     pla
+    59  0846 60                     rts
+    60
+    61                          ; -------------------------------------------------
+    62                          ; main
+    63                          ; -------------------------------------------------
+    64
+    65                          main
+    66  0847 201608                 jsr init
+    67
+    68  084a a9008562a9848563       +mv16im video_screen_base,addr0
+    69  0852 a000                   ldy #0
+    70  0854 a904                   lda #$4
+    71  0856 9162                   sta (addr0),Y
+    72
+    73  0858 203508                 jsr run
+    74  085b 60                     rts
+    75
+    76                          ; -------------------------------------------------
+    77                          ; application data
+    78                          ; -------------------------------------------------
+    79
+    80                          .hellotext
+    81  085c 48454c4c4f20574f...    !scr "HELLO WORLD!"
+    82
+    83                          .statebuffer
+    84  0868 0000000000000000...    !fill 32, $0           ; reserve 32 bytes buffer
+    85
+    86                          ; -------------------------------------------------
+    87                          ; libraries
+    88                          ; -------------------------------------------------
+    89
+
+; ******** Source: libstd64.asm
+     1                          ;
+     2                          ; C64 Standard Library
+     3                          ;
+     4
+     5                          ; -------------------------------------------------
+     6                          ; System
+     7                          ; -------------------------------------------------
+     8
+     9                          system_init
+    10  0888 60                     rts
+    11
+    12                          system_disable_kernal_and_basic
+    13
+    14  0889 78                     +system_disable_interrupts
+    15
+    16  088a a97f8d0ddc             +poke $dc0d, $7f
+    17  088f a97f8d0ddd             +poke $dd0d, $7f
+    18
+    19  0894 ad0ddc                 lda $dc0d
+    20  0897 ad0ddd                 lda $dd0d
+    21
+    22  089a a9008d1ad0             +poke $d01a, $0
+    23  089f a9008d19d0             +poke $d019, $0
+    24
+    25  08a4 a50129f80905           +system_mem_map $5
+    26
+    27  08aa 58                     +system_enable_interrupts
+    28
+    29  08ab 60                     rts
+    30
+    31
+    32                          std_copy_charset
+    33  08ac 78                     +system_disable_interrupts
+    34
+    35  08ad a501                   lda $01
+    36
+    37  08af 58                     +system_enable_interrupts
+    38  08b0 60                     rts
+    39
+    40
+    41                          ; -------------------------------------------------
+    42                          ; Video
+    43                          ; -------------------------------------------------
+    44
+    45
+    46                          video_init
+    47
+    48  08b1 a503                   lda %00000011                   ; enable CIA port A write
+    49  08b3 8d02dd                 sta $dd02
+    50
+    51  08b6 ad00dd                 lda $dd00                       ; set VIC base
+    52  08b9 25fc                   and $fc
+    53  08bb 0901                   ora # (3 - video_vic_bank & 3)
+    54  08bd 8d00dd                 sta $dd00
+    55
+    56  08c0 ad16d0                 lda $d016                       ; set text mode
+    57  08c3 29ef                   and #$ef
+    58  08c5 8d16d0                 sta $d016
+    59  08c8 ad11d0                 lda $d011
+    60  08cb 299f                   and #$9f
+    61  08cd 8d11d0                 sta $d011
+    62
+    63  08d0 ad18d0                 lda $d018                       ; set screen base
+    64  08d3 290f                   and #$0f
+    65  08d5 0910                   ora # ((video_screen_bank & $f) << 4)
+    66  08d7 8d18d0                 sta $d018
+    67
+    68  08da 20e808                 jsr video_copy_charset
+    69
+    70  08dd ad18d0                 lda $d018                       ; set charset base
+    71  08e0 29f1                   and #$f1
+    72  08e2 0902                   ora # ((video_charset_bank & $f) << 1)
+    73  08e4 8d18d0                 sta $d018
+    74
+    75  08e7 60                     rts
+    76
+    77
+    78                          video_copy_charset
+    79
+    80  08e8 78                     +system_disable_interrupts
+    81
+    82  08e9 a501                   lda $01                         ; enable access char rom, no I/O
+    83  08eb 85fb                   sta reg0
+    84  08ed 29fb                   and #$fb
+    85  08ef 8501                   sta $01
+    86
+    87  08f1 a200                   ldx #0
+    88
+    89                          video_copy_charset_loop
+    90
+    91  08f3 bd00d0                 lda video_charset_base_origin+$0,x
+    92  08f6 9d0088                 sta video_charset_base+$0,x
+    93
+    94  08f9 bd00d1                 lda video_charset_base_origin+$100,x
+    95  08fc 9d0089                 sta video_charset_base+$100,x
+    96
+    97  08ff bd00d2                 lda video_charset_base_origin+$200,x
+    98  0902 9d008a                 sta video_charset_base+$200,x
+    99
+   100  0905 bd00d3                 lda video_charset_base_origin+$300,x
+   101  0908 9d008b                 sta video_charset_base+$300,x
+   102
+   103                              ; TO DO MORE UNTIL $FFFF is copied
+   104
+   105  090b ca                     dex
+   106  090c d0e5                   bne video_copy_charset_loop
+   107
+   108  090e a5fb                   lda reg0                        ; restore memory mapping
+   109  0910 8501                   sta $01
+   110
+   111  0912 58                     +system_enable_interrupts
+   112
+   113  0913 60                     rts
+   114
+   115                          video_clear
+   116  0914 a920                   lda #$20                        ; set clear character
+   117  0916 201a09                 jsr video_set_chars
+   118  0919 60                     rts
+   119
+   120                          video_set_chars ; (A = col)
+   121  091a a200                   ldx #0
+   122
+   123                          video_set_chars_loop
+   124  091c 9d0084                 sta video_screen_base+$0,x
+   125  091f 9d0085                 sta video_screen_base+$100,x
+   126  0922 9d0086                 sta video_screen_base+$200,x
+   127  0925 9d0087                 sta video_screen_base+$300,x
+   128  0928 ca                     dex
+   129  0929 d0f1                   bne video_set_chars_loop
+   130
+   131  092b 60                     rts
+   132
+   133                          video_set_colors ; (A = col)
+   134  092c a200                   ldx #0
+   135
+   136                          video_set_colors_loop
+   137  092e 9d00d8                 sta video_color_base+$0,x
+   138  0931 9d00d9                 sta video_color_base+$100,x
+   139  0934 9d00da                 sta video_color_base+$200,x
+   140  0937 9d00db                 sta video_color_base+$300,x
+   141  093a ca                     dex
+   142  093b d0f1                   bne video_set_colors_loop
+   143
+   144  093d 60                     rts
+   145
+   146                          video_set_background ; (A = col)
+   147  093e 8d21d0                 sta $d021
+   148  0941 60                     rts
+   149
+   150                          video_set_border ; (A = col)
+   151  0942 8d20d0                 sta $d020
+   152  0945 60                     rts
+   153
+   154                          video_put_c ; (A = char, X = x, Y = y)
+   155
+   156  0946 60                     rts
+   157
+   158                          ; -------------------------------------------------
+   159                          ; Sprites
+   160                          ; -------------------------------------------------
+   161
+   162                          sprite_init
+   163  0947 60                     rts
+
+; ******** Source: d:\Work\vs64\examples\asm\src\main.asm
+    90

@@ -69,10 +69,9 @@ const AnsiColors = {
 class Settings {
     constructor() {
         this.logLevel = LogLevel.Info;
-        this.compilerExecutable = null;
-        this.compilerDefines = null;
-        this.compilerIncludePaths = null;
-        this.compilerArgs = null;
+        this.buildDefines = null;
+        this.buildIncludePaths = null;
+        this.buildArgs = null;
         this.emulatorExecutable = null;
         this.emulatorArgs = null;
         this.autoBuild = false;
@@ -86,17 +85,40 @@ class Settings {
         settings.logLevel = workspaceConfig.get("c64.loglevel")||"info";
         Logger.setGlobalLevel(settings.logLevel);
 
-        settings.compilerExecutable = Utils.findExecutable(workspaceConfig.get("c64.compilerExecutable")||"");
-        settings.compilerDefines = workspaceConfig.get("c64.compilerDefines")||"";
-        settings.compilerIncludePaths = workspaceConfig.get("c64.compilerIncludePaths")||"";
-        settings.compilerArgs = workspaceConfig.get("c64.compilerArgs")||"";
+        this.setupAcme(workspaceConfig.get("c64.acmeInstallDir"));
+        this.setupCC65(workspaceConfig.get("c64.cc65InstallDir"));
 
-        settings.emulatorExecutable = Utils.findExecutable(workspaceConfig.get("c64.emulatorExecutable")||"");
-        settings.emulatorArgs = workspaceConfig.get("c64.emulatorArgs")||"";
-
+        settings.buildDefines = workspaceConfig.get("c64.buildDefines")||"";
+        settings.buildIncludePaths = workspaceConfig.get("c64.buildIncludePaths")||"";
+        settings.buildArgs = workspaceConfig.get("c64.buildArgs")||"";
         settings.autoBuild = workspaceConfig.get("c64.autoBuild")||true;
 
+        settings.emulatorExecutable = Utils.normalizeExecutableName(workspaceConfig.get("c64.emulatorExecutable")||"");
+        settings.emulatorArgs = workspaceConfig.get("c64.emulatorArgs")||"";
+
         this.show();
+    }
+
+    setupAcme(installDir) {
+        if (installDir) {
+            this.acmeExecutable = path.resolve(installDir, Utils.normalizeExecutableName("acme"));
+        } else {
+            this.acmeExecutable = "acme";
+        }
+    }
+
+    setupCC65(installDir) {
+        if (installDir) {
+            this.cc65Includes = path.resolve(installDir, "include");
+            this.cc65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cc65"));
+            this.ca65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("ca65"));
+            this.ld65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("ld65"));
+        } else {
+            this.cc65Includes = null;
+            this.cc65Executable = "cc65";
+            this.ca65Executable = "ca65";
+            this.ld65Executable = "ld65";
+        }
     }
 
     show() {
@@ -104,7 +126,10 @@ class Settings {
 
         logger.info("[C64] extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
         logger.info("[C64] auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
-        this.logExecutableState(settings.compilerExecutable, "[C64] compiler executable: " + settings.compilerExecutable);
+        this.logExecutableState(settings.acmeExecutable, "[C64] acme executable: " + settings.acmeExecutable);
+        this.logExecutableState(settings.cc65Executable, "[C64] cc65 executable: " + settings.cc65Executable);
+        this.logExecutableState(settings.ca65Executable, "[C64] ca65 executable: " + settings.ca65Executable);
+        this.logExecutableState(settings.ld65Executable, "[C64] ld65 executable: " + settings.ld65Executable);
         this.logExecutableState(settings.emulatorExecutable, "[C64] emulator executable: " + settings.emulatorExecutable);
     }
 
@@ -145,7 +170,7 @@ class Settings {
             return;
         }
 
-        logger.error(format + state);
+        logger.warn(format + state);
     }
 
 }

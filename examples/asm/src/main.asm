@@ -5,11 +5,58 @@
 
 +std_startup $0801, main
 
-; declaring variables
-.counter        !16 $0000   ; repeat counter
-.char_counter   !08 $00     ; character output counter
-.mask           !08 $00
-.running        !08 $0
+; -------------------------------------------------
+; helpers
+; -------------------------------------------------
+
+print_title
+    +strcpy .hellotext, video_screen_base + 93
+    rts
+
+; -------------------------------------------------
+; init
+; -------------------------------------------------
+
+init
+    jsr system_init
+    jsr system_disable_kernal_and_basic
+
+    jsr video_init
+    jsr sprite_init
+
+    jsr video_clear
+
+    lda #1
+    jsr video_set_colors
+
+    lda #0
+    jsr video_set_background
+
+    lda #6
+    jsr video_set_border
+
+    rts
+
+; -------------------------------------------------
+; run
+; -------------------------------------------------
+
+run
+    pha
+    txa
+    pha
+    jsr print_title
+    ldx #$ff
+
+run_loop
+    dex
+    bne run_loop
+
+run_end
+    pla
+    tax
+    pla
+    rts
 
 ; -------------------------------------------------
 ; main
@@ -21,42 +68,11 @@ main
     rts
 
 ; -------------------------------------------------
-; init
-; -------------------------------------------------
-
-init
-    jsr std_disable_kernal_and_basic
-    rts
-
-; -------------------------------------------------
-; run
-; -------------------------------------------------
-
-run
-    pha
-    txa
-    pha
-    ldx #3
-
-runloop
-    lda #1
-    lda #2
-    lda #3
-    dex
-    bne runloop
-
-runend
-    pla
-    tax
-    pla
-    rts
-
-; -------------------------------------------------
 ; application data
 ; -------------------------------------------------
 
-.statebuffer
-    !fill 32, $0           ; reserve 32 bytes buffer
+.hellotext
+    !scr "hello, world!",0 ; zero-terminated string
 
 ; -------------------------------------------------
 ; libraries

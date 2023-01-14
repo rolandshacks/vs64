@@ -15,5 +15,58 @@
             ""
         ],
         "description": "Assembler file body"
+    },
+    "body-with-macros": {
+        "prefix": "BODYX",
+        "body": [
+            ";",
+            "; $TM_FILENAME_BASE",
+            ";",
+            "!src \"libmacro64.asm\"",
+            "",
+            "+std_startup \\$0801, main",
+            "",
+            "; -------------------------------------------------",
+            "; main",
+            "; -------------------------------------------------",
+            "",
+            "main",
+            "    rts",
+            "",
+            "; -------------------------------------------------",
+            "; libraries",
+            "; -------------------------------------------------",
+            "",
+            "!src \"libstd64.asm\"",
+            "!src \"libvideo64.asm\"",
+            ""
+        ],
+        "description": "Assembler file body using standard library"
+    },
+    "macro": {
+        "prefix": "!macro",
+        "body": [
+            "!macro ${1:name} {", "\t$0", "}"
+        ],
+        "description": "Macro declaration"
+    },
+    "comment-block": {
+        "prefix": "COMMENT",
+        "body": [
+            "",
+            "; -------------------------------------------------",
+            "; $0",
+            "; -------------------------------------------------",
+            ""
+        ],
+        "description": "Comment block"
+    },
+    "comment-line": {
+        "prefix": "LINE",
+        "body": [
+            "; -------------------------------------------------",
+            ""
+        ],
+        "description": "Comment line"
     }
 }

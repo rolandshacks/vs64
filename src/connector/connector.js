@@ -909,14 +909,14 @@ class ViceMonitorClient {
             stepOverSubroutines ? 0x1 : 0x0,
             ((numSteps>>0) & 0xff), ((numSteps>>8) & 0xff)
         ]);
+    }
 
-        return;
+    async cmdExecuteUntilReturn() {
+        await this.sendCommand(RequestType.CMD_EXECUTE_UNTIL_RETURN, null);
     }
 
     async cmdReset(hardReset) {
         await this.sendCommand(RequestType.CMD_RESET, [ hardReset ? 0x1 : 0x0 ]);
-
-        return;
     }
 
     async cmdAutostart(filename, run) {
@@ -931,8 +931,6 @@ class ViceMonitorClient {
         }
 
         await this.sendCommand(RequestType.CMD_AUTOSTART, body);
-
-        return;
     }
 
     async cmdCheckpointGet(checkpointNumber) {
@@ -1328,12 +1326,15 @@ class ViceConnector extends DebugRunner {
         logger.trace("ViceConnector.step()");
         const vice = this._vice;
 
-        let stepOverSubroutines = true;
-        if (debugStepType == DebugStepType.STEP_IN) {
-            stepOverSubroutines = false;
+        if (debugStepType == DebugStepType.STEP_OUT) {
+            await vice.cmdExecuteUntilReturn();
+        } else {
+            let stepOverSubroutines = true;
+            if (debugStepType == DebugStepType.STEP_IN) {
+                stepOverSubroutines = false;
+            }
+            await vice.cmdAdvanceInstructions(stepOverSubroutines, 1);
         }
-
-        await vice.cmdAdvanceInstructions(stepOverSubroutines, 1);
 
     }
 

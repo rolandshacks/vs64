@@ -1,5 +1,5 @@
-; 
-; C64 Helpers
+;
+; Included test file
 ;
 
 TEST_CONST = $0000

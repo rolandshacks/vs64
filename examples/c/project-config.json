@@ -1,0 +1,19 @@
+{
+    "name": "cexample",
+    "description": "Example for the CC65 compiler",
+    "toolkit": "cc65",
+    "sources": [
+        "src/main.c",
+        "libc64/src/audio.c",
+        "libc64/src/auxiliary.c",
+        "libc64/src/system.c",
+        "libc64/src/video.c",
+        "libc64/src/sprite.c",
+        "resources/sprites.c"
+    ],
+    "build": "release",
+    "definitions": [],
+    "includes": ["libc64/include"],
+    "args": [],
+    "compiler": ""
+}

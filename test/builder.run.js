@@ -1,11 +1,9 @@
 //
-// Test basics
+// Standalone runner
 //
 
-const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
-const { fstat } = require('fs');
+const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -25,47 +23,46 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { Project } = require('project/project');
 const { Build, BuildType } = require('builder/builder');
+const { DebugInfo } = require('debugger/debug_info');
 
-const logger = new Logger("TestBuilder");
+const logger = new Logger("BuilderRun");
 
-//-----------------------------------------------------------------------------------------------//
-// Tests
-//-----------------------------------------------------------------------------------------------//
+const settings = {
+    acmeExecutable: "C:/tools/c64/acme/acme",
+    cc65Executable: "C:/tools/c64/cc65/bin/cc65",
+    ca65Executable: "C:/tools/c64/cc65/bin/ca65",
+    ld65Executable: "C:/tools/c64/cc65/bin/ld65"
+};
 
-let lastLoggerOutputLine = null;
+const project = new Project(settings);
 
-function loggerSink(txt) {
-    lastLoggerOutputLine = txt;
-}
-
-describe('builder', () => {
-test("test builder", async () => {
-
-    Logger.setGlobalLevel(LogLevel.Trace);
-    Logger.setSink(loggerSink);
-
-    const settings = {
-        acmeExecutable: "C:/tools/c64/acme/acme"
-    };
-
+async function build() {
     let projectFile = path.resolve("project-config.json");
     console.log(projectFile);
 
-    const project = new Project(settings);
     project.fromFile(projectFile);
 
-    expect(project.name).not.toHaveLength(0);
-    expect(project.sources).not.toHaveLength(0);
-    expect(project.basedir).not.toHaveLength(0);
-    expect(project.builddir).not.toHaveLength(0);
-    expect(project.outfile).not.toHaveLength(0);
-    expect(project.buildfiles).toHaveLength(1);
-
     const build = new Build(project);
+    build.onBuildOutput(txt => {
+        console.log(txt);
+    });
     build.clean();
     const result = await build.build();
-    expect(result).not.toBeNull();
+}
 
-});
+async function debug() {
 
-});
+    let debugInfoPath = project.outdebug;
+
+    this._debugInfo = new DebugInfo(debugInfoPath, project);
+
+}
+
+async function main() {
+    Logger.setGlobalLevel(LogLevel.Trace);
+
+    await build();
+    await debug();
+}
+
+main();

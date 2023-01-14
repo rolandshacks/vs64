@@ -1,6 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Acme Cross Compiler Assembly",
+	"name": "6502 Assembler Language Grammar",
 	"patterns": [
 		{
 			"include": "#comments"
@@ -16,9 +16,6 @@
 		},
 		{
 			"include": "#constants-numeric"
-		},
-		{
-			"include": "#macros"
 		}
 	],
 	"repository": {
@@ -46,21 +43,51 @@
 		"meta": {
 			"patterns": [
 				{
-					"include": "#meta-preprocessor-cpu"
+					"include": "#meta-preprocessor-keywords"
 				},
 				{
 					"include": "#meta-preprocessor-flow-control"
 				},
 				{
 					"include": "#meta-preprocessor-io"
+				},
+				{
+					"include": "#meta-declaration"
+				},
+				{
+					"include": "#meta-macro-call"
 				}
 			]
 		},
-		"meta-preprocessor-cpu": {
+		"meta-declaration": {
 			"patterns": [
 				{
 					"name": "meta.preprocessor",
-					"match": "\\!(cpu)\\b"
+					"match": "\\!(addr|set|zone)\\b"
+				}
+			]
+		},
+		"meta-macro-declaration": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\!(macro)\\b"
+				}
+			]
+		},
+		"meta-macro-call": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\+(\\w+)\\b"
+				}
+			]
+		},
+		"meta-preprocessor-keywords": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(cpu|al|as|rl|rs)\\b"
 				}
 			]
 		},
@@ -68,7 +95,7 @@
 			"patterns": [
 				{
 					"name": "meta.diff.header",
-					"match": "\\!(if|ifdef|for|set|do|warn|error|serious|endoffile)\\b"
+					"match": "\\!(if|ifdef|for|set|do|warn|error|serious|endoffile|pseudopc)\\b"
 				}
 			]
 		},
@@ -151,7 +178,7 @@
 			"patterns": [
 				{
 					"name": "keyword.instructions",
-					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|wo|word|align|fill|fi)\\b"
+					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|24|32|wo|word|align|fill|fi|hex|h|skip)\\b"
 				}
 			]
 		},
@@ -159,7 +186,7 @@
 			"patterns": [
 				{
 					"name": "keyword.instructions",
-					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text)\\b"
+					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text|Text)\\b"
 				}
 			]
 		},
@@ -190,20 +217,12 @@
 					"name": "constant.numeric.bin"
 				},
 				{
-					"match": "#?\\[0-9]+\\b",
+					"match": "#?[0-9]+\\b",
 					"name": "constant.numeric.dec"
 				},
 				{
 					"match": "#?\\&[0-7]+\\b",
 					"name": "constant.numeric.oct"
-				}
-			]
-		},
-		"macros": {
-			"patterns": [
-				{
-					"name": "entity.name.function",
-					"match": "\\!(macro)\\b"
 				}
 			]
 		}

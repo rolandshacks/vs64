@@ -185,7 +185,7 @@ class TaskProvider {
                     return new TaskTerminal(definition, instance._settings, instance._builder);
                 }
             ),
-            ["$acme"]
+            ["$builder"]
         );
 
         task.group = vscode.TaskGroup.Build;
