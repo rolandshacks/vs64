@@ -484,7 +484,9 @@ class Build {
         ];
 
         if (buildType == BuildType.Release) {
-            args.push("-Oirs");
+            args.push("-O");     // enable optimization, inlining, "registry keyword"
+            args.push("-Oirs");  // enable optimization, inlining, "registry keyword"
+            //args.push("-Cl");  // enable static locals
         }
 
         const definitions = [ ...project.definitions ];

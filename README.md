@@ -14,14 +14,39 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Extended introspection for 6502 cpu states and C64 custom chips state information and memory contents
 * On-the-fly disassembly of C64 program files
 
-## Requirements
+## Setup
 
-* You need to install either the ACME assembler or the CC65 compiler toolkit.
-* For debugging using VICE, you need to install and configure the VICE C64 emulator.
+### ACME Cross-Assembler
 
-There are no further requirements or dependencies to operate this extension.
+VS64 supports the ACME Cross-Assembler.
 
-## Introduction and Basic Usage
+* Manual installation: Download and install from https://sourceforge.net/projects/acme-crossass
+* Use a package management system, for example on Ubuntu/Debian: `sudo apt install acme`
+
+In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct ACME installation path.
+
+### CC65 Compiler
+
+VS64 also supports the CC65 6502 C Compiler.
+
+* Manual installation: Download and install from https://cc65.github.io
+* Use a package management system, for example on Ubuntu/Debian: `sudo apt install cc65`
+
+In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct CC65 installation and include paths.
+
+### VICE Emulator
+
+In addition to the internal 6502 cpu emulator, VS64 also supports debugging using the VICE emulator.
+
+* Manual installation: Download and install from https://vice-emu.sourceforge.io
+* Use a package management system, for example on Ubuntu/Debian: `sudo apt install vice`
+
+In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct VICE executable.
+
+> Please notice: It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
+
+
+## Basic Usage
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
 

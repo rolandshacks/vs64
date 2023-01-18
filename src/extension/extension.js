@@ -80,7 +80,7 @@ class Extension {
     	}
 
         { // create output channel
-            this._outputChannel = vscode.window.createOutputChannel("C64");
+            this._outputChannel = vscode.window.createOutputChannel("VS64");
         }
 
         { // load settings
@@ -188,7 +188,29 @@ class Extension {
     updateProject() {
         const settings = this._settings;
         const projectFile = VscodeUtils.getAbsoluteFilename(settings.projectFile||Constants.ProjectConfigFile);
-        this._project.fromFileIfChanged(projectFile);
+        const project = this._project;
+
+        try {
+            project.fromFileIfChanged(projectFile);
+        } catch (err) {
+            logger.error(err);
+
+            const txt = projectFile + " : Error : " + err;
+
+            /*
+            const terminal = vscode.window.activeTerminal;
+            if (terminal) {
+                terminal.write(txt + "\r\n");                
+                terminal.done();
+            }
+            */
+
+            const channel = this._outputChannel;
+            if (channel) {
+                channel.appendLine(txt);
+                channel.show();
+            }
+        }
     }
 
     updateSettings() {
@@ -247,8 +269,11 @@ class Extension {
     triggerBuild() {
 
         this.cancelBuild();
-
         this.updateProject();
+
+        if (this._project.error) {
+            return;
+        }
 
         const instance = this;
 
@@ -284,17 +309,27 @@ class Extension {
             return null;
         }
 
+        const settings = this._settings;
+        const project = this._project;
+
+        if (project.error) {
+            const txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
+            logger.error(txt);
+            terminal.write(txt + "\r\n");                
+            terminal.done();
+            return null;
+        }
+
         return new Promise((resolve, reject) => {
             //terminal.write('starting build...\r\n');
-
-            const project = this._project;
-            const settings = this._settings;
 
             if (this._builder) {
                 const txt = "build process already active";
                 logger.error(txt);
                 terminal.write(txt + "\r\n");
+                terminal.done();
                 resolve();
+                return;
             }
 
             const build = new Build(project);
@@ -313,6 +348,7 @@ class Extension {
                     terminal.write(txt + "\r\n", AnsiColors.Red);
                     terminal.done();
                     reject();
+                    return;
                 }
 
                 const txt = "clean succeeded";
@@ -323,6 +359,7 @@ class Extension {
                 if (action == "clean") {
                     terminal.done();
                     resolve();
+                    return;
                 }
             }
 
@@ -369,9 +406,11 @@ class Extension {
                         if (hasError) {
                             this.showStatus("$(error) " + statusText||txt);
                             reject(txt||"");
+                            return;
                         } else {
                             this.showStatus("$(pass) " + statusText||txt);
                             resolve();
+                            return;
                         }
 
                     })
@@ -380,6 +419,7 @@ class Extension {
                         terminal.done();
                         this.showStatus("$(error) Build failed");
                         reject();
+                        return;
                     });
 
                 } catch (err) {
@@ -390,6 +430,7 @@ class Extension {
                     terminal.write(txt + "\r\n", AnsiColors.Red);
                     terminal.done();
                     reject();
+                    return;
                 }
             }
         });

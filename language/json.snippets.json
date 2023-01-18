@@ -1,0 +1,40 @@
+{
+    "asmproj": {
+        "prefix": ["VS64 Assembler Project"],
+        "body": [
+            "{",
+            "    \"name\": \"${1:name}\",",
+            "    \"description\": \"${2:description}\",",
+            "    \"toolkit\": \"acme\",",
+            "    \"main\": \"src/main.asm\",",
+            "    \"build\": \"debug\",",
+            "    \"definitions\": [],",
+            "    \"includes\": [\"src/includes\"],",
+            "    \"args\": [],",
+            "    \"compiler\": \"\"",
+            "}",
+            ""
+        ],
+        "description": "VS64 assembler project configuration file template"
+    },
+    "cproj": {
+        "prefix": ["VS64 C Project"],
+        "body": [
+            "{",
+            "    \"name\": \"${1:name}\",",
+            "    \"description\": \"${2:description}\",",
+            "    \"toolkit\": \"cc65\",",
+            "    \"sources\": [",
+            "        \"src/main.c\"",
+            "    ],",
+            "    \"build\": \"debug\",",
+            "    \"definitions\": [],",
+            "    \"includes\": [\"src/includes\"],",
+            "    \"args\": [],",
+            "    \"compiler\": \"\"",
+            "}",
+            ""
+        ],
+        "description": "VS64 C project configuration file template"
+    }
+}

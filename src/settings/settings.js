@@ -93,8 +93,7 @@ class Settings {
         settings.buildArgs = workspaceConfig.get("c64.buildArgs")||"";
         settings.autoBuild = workspaceConfig.get("c64.autoBuild")||true;
 
-        settings.emulatorExecutable = Utils.normalizeExecutableName(workspaceConfig.get("c64.emulatorExecutable")||"");
-        settings.emulatorArgs = workspaceConfig.get("c64.emulatorArgs")||"";
+        this.setupVice(workspaceConfig.get("c64.emulatorExecutable"), workspaceConfig.get("c64.emulatorArgs"));
 
         this.show();
     }
@@ -115,22 +114,44 @@ class Settings {
             this.ld65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("ld65"));
         } else {
             this.cc65Includes = null;
+            if (fs.existsSync("/usr/share/cc65/include")) {
+                this.cc65Includes = "/usr/share/cc65/include";
+            }
             this.cc65Executable = "cc65";
             this.ca65Executable = "ca65";
             this.ld65Executable = "ld65";
         }
     }
 
+    setupVice(executablePath, args) {
+        if (executablePath) {
+            this.emulatorExecutable = Utils.normalizeExecutableName(executablePath);
+        } else {
+            this.emulatorExecutable = "x64sc";
+        }
+
+        this.emulatorArgs = args||"";
+    }
+
     show() {
         const settings = this;
 
-        logger.info("[C64] extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
-        logger.info("[C64] auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
+        logger.debug("[C64] extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
+        logger.debug("[C64] auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
+
+        logger.debug("[C64] acme executable: " + settings.acmeExecutable);
+        logger.debug("[C64] cc65 executable: " + settings.cc65Executable);
+        logger.debug("[C64] ca65 executable: " + settings.ca65Executable);
+        logger.debug("[C64] ld65 executable: " + settings.ld65Executable);
+        logger.debug("[C64] vice executable: " + settings.emulatorExecutable);
+
+        /*
         this.logExecutableState(settings.acmeExecutable, "[C64] acme executable: " + settings.acmeExecutable);
         this.logExecutableState(settings.cc65Executable, "[C64] cc65 executable: " + settings.cc65Executable);
         this.logExecutableState(settings.ca65Executable, "[C64] ca65 executable: " + settings.ca65Executable);
         this.logExecutableState(settings.ld65Executable, "[C64] ld65 executable: " + settings.ld65Executable);
         this.logExecutableState(settings.emulatorExecutable, "[C64] emulator executable: " + settings.emulatorExecutable);
+        */
     }
 
     getExecutableState(filename) {

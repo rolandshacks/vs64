@@ -74,31 +74,52 @@
 ; Data Handling
 ; -------------------------------------------------
 
-!macro storeb .value, .addr {
+!macro storeb .addr, .value {
     lda #.value
     sta .addr
 }
 
-!macro storew .value, .addr {
+!macro storebi .addr, .value {
+    +storew regw0, .addr
+    +storebi regw0, .value
+}
+
+!macro storebv .addr, .value {
+    lda .value
+    sta .addr
+}
+
+!macro storeibv .addr, .value {
+    lda .value
+    ldy #0
+    sta (.addr),y
+}
+
+!macro storew .addr, .value {
     lda #<(.value)
     sta .addr
     lda #>(.value)
     sta .addr+1
 }
 
-!macro moveb .src, .dest {
+!macro storewi .addr, .value {
+    +storew regw0,.addr
+    +storew regw0,.value
+}
+
+!macro moveb .dest, .src {
     lda .src
     sta .dest
 }
 
-!macro movew .src, .dest {
+!macro movew .dest, .src {
     lda .src
     sta .dest
     lda .src+1
     sta .dest+1
 }
 
-!macro movel .src, .dest {
+!macro movel .dest, .src {
     lda .src
     sta .dest
     lda .src+1
@@ -125,52 +146,191 @@
 +
 }
 
-!macro beqw .val,.addr {
+!macro beqw .addr, .val {
     lda .val
     bne +
     lda .val + 1
-    beq .addr 
+    beq .addr
 +
 }
 
-!macro add8 {
+!macro addb .addr,.value {
     clc
-    txa
-    sty result0
-    adc result0
+    lda .addr
+    adc .value
+    sta .addr
 }
 
-!macro add16 .a,.b {
+!macro subb .addr,.value {
+    sec
+    lda .addr
+    sbc .value
+    sta .addr
+}
+
+!macro addw .addr,.value {
     clc
-    lda #<(.a)
-    adc #<(.b)
-    sta result0
-    lda #>(.a)
-    adc #>(.b)
-    sta result1
+    lda .addr
+    adc #<(.value)
+    sta .addr
+    lda .addr+1
+    adc #>(.value)
+    sta .addr+1
+}
+
+
+!macro addwb .addr,.value {
+    clc
+    lda .addr
+    adc #.value
+    sta .addr
+    lda .addr+1
+    adc #0
+    sta .addr+1
+}
+
+!macro addwv .addr,.value {
+    clc
+    lda .addr
+    adc .value
+    sta .addr
+    lda .addr+1
+    adc .value+1
+    sta .addr+1
+}
+
+!macro addwvi .addr,.value {
+    +storew regw0, .addr
+    +storew regw1, .value
+    +addwv regw0,regw1
+}
+
+!macro addwbv .addr,.value {
+    clc
+    lda .addr
+    adc .value
+    sta .addr
+    lda .addr+1
+    adc #0
+    sta .addr+1
+}
+
+!macro subw .addr,.value {
+    sec
+    lda .addr
+    sbc #<(.value)
+    sta .addr
+    lda .addr+1
+    sbc #>(.value)
+    sta .addr+1
+}
+
+!macro subwb .addr,.value {
+    sec
+    lda .addr
+    sbc #<(.value)
+    sta .addr
+    lda .addr+1
+    sbc #0
+    sta .addr+1
+}
+
+!macro subwv .addr,.value {
+    sec
+    lda .addr
+    sbc .value
+    sta .addr
+    lda .addr+1
+    sbc .value+1
+    sta .addr+1
+}
+
+!macro subwbv .addr,.value {
+    sec
+    lda .addr
+    sbc .value
+    sta .addr
+    lda .addr+1
+    sbc #0
+    sta .addr+1
+}
+
+!macro addbv .addr,.value {
+    clc
+    lda .addr
+    adc .value
+    sta .addr
+}
+
+!macro subbv .a,.b {
+    sec
+    lda .addr
+    sbc .value
+    sta .addr
+}
+
+!macro cmpw .addr, .val {
+    lda #>(.val)
+    cmp .addr+1
+    bne +
+    lda #<(.val)
+    cmp .addr
++
+}
+
+!macro cmpb .addr, .val {
+    lda .val
+    cmp .addr
+}
+
+!macro cmpwi .addr, .val {
+    +storew regw0, .addr
+    +cmpw regw0, .val
++
+}
+
+!macro clearb .addr {
+    lda #0
+    sta .addr
+}
+
+!macro clearw .addr {
+    lda #0
+    sta .addr
+    sta .addr+1
+}
+
+!macro set_bit .addr,.bitnum,.bitvalue {
+    lda .addr
+    !if .bitvalue {
+        ora 1 << .bitnum
+    } else {
+        and $ff - (1 << .bitnum)
+    }
+    sta .addr
 }
 
 ; -------------------------------------------------
 ; Common
 ; -------------------------------------------------
 
-!macro strcpy .src,.dst {
-    +storew .src, regw0
-    +storew .dst, regw1
+!macro strcpy .dst, .src {
+    +storew regw0, .src
+    +storew regw1, .dst
     jsr strcpy_fn
 }
 
 !macro memset .dst,.val,.len {
-    +storew .dst, regw0
-    +storeb .val, reg0
-    +storew .len, regw1
+    +storew regw0, .dst
+    +storeb reg0, .val
+    +storew regw1, .len
     jsr memset_fn
 }
 
 !macro memcpy .dst,.src,.len {
-    +storew .dst, regw0
-    +storew .src, regw1
-    +storew .len, regw2
+    +storew regw0, .dst
+    +storew regw1, .src
+    +storew regw2, .len
     jsr memcpy_fn
 }
 
@@ -210,6 +370,80 @@
 ; Sprites
 ; -------------------------------------------------
 
+!addr sprite_base = video_vic_base ; ($8000)
+!set sprite_base_index = 0
+
+!addr sprw0 = $6a ; $6a+6b
+!addr sprw1 = $6c ; +6c+6d
+
 !macro sprite_line .v {
 	!by .v>>16, (.v>>8)&255, .v&255
 }
+
+!macro sprite_set_enabled .sprite,.enabled {
+    +set_bit $d015,.sprite,.enabled
+}
+
+!macro sprite_set_mode .sprite,.multicolor {
+    +set_bit $d01c,.sprite,.multicolor
+}
+
+!macro sprite_set_data .sprite,.block {
+    lda .block
+    +storew regw0, video_screen_base + $03f8
+    +addwbv regw0, .sprite
+    +storeibv regw0, .block
+}
+
+!macro sprite_set_color .sprite,.color {
+    +moveb $d027+.sprite, .color
+}
+
+!macro sprite_set_common_colors .color_a,.color_b {
+    +moveb $d026, .color_a
+    +moveb $d025, .color_b
+}
+
+!macro sprite_set_pos .sprite,.x,.y {
+    +moveb reg0, .sprite
+    +movew regw0, .x
+    +movew regw1, .y
+    jsr sprite_set_pos_fn
+}
+
+!macro sprite_define .id,.x,.y,.vx,.vy,.anim_delay {
+    !byte .id               ; [00] id
+    !word .x                ; [01] x
+    !word .y                ; [03] y
+    !byte >(.vx)            ; [05] vx
+    !byte <(.vx)            ; [05] vx_sub
+    !word .vy               ; [07] vy
+    !byte 0                 ; [09] xdir (0: right, 1: left)
+    !byte 0                 ; [10] ydir (0: down, 1: up)
+    !byte 0                 ; [11] anim
+    !byte .anim_delay       ; [12] anim_delay
+    !byte 0                 ; [13] anim_counter
+    !byte 0                 ; [14] vx_counter
+                            ; len = 15
+}
+
+!set sprite_info_size = 15
+
+!macro sprite_table .num_sprites {
+    !for id, 0, .num_sprites {
+        +sprite_define id, 80+(id*33), 0+(id*25), $300 + id*20, id*41, 2
+    }
+}
+
+!set sprite_field_id = 0
+!set sprite_field_x = 1
+!set sprite_field_y = 3
+!set sprite_field_vx = 5
+!set sprite_field_vxsub = 6
+!set sprite_field_vy = 7
+!set sprite_field_xdir = 9
+!set sprite_field_ydir = 10
+!set sprite_field_anim = 11
+!set sprite_field_anim_delay = 12
+!set sprite_field_anim_counter = 13
+!set sprite_field_vx_counter = 14

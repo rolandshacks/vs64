@@ -10,6 +10,7 @@ BIND(module);
 
 const { Logger } = require('utilities/logger');
 const { DebugAddressInfo } = require('debugger/debug_info');
+const { Profiler } = require('debugger/profiler');
 
 const logger = new Logger("Debug");
 
@@ -517,6 +518,7 @@ class DebugRunner {
     constructor() {
         this.init();
         this._eventMap = null;
+        this._profiler = new Profiler(this);
     }
 
     init() {
@@ -541,11 +543,10 @@ class DebugRunner {
         return eventFunction(arg1, arg2, arg3);
     }
 
-    setBreakpoints(breakpoints) {
-        logger.info("DebugRunner.setBreakpoints()");
-    }
+    setBreakpoints(breakpoints) {}
 
     start() {
+        this._profiler.reset();
         this._running = true;
     }
 
@@ -562,25 +563,23 @@ class DebugRunner {
     }
 
     async step(debugStepType) {
-        logger.info("DebugRunner.step()");
+        this._profiler.reset();
+        await this.do_step(debugStepType);
     }
 
+    async do_step(debugStepType) {}
+
     async read(addr, size) {
-        logger.info("DebugRunner.read()");
         return 0x0;
     }
 
-    async write(addr, value) {
-        logger.info("DebugRunner.write()");
-    }
+    async write(addr, value) {}
 
     async loadProgram(filename, autoOffsetCorrection, forcedStartAddress) {
-        logger.info("DebugRunner.loadProgram()");
         this.init();
     }
 
     getCpuState() {
-        logger.info("DebugRunner.getCpuState()");
         return null;
     }
 

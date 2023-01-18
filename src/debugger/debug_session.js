@@ -26,6 +26,7 @@ const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState,
 const { DebugInfo } = require('debugger/debug_info');
 const { Emulator } = require('emulator/emu');
 const { ViceConnector, ViceProcess } = require('connector/connector');
+const profiler = require('./profiler');
 
 const logger = new Logger("DebugSession");
 const KILL_VICE_PROCESS_AT_STOP = false;
@@ -86,7 +87,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._launchPC = null;
         this._emulator = null;
         this._emulatorProcess = null;
-
         this._variablesCache = {};
 
     }
@@ -655,6 +655,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         const debugInfo = this._debugInfo;
+        const profiler = emu._profiler;
+        const cyclesDelta = profiler ? profiler.cyclesDelta : 0;
+        const cpuTimeDelta = profiler ? profiler.cpuTimeDelta : "";
 
         args = args||{};
 
@@ -731,6 +734,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
                 variables = [
                     { name: "Cycles", type: "stat", value: cpuState.cpuInfo.cycles.toString(), variablesReference: 0 },
+                    { name: "Cycles Delta", type: "stat", value: cyclesDelta.toString(), variablesReference: 0 },
+                    { name: "Cpu Time Delta", type: "stat", value: cpuTimeDelta, variablesReference: 0 },
                     { name: "Opcode", type: "stat", value: Formatter.formatValue(cpuState.cpuInfo.opcode), variablesReference: 0 },
                     { name: "IRQ", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.irq), variablesReference: 0 },
                     { name: "NMI", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.nmi), variablesReference: 0 },
@@ -897,6 +902,125 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    findNamedItem(name) {
+        const debugInfo = this._debugInfo;
+        const emu = this._emulator;
+        const cpuState = emu.getCpuState();
+        const registers = cpuState.cpuRegisters;
+
+        let symbol = null;
+
+        const item = {
+            name: name
+        };
+
+        if (debugInfo.supportsScopes) {
+            const pc = registers.PC;
+            const symbol = debugInfo.getScopedSymbol(pc, name);
+            if (symbol) {
+                item.symbol = symbol;
+                item.relativeAddress = symbol.value;
+            }
+        }
+
+        if (null == symbol) {
+            const symbol = debugInfo.getSymbol(name);
+            if (symbol) {
+                item.symbol = symbol;
+                item.absoluteAddress = symbol.value;
+            }
+        }
+
+        if (!item.symbol) {
+            const label = debugInfo.getLabel(name);
+            if (label) {
+                item.label = label;
+                item.absoluteAddress = label.address;
+            }
+        }
+
+        return item;
+    }
+
+    parseQuery(expr) {
+
+        if (!expr) return null;
+
+        let name = null;
+        let address = null;
+        let dataSize = null;
+        let elementCount = null;
+
+        const isAddress = ("$" == expr.charAt(0) && expr.length > 1);
+        const pos = expr.indexOf(',');
+
+        if (isAddress) {
+            name = pos >= 0 ? expr.substr(1, pos) : expr.substr(1);
+            address = parseInt(name, 16);
+        } else {
+            name = pos >= 0 ? expr.substr(0, pos) : expr;
+        }
+
+        if (pos >= 0) {
+            const fmt = expr.substr(pos+1);
+            if (fmt == 'b') {
+                dataSize = 8;
+            } else if (fmt == 'w') {
+                dataSize = 16;
+            } else {
+                elementCount = parseInt(fmt);
+            }
+        }
+
+        return {
+            name: name,
+            address: address,
+            dataSize : dataSize,
+            elementCount : elementCount
+        };
+    }
+
+    async getFormattedData(expr) {
+
+        const emu = this._emulator;
+
+        const query = this.parseQuery(expr);
+
+        if (!query) return null;
+
+        if (query.address == null) {
+
+            const addressInfo = this.findNamedItem(query.name);
+            if (!addressInfo) return null;
+
+            if (addressInfo.absoluteAddress) {
+                query.address = addressInfo.absoluteAddress;
+            } else if (addressInfo.relativeAddress) {
+                // resolve symbol from C-Stack
+                const mem = await emu.readMemory(0x02, 0x03);
+                const stackPointerMem = (mem[1] << 8) + mem[0];
+                query.address = stackPointerMem + addressInfo.relativeAddress;
+            } else {
+                return null;
+            }
+
+            query.namedValue = true;
+        }
+
+        query.result = null;
+
+        const prefix = query.namedValue ? ("[" + Formatter.formatWord(query.address, true) + "] ") : "";
+
+        if (query.elementCount) {
+            query.result = prefix + await this.formatMemory(query.address, query.elementCount);
+        } else {
+            const info = await this.formatSymbol({ value: query.address, isAddress: true, data_size: query.dataSize });
+            query.result = prefix + info.value;
+        }
+
+        return query;
+    }
+
     async evaluateRequest(response, args) {
 
         const debugInfo = this._debugInfo;
@@ -910,11 +1034,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             return;
         }
 
-
         const emu = this._emulator;
         const cpuState = emu.getCpuState();
         const registers = cpuState.cpuRegisters;
         const expr = args.expression;
+
         let typeInfo = null;
 
         let value = null;
@@ -926,102 +1050,22 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else if ("#$" == expr.substr(0, 2) && expr.length >= 3) {
             const exprValue = parseInt(expr.substr(2), 16);
             value = "(const) " + Formatter.formatByte(exprValue);
-        } else if ("$" == expr.charAt(0) && expr.length > 1) {
-            let addr = null;
-
-            const pos = expr.indexOf(',');
-            if (pos >= 0) {
-                addr = parseInt(expr.substr(1, pos), 16);
-                const fmt = expr.substr(pos+1);
-                if (fmt == 'b') {
-                    let info = await this.formatSymbol({ value: addr, isAddress: true, data_size: 8 });
-                    value = info.value;
-                } else if (fmt == 'w') {
-                    let info = await this.formatSymbol({ value: addr, isAddress: true, data_size: 16 });
-                    value = info.value;
-                } else {
-                    const numElements = parseInt(fmt);
-                    value = await this.formatMemory(addr, numElements);
-                }
-            } else {
-                addr = parseInt(expr.substr(1), 16);
-                let info = await this.formatSymbol({ value: addr, isAddress: true });
-                value = info.value;
-            }
-
-            address = addr;
         } else if (expr.toUpperCase() == "A") {
-            value = "(accumulator) A = " + Formatter.formatByte(registers.A);
+            value = "(accumulator A) " + Formatter.formatByte(registers.A);
         } else if (expr.toUpperCase() == "X") {
-            value = "(register) X = " + Formatter.formatByte(registers.X);
+            value = "(register X) " + Formatter.formatByte(registers.X);
         } else if (expr.toUpperCase() == "Y") {
-            value = "(register) Y = " + Formatter.formatByte(registers.Y);
+            value = "(register Y) " + Formatter.formatByte(registers.Y);
         } else if (expr.toUpperCase() == "PC") {
-            value = "(program counter) PC = " + Formatter.formatAddress(registers.PC);
+            value = "(program counter) " + Formatter.formatAddress(registers.PC);
             address = registers.PC;
         } else if (expr.toUpperCase() == "SP") {
-            value = "(stack pointer) SP = " + Formatter.formatByte(registers.S);
+            value = "(stack pointer) " + Formatter.formatByte(registers.S);
         } else {
-
-            const pos = expr.indexOf(',');
-            let symbolName = null;
-            let numElements = null;
-            let dataSize = null;
-            if (pos >= 0) {
-                symbolName = expr.substr(0, pos);
-                const fmt = expr.substr(pos+1);
-                if (fmt == 'b') {
-                    dataSize = 8;
-                } else if (fmt == 'w') {
-                    dataSize = 16;
-                } else {
-                    numElements = parseInt(fmt);
-                }
-            } else {
-                symbolName = expr;
-            }
-
-            let symbol = null;
-
-            if (debugInfo.supportsScopes) {
-                const pc = cpuState.cpuRegisters.PC;
-                symbol = debugInfo.getScopedSymbol(pc, symbolName);
-                if (symbol) {
-                    const relativeAddress = symbol.value;
-                    const mem = await emu.readMemory(0x02, 0x03);
-                    const stackPointerMem = (mem[1] << 8) + mem[0];
-                    const address = stackPointerMem + relativeAddress;
-                    symbol.value = address;
-                }
-            }
-
-            if (null == symbol) {
-                symbol = debugInfo.getSymbol(symbolName);
-            }
-
-            if (null != symbol) {
-
-                const addrPrefix = symbol.isAddress ? ("[" + Formatter.formatWord(symbol.value, true) + "] ") : "";
-
-                if (symbol.isAddress && (numElements || dataSize)) {
-
-                    if (numElements) {
-                        const memstr = await this.formatMemory(symbol.value, numElements);
-                        value = addrPrefix + memstr;
-                    } else {
-                        let info = await this.formatSymbol({ value: symbol.value, isAddress: true, data_size: dataSize });
-                        value = addrPrefix + info.value;
-                    }
-                } else {
-                    let info = await this.formatSymbol(symbol);
-                    value = addrPrefix + info.value;
-                }
-            } else {
-                let label = debugInfo.getLabel(expr);
-                if (null != label) {
-                    value = label.name + ": " + Formatter.formatAddress(label.address) + ", line " + label.line;
-                    address = label.address;
-                }
+            const exprValue = await this.getFormattedData(expr);
+            if (exprValue) {
+                value = exprValue.result;
+                address = exprValue.address;
             }
         }
 
@@ -1168,7 +1212,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     }
 
     onDebugStopped(reason) {
-        logger.info("debug stopped");
+        logger.debug("debug stopped");
 
         if (!reason) return;
 
@@ -1183,6 +1227,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else {
 
             this._variablesCache = {}; // clear cached state information
+
+            const emu = this._emulator;
+            if (emu) {
+                emu._profiler.update();
+            }
 
             let eventReason = "";
             let eventDescription = null;

@@ -85,7 +85,7 @@ class Emulator extends DebugRunner {
         this.run(null, true);
     }
 
-    async step(debugStepType) {
+    async do_step(debugStepType) {
 
         /*
         if (debugStepType == DebugStepType.STEP_IN) {
@@ -335,7 +335,7 @@ class Emulator extends DebugRunner {
         }
 
         cpu._opcode = this.readSync( cpu.PC );
-        cpu._cycleCounter = 0;
+        cpu.resetCycleCounter();
     }
 
     readSync(addr) {

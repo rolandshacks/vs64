@@ -18,24 +18,38 @@ const CallStackSize = 128;
 
 class CPU6502 {
     constructor(mem_read_fn, mem_write_fn) {
-        this.PC = 0; // Program counter
 
-	    this.A = 0; this.X = 0; this.Y = 0; this.S = 0; // Registers
-	    this.N = 0; this.Z = 1; this.C = 0; this.V = 0; // ALU flags
-	    this.I = 0; this.D = 0; this.B = 0; // Other flags
-	    this.irq = 0; this.nmi = 0; // IRQ lines
+		this.read = mem_read_fn; 							// Memory read access function
+		this.write = mem_write_fn;							// Memory write access function
 
-	    this._tmp = 0; this._addr = 0; // Temporary registers
-        this._returnReached = false; // called RTS at end of program
-	    this._opcode = 0; // Current opcode
-	    this._cycleCounter = 0; // Cycles counter
+		this.PC = 0;										// Program counter
+	    this.A = 0; this.X = 0; this.Y = 0; this.S = 0; 	// Registers
+	    this.N = 0; this.Z = 1; this.C = 0; this.V = 0;		// ALU flags
+	    this.I = 0; this.D = 0; this.B = 0; 				// Other flags
+	    this.irq = 0; this.nmi = 0; 						// IRQ lines
 
-		this.read = mem_read_fn; // Memory read access function
-		this.write = mem_write_fn; // Memory write access function
+	    this._tmp = 0; this._addr = 0; 						// Temporary registers
+        this._returnReached = false; 						// called RTS at end of program
+	    this._opcode = 0; 									// Current opcode
 
-		this._callStack = []; // Call stack buffer
+	    this._cycleCounter = 0; 							// Cycles counter
+		this.resetCycleCounter();
+
+		this._callStack = [];								// Call stack buffer
 		this.clearCallStack();
     }
+
+	get cycleCounter() {
+		return this._cycleCounter;
+	}
+
+	resetCycleCounter() {
+		this._cycleCounter = 0;
+	}
+
+	incCycleCounter(cycles) {
+		this._cycleCounter += cycles;
+	}
 
 	dumpCallStack() {
 		const callStack = this._callStack;
@@ -90,7 +104,7 @@ class CPU6502 {
 			this.irq,
 			this.nmi,
 			this._opcode,
-			this._cycleCounter,
+			this.cycleCounter,
 			this._callStack,
 			0,  // (TODO) not supported: raster line
 			0,  // (TODO) not supported: raster cycle
@@ -145,7 +159,7 @@ class CPU6502 {
     log(){
         let opcode = this.read( this.PC );
 	    let msg = "nPC=" + this.PC.toString(16);
-	    msg += " cyc=" + this._cycleCounter;
+	    msg += " cyc=" + this.cycleCounter;
 	    msg += " [" + this.fmt(opcode) + "] ";
 	    msg += ( this.C ? "C" : "-");
 	    msg += ( this.N ? "N" : "-");
@@ -180,14 +194,14 @@ class CPU6502 {
     izx() {
 	    let a = (this.read(this.PC++) + this.X) & 0xFF;
 	    this._addr = (this.read(a+1) << 8) | this.read(a);
-	    this._cycleCounter += 6;
+	    this.incCycleCounter(6);
     }
 
 	izyp() {
 	    let a = this.read(this.PC++);
 	    let paddr = (this.read((a+1) & 0xFF) << 8) | this.read(a);
 	    this._addr = (paddr + this.Y);
-		this._cycleCounter += 6;
+		this.incCycleCounter(6);
 	}
 
     izy() {
@@ -195,9 +209,9 @@ class CPU6502 {
 	    let paddr = (this.read((a+1) & 0xFF) << 8) | this.read(a);
 	    this._addr = (paddr + this.Y);
 	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
-		    this._cycleCounter += 6;
+		    this.incCycleCounter(6);
 	    } else {
-		    this._cycleCounter += 5;
+		    this.incCycleCounter(5);
 	    }
     }
 
@@ -206,44 +220,44 @@ class CPU6502 {
 	    a |= (this.read(this.PC++) << 8);
 	    this._addr = this.read(a);
 	    this._addr |= (this.read( (a & 0xFF00) | ((a + 1) & 0xFF) ) << 8);
-	    this._cycleCounter += 6;
+	    this.incCycleCounter(6);
     }
 
     zp() {
 	    this._addr = this.read(this.PC++);
-	    this._cycleCounter += 3;
+	    this.incCycleCounter(3);
     }
 
     zpx() {
 	    this._addr = (this.read(this.PC++) + this.X) & 0xFF;
-	    this._cycleCounter += 4;
+	    this.incCycleCounter(4);
     }
 
     zpy() {
 	    this._addr = (this.read(this.PC++) + this.Y) & 0xFF;
-	    this._cycleCounter += 4;
+	    this.incCycleCounter(4);
     }
 
     imp() {
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     imm() {
 	    this._addr = this.PC++;
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     abs() {
 	    this._addr = this.read(this.PC++);
 	    this._addr |= (this.read(this.PC++) << 8);
-	    this._cycleCounter += 4;
+	    this.incCycleCounter(4);
     }
 
 	abxp() {
 	    let paddr = this.read(this.PC++);
 	    paddr |= (this.read(this.PC++) << 8);
 	    this._addr = (paddr + this.X);
-		  this._cycleCounter += 5;
+		  this.incCycleCounter(5);
     }
 
     abx() {
@@ -251,9 +265,9 @@ class CPU6502 {
 	    paddr |= (this.read(this.PC++) << 8);
 	    this._addr = (paddr + this.X);
 	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
-		    this._cycleCounter += 5;
+		    this.incCycleCounter(5);
 	    } else {
-		    this._cycleCounter += 4;
+		    this.incCycleCounter(4);
 	    }
     }
 
@@ -262,9 +276,9 @@ class CPU6502 {
 	    paddr |= (this.read(this.PC++) << 8);
 	    this._addr = (paddr + this.Y);
 	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
-		    this._cycleCounter += 5;
+		    this.incCycleCounter(5);
 	    } else {
-		    this._cycleCounter += 4;
+		    this.incCycleCounter(4);
 	    }
     }
 
@@ -272,7 +286,7 @@ class CPU6502 {
 	    let paddr = this.read(this.PC++);
 	    paddr |= (this.read(this.PC++) << 8);
 	    this._addr = (paddr + this.Y);
-      this._cycleCounter += 5;
+      this.incCycleCounter(5);
     }
 
     rel() {
@@ -281,12 +295,12 @@ class CPU6502 {
 		    this._addr -= 0x100;
 	    }
 	    this._addr += this.PC;
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     rmw() {
 	    this.write(this._addr, this._tmp & 0xFF);
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     fnz(v) {
@@ -311,9 +325,9 @@ class CPU6502 {
     branch(v) {
 	    if (v) {
 		    if ( (this._addr & 0x100) != (this.PC & 0x100) ) {
-			    this._cycleCounter += 2;
+			    this.incCycleCounter(2);
 		    } else {
-			    this._cycleCounter += 1;
+			    this.incCycleCounter(1);
 		    }
 		    this.PC = this._addr;
 	    }
@@ -433,7 +447,7 @@ class CPU6502 {
 	    this.I = 1;
 	    this.D = 0;
 	    this.PC = (this.read(0xFFFF) << 8) | this.read(0xFFFE);
-	    this._cycleCounter += 5;
+	    this.incCycleCounter(5);
     }
 
     bcc() { this.branch( this.C == 0 ); }
@@ -528,7 +542,7 @@ class CPU6502 {
 
     jmp() {
 	    this.PC = this._addr;
-	    this._cycleCounter--;
+	    this.incCycleCounter(-1);
     }
 
     jsr() {
@@ -537,7 +551,7 @@ class CPU6502 {
 	    this.write(this.S + 0x100, (this.PC - 1) & 0xFF);
 	    this.S = (this.S - 1) & 0xFF;
 	    this.PC = this._addr;
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     las() {
@@ -612,7 +626,7 @@ class CPU6502 {
     pha() {
 	    this.write(this.S + 0x100, this.A);
 	    this.S = (this.S - 1) & 0xFF;
-	    this._cycleCounter++;
+	    this.incCycleCounter(1);
     }
 
     php() {
@@ -626,14 +640,14 @@ class CPU6502 {
 	    v |= this.C;
 	    this.write(this.S + 0x100, v);
 	    this.S = (this.S - 1) & 0xFF;
-	    this._cycleCounter++;
+	    this.incCycleCounter(1);
     }
 
     pla() {
 	    this.S = (this.S + 1) & 0xFF;
 	    this.A = this.read(this.S + 0x100);
 	    this.fnz(this.A);
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     plp() {
@@ -646,7 +660,7 @@ class CPU6502 {
 	    this.I = ((this._tmp & 0x04) != 0) ? 1 : 0;
 	    this.Z = ((this._tmp & 0x02) != 0) ? 1 : 0;
 	    this.C = ((this._tmp & 0x01) != 0) ? 1 : 0;
-	    this._cycleCounter += 2;
+	    this.incCycleCounter(2);
     }
 
     rti() {
@@ -663,7 +677,7 @@ class CPU6502 {
 	    this.PC = this.read(this.S + 0x100);
 	    this.S = (this.S + 1) & 0xFF;
 	    this.PC |= this.read(this.S + 0x100) << 8;
-	    this._cycleCounter += 4;
+	    this.incCycleCounter(4);
     }
 
     rts() {
@@ -673,7 +687,7 @@ class CPU6502 {
 	    this.S = (this.S + 1) & 0xFF;
 	    this.PC |= this.read(this.S + 0x100) << 8;
 	    this.PC++;
-	    this._cycleCounter += 4;
+	    this.incCycleCounter(4);
     }
 
     sbc() {

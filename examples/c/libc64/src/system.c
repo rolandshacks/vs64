@@ -4,6 +4,11 @@
 
 #include "libc64/system.h"
 
+address_t g_ptr;
+uint16_t g_system_read_addr = 0x0;
+
+#pragma static-locals(push, on)
+
 void poke(const uint16_t poke_address, const uint8_t value) {
     *(address_t)(poke_address) = value;
 }
@@ -13,18 +18,22 @@ uint8_t peek(const uint16_t address) {
 }
 
 void set_bit(const uint16_t address, uint8_t bit, bool enabled) {
-    address_t ptr = (address_t)(address);
-    uint8_t value = (enabled) ? *ptr | (1 << bit) : *ptr & ~(1 << bit);
-    *ptr = value;
+    g_ptr = (address_t)(address);
+    if (enabled) {
+        *g_ptr |= (1 << bit);
+    } else {
+        *g_ptr &= ~(1 << bit);
+    }
 }
 
 bool get_bit(const uint16_t address, uint8_t bit) {
-    address_t ptr = (address_t)(address);
-    return (*ptr & (1 << bit)) != 0x0;
+    g_ptr = (address_t)(address);
+    return (*g_ptr & (1 << bit)) != 0x0;
 }
 
-void system_init() {
+#pragma static-locals(pop)
 
+void system_init() {
 }
 
 void system_disable_interrupts() {
@@ -35,11 +44,9 @@ void system_enable_interrupts() {
     asm ("cli"); // NOLINT
 }
 
-uint16_t _system_read_addr = 0x0;
-
 void system_read_memory(uint16_t addr) {
-    _system_read_addr = addr;
-    asm ("lda %v", _system_read_addr); // NOLINT
+    g_system_read_addr = addr;
+    asm ("lda %v", g_system_read_addr); // NOLINT
 }
 
 void system_disable_kernal_and_basic() {

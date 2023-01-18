@@ -5,7 +5,6 @@
 #include <stdbool.h>
 
 void sprite_init();
-
 void sprite_set_enabled(uint8_t sprite, bool enabled);
 void sprite_set_mode(uint8_t sprite, bool multicolor);
 uint8_t sprite_get_address(const uint8_t* data);

@@ -1,7 +1,17 @@
+//
+// Main
+//
+
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <sys.h>
+
+///////////////////////////////////////////////////////////////////////////////
+// Compiler Pragmas
+///////////////////////////////////////////////////////////////////////////////
+
+#pragma static-locals(on)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Global Flags
@@ -66,11 +76,10 @@ void starfield_init() {
 
 }
 
+star_t* star;
 void starfield_update() {
 
     int i;
-    star_t* star;
-
     uint8_t y = stars_y;
 
     for (i=0; i<num_stars; i++) {
@@ -117,11 +126,13 @@ struct sprite_tag {
     int16_t vy;
     uint8_t address;
     uint8_t animation;
+    uint16_t animation_counter;
+    int16_t vanimation;
 };
 
 typedef struct sprite_tag sprite_t;
 
-#define sprite_count 2
+#define sprite_count 4
 
 sprite_t sprites[sprite_count] = {};
 uint8_t sprite_colors[] = {2,6,2,11,2,4,2,9};
@@ -130,10 +141,6 @@ void sprite_update_pos(sprite_t* sprite) {
     uint16_t sx = (sprite->x > 0) ? sprite->x : 0;
     uint16_t sy = (sprite->y > 0) ? sprite->y : 0;
     sprite_set_pos(sprite->id, sx>>3, sy>>3);
-}
-
-void sprite_update_animation(sprite_t* sprite) {
-    sprite_set_address(sprite->id, sprite->address + (sprite->animation>>3));
 }
 
 void sprites_init() {
@@ -163,9 +170,12 @@ void sprites_init() {
         sprite->vy = (int16_t) (- i * 30);
         sprite->address = 0;
         sprite->animation = 0;
+        sprite->animation_counter = 0;
+        sprite->vanimation = 96 + (id % 3) * 16;
 
+        sprite_set_address(sprite->id, 0);
         sprite_update_pos(sprite);
-        sprite_update_animation(sprite);
+       
     }
 }
 
@@ -173,42 +183,73 @@ void sprites_update() {
 
     int i;
     sprite_t* sprite;
-    uint8_t da;
+    int16_t n;
+    int16_t m;
+    int16_t k;
 
     for (i=0; i<sprite_count; i++) {
         sprite = &sprites[i];
 
-        sprite->x += sprite->vx;
-        if (sprite->x > 2591) {
-            sprite->x = 2591;
-            sprite->vx = -sprite->vx;
-        } else if (sprite->x < 192) {
-            sprite->x = 192;
-            sprite->vx = -sprite->vx;
+        // Y movement
+
+        n = sprite->y;
+        m = sprite->vy;
+
+        n += m;
+        if (n > 1847) {
+            n = 1847;
+            m = -80;
         }
 
-        sprite->y += sprite->vy;
-        if (sprite->y > 1847) {
-            sprite->y = 1847;
-            sprite->vy = -80;
+        m += 3;
+        if (m > 80) m = 80;
+
+        sprite->y = n;
+        sprite->vy = m;
+
+        // X movement
+
+        n = sprite->x;
+        m = sprite->vx;
+
+        n += m;
+        if (n > 2591) {
+            n = 2591;
+            m = -m;
+        } else if (n < 192) {
+            n = 192;
+            m = -m;
         }
 
-        sprite->vy += 3;
-        if (sprite->vy > 80) sprite->vy = 80;
+        sprite->x = n;
+        sprite->vx = m;
 
-        da = 3 + (sprite->id % 3);
-        if (sprite->vx >= 0) {
-            sprite->animation = (sprite->animation + da) % 48;
-        } else {
-            sprite->animation = (sprite->animation + 48 - da) % 48;
+        // animation
+
+        n = sprite->animation;
+        m = sprite->animation_counter;
+        k = sprite->vanimation;
+
+        m = (m + k) & 0xffff;
+        if (m & 0xff00) {
+            m &= 0x00ff;
+            if (sprite->vx >= 0) {
+                if (n > 0) n--; else n=5;
+            } else {
+                if (n < 5) n++; else n=0;
+            }
+
         }
 
+        sprite->animation = n;
+        sprite->animation_counter = m;
+
+        // update sprite registers
+        sprite_set_address(sprite->id, sprite->address + n);
         sprite_update_pos(sprite);
-        sprite_update_animation(sprite);
     }
 
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Control Loop

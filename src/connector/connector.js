@@ -445,7 +445,6 @@ class ViceMonitorClient {
 
         let body = null;
         if (bodyLength > 0) {
-            //body = buffer.slice(responseHeaderLength);
             body = buffer.subarray(responseHeaderLength, responseHeaderLength + bodyLength);
         }
 
@@ -491,7 +490,10 @@ class ViceMonitorClient {
             let ofs = 0;
             let len = body[ofs]+(body[ofs+1]<<8); ofs+=2;
             if (len == 0) len = bodyLen - ofs;
-            const mem = body.slice(ofs, ofs+len);
+
+            // make a copy of the data to avoid race conditions with parallel requests
+            const mem = Buffer.alloc(len);
+            body.copy(mem, 0, ofs, ofs+len);
 
             eventObj = {
                 type: responseType,
@@ -1318,7 +1320,7 @@ class ViceConnector extends DebugRunner {
         super.stop();
     }
 
-    async step(debugStepType) {
+    async do_step(debugStepType) {
 
         this._activeBreakpoint = null;
         this._stepType = debugStepType;

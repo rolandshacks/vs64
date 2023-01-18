@@ -156,7 +156,7 @@ void video_set_border(uint8_t col) {
 uint16_t video_get_raster_line() {
     return (peek(0xd011) & 0x80 >> 7) | peek(0xd012);
 }
-
+    
 void video_wait_next_frame() {
     uint16_t line = video_get_raster_line();
     if (line >= 240) { while (video_get_raster_line() > 80) {}; }

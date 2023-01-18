@@ -62,9 +62,12 @@ class Token {
 
 class Project {
     constructor(settings) {
+        this._error = null;
         this._settings = settings;
         this._modificationTime = null;
     }
+
+    get error() { return this._error; }
 
     get name() { return this._name; }
     get toolkit() { return this._toolkit; }
@@ -118,6 +121,8 @@ class Project {
     }
 
     fromFile(filename) {
+        this._error = null;
+
         try {
             const stats = fs.statSync(filename);
             const json = fs.readFileSync(filename, 'utf8');
@@ -125,18 +130,22 @@ class Project {
             this._modificationTime = new Date(stats.mtime).getTime();
             this.fromJson(json);
         } catch(err) {
-            logger.error("failed to read project configuration file: " + err);
+            this._error = err;
+            throw(err);
         }
     }
 
     fromJson(json) {
+        this._error = null;
+
         try {
             const data = JSON.parse(json);
             this.#init(data);
-        } catch(err) {
-            logger.error("failed to parse project configuration: " + err);
+        } catch (err) {
+            this._error = err;
+            throw(err);
         }
-        return null;
+
     }
 
     #init(data) {
@@ -192,7 +201,7 @@ class Project {
         const settings = this._settings;
         const projectDir = this.basedir;
 
-        if (!data.main && !data.sources) { throw("properties 'main' and 'sources' are missing."); }
+        if (!data.main && !data.sources) { throw("properties 'sources' or 'main' are missing."); }
 
         const srcs = [];
 
@@ -296,8 +305,11 @@ class Project {
         const configfile = this.configfile;
         this.#addFile(configfile);
 
-        for (const source of this._sources) {
-            this.#scanFile(source);
+        const sources = this._sources;
+        if (sources) {
+            for (const source of this._sources) {
+                this.#scanFile(source);
+            }
         }
     }
 

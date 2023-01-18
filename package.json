@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "vs64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.0.0",
+	"version": "2.0.0-alpha2",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "GPL-3.0",
@@ -43,7 +43,6 @@
 	"activationEvents": [
 		"onStartupFinished",
 		"onLanguage:asm",
-		"onCommand:c64.build",
 		"onDebug",
 		"onCommand:workbench.action.tasks.runTask"
 	],
@@ -99,6 +98,10 @@
 			{
 				"language": "asm",
 				"path": "./language/asm.snippets.json"
+			},
+			{
+				"language": "json",
+				"path": "./language/json.snippets.json"
 			}
 		],
 		"customEditors": [
@@ -114,49 +117,49 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "C64 tools configuration",
+			"title": "VS64 configuration",
 			"properties": {
-				"c64.autoBuild": {
+				"vs64.autoBuild": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable automatic build after save"
 				},
-				"c64.acmeInstallDir": {
+				"vs64.acmeInstallDir": {
 					"type": "string",
 					"default": "",
 					"description": "Path to ACME assembler installation"
 				},
-				"c64.cc65InstallDir": {
+				"vs64.cc65InstallDir": {
 					"type": "string",
 					"default": "",
 					"description": "Path to CC65 compiler installation"
 				},
-				"c64.buildDefines": {
+				"vs64.buildDefines": {
 					"type": "string",
 					"default": "",
 					"description": "Global build defines"
 				},
-				"c64.buildIncludePaths": {
+				"vs64.buildIncludePaths": {
 					"type": "string",
 					"default": "",
 					"description": "Global build include paths"
 				},
-				"c64.buildArgs": {
+				"vs64.buildArgs": {
 					"type": "string",
 					"default": "",
 					"description": "Global additional build command line options"
 				},
-				"c64.emulatorExecutable": {
+				"vs64.emulatorExecutable": {
 					"type": "string",
 					"default": "x64sc",
 					"description": "Path to emulator executable"
 				},
-				"c64.emulatorArgs": {
+				"vs64.emulatorArgs": {
 					"type": "string",
 					"default": "",
 					"description": "Additional emulator command line options"
 				},
-				"c64.loglevel": {
+				"vs64.loglevel": {
 					"type": "string",
 					"default": "info",
 					"enum": [
