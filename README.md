@@ -1,6 +1,14 @@
-# VS64 - The C64 Development Environment [![Version](https://img.shields.io/visual-studio-marketplace/v/rosc.vs64)](https://marketplace.visualstudio.com/items?itemName=rosc.vs64) [![Installs](https://img.shields.io/visual-studio-marketplace/i/rosc.vs64)](https://marketplace.visualstudio.com/items?itemName=rosc.vs64) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/Nightly/vscode-docker-nightly-2?branchName=main)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=22&branchName=main)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/rosc.vs64)](https://marketplace.visualstudio.com/items?itemName=rosc.vs64) [![Installs](https://img.shields.io/visual-studio-marketplace/i/rosc.vs64)](https://marketplace.visualstudio.com/items?itemName=rosc.vs64) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/Nightly/vscode-docker-nightly-2?branchName=main)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=22&branchName=main)
+
+# VS64 - The C64 Development Environment
+
+[VS64](https://github.com/rolandshacks/vs64) is an open-source extension for [Visual Studio Code](https://code.visualstudio.com).
 
 The VS64 extension makes it easy to build, debug, inspect and run C64 assembly code from Visual Studio Code. It provides in-depth editing support for the ACME assembler syntax, an integrated project and build system and support for the Visual Studio Code task and launch system.
+
+<p align="center">
+  <img src="./resources/walkthroughs/welcomxe.png" alt="" />
+</p>
 
 ## Features
 
@@ -13,6 +21,21 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states and C64 custom chips state information and memory contents
 * On-the-fly disassembly of C64 program files
+
+## Quick and Start (TL;DR)
+
+The quickest start is by opening the command palette and run the **"VS64: Getting Started"** command.
+
+If you want to do some manual steps or adjustments, these are the individual things to look at:
+
+* Install the ACME cross-assembler and/or the CC65 C-compiler
+* Install the VICE emulator
+* Adjust your VS64 settings
+* Run "VS64: Create Project" from the command palette
+* Auto-compile should pick up the newly created project and build everything
+* Debug configurations should be ready to run on the internal CPU emulator or VICE
+
+> **Please notice:** The "Create Project" command does not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
 
 ## Setup
 
@@ -43,7 +66,7 @@ In addition to the internal 6502 cpu emulator, VS64 also supports debugging usin
 
 In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct VICE executable.
 
-> Please notice: It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
+> **Please notice:** It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
 
 
 ## Basic Usage
@@ -239,49 +262,53 @@ The debugger supports different kinds of watch expressions: registers, constant 
 
 ## Preferences/Settings Reference
 
-To setup the C64 development environment, go to Preferences>Settings and check the following settings:
+To setup the C64 development environment, go to *Preferences>Settings* to open the settings window.
 
-> C64: Acme Install Dir
+### Build System Settings
 
-Path to Acme installation.
+> VS64: Acme Install Dir
 
-Example: `C:\Tools\c64\acme`
+Path to Acme installation. Example: `C:\Tools\c64\acme`.
 
-> C64: Cc65 Install Dir
+> VS64: Cc65 Install Dir
 
-Path to Cc65 installation.
+Path to Cc65 installation. Example: `C:\Tools\c64\cc65`.
 
-Example: `C:\Tools\c64\cc65`
-
-> C64: Build Defines
+> VS64: Build Defines
 
 Global build defines.
 
-> C64: Build Includes
+> VS64: Build Includes
 
 Global build include paths.
 
-> C64: Build Args
+> VS64: Build Args
 
 Global build command line options.
 
-> C64: Auto Build
+> VS64: Auto Build
 
 Enable auto build before running or debugging.
 
-> C64: Emulator Executable
+### Emulator Settings
 
-Path to Vice emulator executable.
+> VS64: Emulator Executable
 
-Example: `C:\Tools\c64\vice\bin\x64sc.exe`
+Path to Vice emulator executable. Example: `C:\Tools\c64\vice\bin\x64sc.exe`.
 
-> C64: Emulator Arguments
+> VS64: Emulator Arguments
 
 Additional emulator command line options.
 
-> C64: Log Level
+### Misc Settings
+
+> VS64: Log Level
 
 Set console output verbosity level (error, warn, info, debug, trace).
+
+> VS64: Show Welcome
+
+Enable the welcome page. This setting is automatically disabled after the welcome page has been shown.
 
 ## Open Source
 

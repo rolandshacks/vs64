@@ -1,15 +1,16 @@
 {
 	"name": "vs64",
-	"displayName": "vs64",
+	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.0.0-alpha2",
+	"version": "2.0.0-alpha3",
 	"preview": true,
 	"publisher": "rosc",
-	"license": "GPL-3.0",
-	"icon": "images/icon.png",
+	"license": "SEE LICENSE IN LICENSE",
+	"icon": "resources/icons/icon.png",
 	"author": {
 		"name": "Roland Schabenberger"
 	},
+	"homepage": "https://github.com/rolandshacks/vs64",
 	"private": true,
 	"engines": {
 		"vscode": "^1.73.0"
@@ -44,16 +45,114 @@
 		"onStartupFinished",
 		"onLanguage:asm",
 		"onDebug",
+		"onCommand:vs64.showWelcome",
+        "onCommand:vs64.createProject",
 		"onCommand:workbench.action.tasks.runTask"
+	],
+	"keywords": [
+		"vs64",
+		"c64",
+		"assembler",
+		"6502",
+		"emulator"
 	],
 	"categories": [
 		"Programming Languages",
 		"Snippets",
-		"Linters",
 		"Debuggers",
 		"Formatters"
 	],
 	"contributes": {
+        "commands": [
+            {
+                "command": "vs64.showWelcome",
+                "title": "Getting Started",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.showSettings",
+                "title": "Settings",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.createProject",
+                "title": "Create Project",
+                "category": "VS64"
+            }
+        ],
+		"walkthroughs": [
+			{
+				"id": "vs64",
+				"title": "Get Started with VS64",
+				"description": "Learn how to quickly setup the VS64 development environment.",
+				"steps": [
+					{
+						"id": "welcome",
+						"title": "Welcome to VS64!",
+						"description": "VS64 is an easy way to develop code for the Commodore C64.\n\n[Visit Home Page](https://github.com/rolandshacks/vs64)",
+						"media": {
+							"markdown": "resources/walkthroughs/welcome.md"
+						},
+						"completionEvents": []
+					},
+					{
+						"id": "setup_acme",
+						"title": "Setup ACME Cross-Assembler",
+						"description": "In order to use ACME, please download, install and add the ACME install directory to the VS64 preferences.\n\n[Visit ACME Home Page](https://sourceforge.net/projects/acme-crossass)\n\n[Update Settings](command:vs64.showSettings?%22acme%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/acme.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.acmeInstallDir"
+						]
+					},
+					{
+						"id": "setup_cc65",
+						"title": "Setup CC65 C-Compiler",
+						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Update Settings](command:vs64.showSettings?%22cc65%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/cc65.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.cc65InstallDir"
+						]
+					},
+					{
+						"id": "setup_vice",
+						"title": "Setup VICE Emulator",
+						"description": "VS64 supports the VICE Emulator.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Update Settings](command:vs64.showSettings?%22emulator%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/vice.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.emulatorExecutable"
+						]
+					},
+					{
+						"id": "setup_project",
+						"title": "Create a VS64 Project",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create Project](command:vs64.createProject)",
+						"media": {
+							"markdown": "resources/walkthroughs/project.md"
+						},
+						"completionEvents": [
+							"onCommand:vs64.createProject"
+						]
+					},
+					{
+						"id": "read_help",
+						"title": "Read the Docs",
+						"description": "The README.md contains a lot more details.\n\n[Visit Home Page](https://github.com/rolandshacks/vs64)",
+						"media": {
+							"markdown": "README.md"
+						},
+						"completionEvents": [
+						]
+					}
+
+				]
+			}
+		],
 		"problemMatchers": [
 			{
 				"name": "builder",
@@ -115,71 +214,93 @@
 				]
 			}
 		],
-		"configuration": {
-			"type": "object",
-			"title": "VS64 configuration",
-			"properties": {
-				"vs64.autoBuild": {
-					"type": "boolean",
-					"default": true,
-					"description": "Enable automatic build after save"
-				},
-				"vs64.acmeInstallDir": {
-					"type": "string",
-					"default": "",
-					"description": "Path to ACME assembler installation"
-				},
-				"vs64.cc65InstallDir": {
-					"type": "string",
-					"default": "",
-					"description": "Path to CC65 compiler installation"
-				},
-				"vs64.buildDefines": {
-					"type": "string",
-					"default": "",
-					"description": "Global build defines"
-				},
-				"vs64.buildIncludePaths": {
-					"type": "string",
-					"default": "",
-					"description": "Global build include paths"
-				},
-				"vs64.buildArgs": {
-					"type": "string",
-					"default": "",
-					"description": "Global additional build command line options"
-				},
-				"vs64.emulatorExecutable": {
-					"type": "string",
-					"default": "x64sc",
-					"description": "Path to emulator executable"
-				},
-				"vs64.emulatorArgs": {
-					"type": "string",
-					"default": "",
-					"description": "Additional emulator command line options"
-				},
-				"vs64.loglevel": {
-					"type": "string",
-					"default": "info",
-					"enum": [
-						"error",
-						"warn",
-						"info",
-						"debug",
-						"trace"
-					],
-					"enumDescriptions": [
-						"Set logging level to ERROR",
-						"Set logging level to WARNING",
-						"Set logging level to INFO (default)",
-						"Set logging level to DEBUG. Use this to show debugging information",
-						"Set logging level to TRACE. This is the maximum verbosity setting."
-					],
-					"description": "Set console output verbosity level"
+		"configuration": [
+			{
+				"id": "build",
+				"title": "Build System",
+				"order": 10,
+				"properties": {
+					"vs64.autoBuild": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable automatic build after save"
+					},
+					"vs64.acmeInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to ACME assembler installation"
+					},
+					"vs64.cc65InstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to CC65 compiler installation"
+					},
+					"vs64.buildDefines": {
+						"type": "string",
+						"default": "",
+						"description": "Global build defines"
+					},
+					"vs64.buildIncludePaths": {
+						"type": "string",
+						"default": "",
+						"description": "Global build include paths"
+					},
+					"vs64.buildArgs": {
+						"type": "string",
+						"default": "",
+						"description": "Global additional build command line options"
+					}
+				}
+			},
+			{
+				"id": "emulation",
+				"title": "Emulator",
+				"order": 11,
+				"properties": {
+					"vs64.emulatorExecutable": {
+						"type": "string",
+						"default": "x64sc",
+						"description": "Path to emulator executable"
+					},
+					"vs64.emulatorArgs": {
+						"type": "string",
+						"default": "",
+						"description": "Additional emulator command line options"
+					}
+				}
+			},
+			{
+				"id": "misc",
+				"title": "Misc",
+				"order": 12,
+				"properties": {
+					"vs64.showWelcome": {
+						"type": "boolean",
+						"default": true,
+						"description": "Show welcome page"
+					},
+					"vs64.loglevel": {
+						"type": "string",
+						"default": "info",
+						"enum": [
+							"error",
+							"warn",
+							"info",
+							"debug",
+							"trace"
+						],
+						"enumDescriptions": [
+							"Set logging level to ERROR",
+							"Set logging level to WARNING",
+							"Set logging level to INFO (default)",
+							"Set logging level to DEBUG. Use this to show debugging information",
+							"Set logging level to TRACE. This is the maximum verbosity setting."
+						],
+						"description": "Set console output verbosity level"
+					}
 				}
 			}
-		},
+		],
 		"breakpoints": [
 			{
 				"language": "asm"

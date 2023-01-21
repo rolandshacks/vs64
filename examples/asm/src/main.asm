@@ -1,7 +1,7 @@
 ;
 ; C64 Demo
 ;
-!src "libmacro64.asm"
+!src "lib64/libmacro64.asm"
 
 +std_startup $0801, main
 
@@ -266,5 +266,5 @@ main                                            ; main entry
 ; libraries
 ; -------------------------------------------------
 
-!src "libstd64.asm"
+!src "lib64/libstd64.asm"
 !src "sprites.asm"

@@ -98,7 +98,16 @@ class Project {
     get startAddress() { return this._startAddress; }
     get buildType() { return this._buildType; }
 
+    isValid() {
+        if (this.error) return false;
+        if (!this.basedir || this.basedir.length < 1) return false;
+        if (!this.builddir || this.builddir.length < 1) return false;
+        return true;
+    }
+
     fromFileIfChanged(filename) {
+
+        let reload = false;
 
         let modificationTime = null;
 
@@ -109,11 +118,14 @@ class Project {
             return;
         }
 
-        let reload = false;
-        const configFile = path.resolve(filename);
-
-        if (!this._configfile || configFile != this._configfile) reload = true;
-        if (!this._modificationTime || (modificationTime && modificationTime > this._modificationTime)) reload = true;
+        if (!this._modificationTime || (modificationTime && modificationTime > this._modificationTime)) {
+            reload = true;
+        } else {
+            const configFile = path.resolve(filename);
+            if (!this._configfile || configFile != this._configfile) {
+                reload = true;
+            }
+        }
 
         if (reload) {
             this.fromFile(filename);

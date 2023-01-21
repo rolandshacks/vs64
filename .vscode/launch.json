@@ -42,6 +42,13 @@
             "cwd": "${workspaceFolder}/test"
         },
         {
+            "name": "Run Expression Resolver",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/expr.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
             "name": "Run DebugInfo",
             "type": "node",
             "request": "launch",

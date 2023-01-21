@@ -20,6 +20,7 @@ BIND(module);
 
 const { Constants } = require('settings/settings');
 const { Utils, Formatter } = require('utilities/utils');
+const { Expression } = require('utilities/expression');
 const { VscodeUtils } = require('utilities/vscode_utils');
 const { Logger } = require('utilities/logger');
 const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState, MemoryType } = require('debugger/debug');
@@ -27,6 +28,7 @@ const { DebugInfo } = require('debugger/debug_info');
 const { Emulator } = require('emulator/emu');
 const { ViceConnector, ViceProcess } = require('connector/connector');
 const profiler = require('./profiler');
+const { indexOf } = require('../emulator/roms/kernal');
 
 const logger = new Logger("DebugSession");
 const KILL_VICE_PROCESS_AT_STOP = false;
@@ -946,19 +948,24 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (!expr) return null;
 
-        let name = null;
         let address = null;
         let dataSize = null;
         let elementCount = null;
 
-        const isAddress = ("$" == expr.charAt(0) && expr.length > 1);
         const pos = expr.indexOf(',');
+        const reference = pos >= 0 ? expr.substr(0, pos) : expr;
 
-        if (isAddress) {
-            name = pos >= 0 ? expr.substr(1, pos) : expr.substr(1);
-            address = parseInt(name, 16);
-        } else {
-            name = pos >= 0 ? expr.substr(0, pos) : expr;
+        let isExpression = false;
+
+        for (let c of reference) {
+            if ("+-*/()".indexOf(c) >= 0) {
+                isExpression = true;
+                break;
+            }
+        }
+
+        if (!isExpression && "$" == reference.charAt(0) && reference.length > 1) {
+            address = parseInt(reference.substr(1), 16);
         }
 
         if (pos >= 0) {
@@ -973,11 +980,35 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         return {
-            name: name,
+            name: reference,
+            isExpression: isExpression,
             address: address,
             dataSize : dataSize,
             elementCount : elementCount
         };
+    }
+
+    async getNamedItemAddress(name) {
+
+        const emu = this._emulator;
+
+        let address = null;
+
+        const addressInfo = this.findNamedItem(name);
+        if (!addressInfo) return null;
+
+        if (addressInfo.absoluteAddress) {
+            address = addressInfo.absoluteAddress;
+        } else if (addressInfo.relativeAddress) {
+            // resolve symbol from C-Stack
+            const mem = await emu.readMemory(0x02, 0x03);
+            const stackPointerMem = (mem[1] << 8) + mem[0];
+            address = stackPointerMem + addressInfo.relativeAddress;
+        } else {
+            return null;
+        }
+    
+        return address;
     }
 
     async getFormattedData(expr) {
@@ -988,26 +1019,29 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (!query) return null;
 
-        if (query.address == null) {
+        if (query.isExpression) {
 
-            const addressInfo = this.findNamedItem(query.name);
-            if (!addressInfo) return null;
+            const expression = new Expression(query.name, (name) => {
+                const addressInfo = this.findNamedItem(name);
+                if (!addressInfo) return null;
+                return addressInfo.absoluteAddress;
+            });
 
-            if (addressInfo.absoluteAddress) {
-                query.address = addressInfo.absoluteAddress;
-            } else if (addressInfo.relativeAddress) {
-                // resolve symbol from C-Stack
-                const mem = await emu.readMemory(0x02, 0x03);
-                const stackPointerMem = (mem[1] << 8) + mem[0];
-                query.address = stackPointerMem + addressInfo.relativeAddress;
-            } else {
-                return null;
-            }
+            const computedAddress = expression.eval();
 
+            query.address = computedAddress;
+            query.namedValue = true;
+  
+        } else if (query.address == null) {
+            query.address = await this.getNamedItemAddress(query.name);
             query.namedValue = true;
         }
 
         query.result = null;
+
+        if (query.address == null) {
+            return query;
+        }
 
         const prefix = query.namedValue ? ("[" + Formatter.formatWord(query.address, true) + "] ") : "";
 

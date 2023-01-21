@@ -75,6 +75,16 @@ class Settings {
         this.emulatorExecutable = null;
         this.emulatorArgs = null;
         this.autoBuild = false;
+        this.showWelcome = true;
+    }
+
+    disableWelcome(workspaceConfig) {
+        const settings = this;
+        settings.showWelcome = false;
+        if (workspaceConfig) {
+            // update globally
+            workspaceConfig.update("vs64.showWelcome", settings.showWelcome, true);
+        }
     }
 
     update(workspaceConfig) {
@@ -82,18 +92,22 @@ class Settings {
 
         const settings = this;
 
-        settings.logLevel = workspaceConfig.get("c64.loglevel")||"info";
+        settings.showWelcome = workspaceConfig.get("vs64.showWelcome");
+        if (null == settings.showWelcome) settings.showWelcome = true;
+
+        settings.logLevel = workspaceConfig.get("vs64.loglevel")||"info";
         Logger.setGlobalLevel(settings.logLevel);
 
-        this.setupAcme(workspaceConfig.get("c64.acmeInstallDir"));
-        this.setupCC65(workspaceConfig.get("c64.cc65InstallDir"));
+        this.setupAcme(workspaceConfig.get("vs64.acmeInstallDir"));
+        this.setupCC65(workspaceConfig.get("vs64.cc65InstallDir"));
 
-        settings.buildDefines = workspaceConfig.get("c64.buildDefines")||"";
-        settings.buildIncludePaths = workspaceConfig.get("c64.buildIncludePaths")||"";
-        settings.buildArgs = workspaceConfig.get("c64.buildArgs")||"";
-        settings.autoBuild = workspaceConfig.get("c64.autoBuild")||true;
+        settings.buildDefines = workspaceConfig.get("vs64.buildDefines")||"";
+        settings.buildIncludePaths = workspaceConfig.get("vs64.buildIncludePaths")||"";
+        settings.buildArgs = workspaceConfig.get("vs64.buildArgs")||"";
+        settings.autoBuild = workspaceConfig.get("vs64.autoBuild");
+        if (null == settings.autoBuild) settings.autoBuild = true;
 
-        this.setupVice(workspaceConfig.get("c64.emulatorExecutable"), workspaceConfig.get("c64.emulatorArgs"));
+        this.setupVice(workspaceConfig.get("vs64.emulatorExecutable"), workspaceConfig.get("vs64.emulatorArgs"));
 
         this.show();
     }
