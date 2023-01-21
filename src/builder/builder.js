@@ -112,11 +112,7 @@ class Build {
 
     #validate() {
         const project = this._project;
-        if (!project) return false;
-
-        if (!project.basedir || project.basedir.length < 1) return false;
-        if (!project.builddir || project.builddir.length < 1) return false;
-
+        if (!project ||!project.isValid()) return false;
         return true;
     }
 

@@ -123,6 +123,27 @@ class Extension {
             thisInstance.onSave(document);
         });
 
+        // register "show welcome" command
+        {
+            subscriptions.push(vscode.commands.registerCommand("vs64.showWelcome", function() {
+                thisInstance.showWelcome(true);
+            }));
+        }
+
+        // register "show settings" command
+        {
+            subscriptions.push(vscode.commands.registerCommand("vs64.showSettings", function(filter) {
+                thisInstance.showSettings(filter, true);
+            }));
+        }
+
+        // register "create project" command
+        {
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProject", function() {
+                thisInstance.onCommandCreateProject();
+            }));
+        }
+
         // register task provider
         this._taskProvider = vscode.tasks.registerTaskProvider(
             TaskProvider.Type,
@@ -167,22 +188,90 @@ class Extension {
             }
 
             vscode.debug.onDidStartDebugSession((debugSession) => {
-                this.showStatus("Debugging started");
+                thisInstance.showStatus("Debugging started");
             });
 
             vscode.debug.onDidTerminateDebugSession((debugSession) => {
-                this.showStatus("Debugging terminated");
+                thisInstance.showStatus("Debugging terminated");
             });
 
             vscode.debug.onDidChangeBreakpoints((breakpointChange) => {
-                this.showStatus("Changed breakpoints");
+                thisInstance.showStatus("Changed breakpoints");
             });
 
         }
 
+        this.showWelcome();
+
+    }
+
+    showWelcome(forced) {
+        const settings = this._settings;
+        if (!settings) return;
+
+        if (!forced && !settings.showWelcome) return;
+
+        const workspaceConfig = vscode.workspace.getConfiguration();
+        settings.disableWelcome(workspaceConfig);
+
+        const extensionId = this._extensionContext.extension.id;
+
+        let openToSide = (vscode.window.tabGroups.activeTabGroup.activeTab != null);
+
+        vscode.commands.executeCommand(
+            "workbench.action.openWalkthrough",
+            { category: extensionId + "#" + "vs64", step: "welcome" },
+            openToSide
+        );
+    }
+
+    showSettings(filter, forced) {
+        const settings = this._settings;
+        if (!settings) return;
+        let openToSide = (vscode.window.tabGroups.activeTabGroup.activeTab != null);
+
+        const queryString = "vs64" + (filter ? "."+filter : "");
+
+        vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            queryString,
+            openToSide
+        );
+    }
+
+    updateSettings() {
+        const workspaceConfig = vscode.workspace.getConfiguration();
+        const settings = this._settings;
+        settings.update(workspaceConfig);
     }
 
     onDidChangeActiveTextEditor(textEditor) {
+    }
+
+    onCommandCreateProject() {
+
+        this.cancelBuild();
+
+        const extensionContext = this._extensionContext;
+
+        const templateFolder = path.join(extensionContext.extensionPath, "resources", "templates");
+
+        const workspaceRoot = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
+		? vscode.workspace.workspaceFolders[0].uri.fsPath : null;
+	    if (!workspaceRoot) {
+		    return;
+    	}
+
+        const destFolder = workspaceRoot;
+
+        this.copy(templateFolder, destFolder);
+
+        if (this._settings.autoBuild) {
+            this.triggerBuild();
+        } else {
+            this.updateProject();
+        }
+
     }
 
     updateProject() {
@@ -194,29 +283,13 @@ class Extension {
             project.fromFileIfChanged(projectFile);
         } catch (err) {
             logger.error(err);
-
             const txt = projectFile + " : Error : " + err;
-
-            /*
-            const terminal = vscode.window.activeTerminal;
-            if (terminal) {
-                terminal.write(txt + "\r\n");                
-                terminal.done();
-            }
-            */
-
             const channel = this._outputChannel;
             if (channel) {
                 channel.appendLine(txt);
                 channel.show();
             }
         }
-    }
-
-    updateSettings() {
-        const workspaceConfig = vscode.workspace.getConfiguration();
-        const settings = this._settings;
-        settings.update(workspaceConfig);
     }
 
     clear() {
@@ -315,7 +388,7 @@ class Extension {
         if (project.error) {
             const txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
             logger.error(txt);
-            terminal.write(txt + "\r\n");                
+            terminal.write(txt + "\r\n");
             terminal.done();
             return null;
         }
@@ -434,6 +507,91 @@ class Extension {
                 }
             }
         });
+    }
+
+    getFiles(folder, relFolder, files) {
+
+        relFolder ||= "";
+        files ||= [];
+
+        const elements = fs.readdirSync(folder);
+        for (const fileName of elements) {
+
+            const absFilePath = path.join(folder, fileName);
+            const relFilePath = path.join(relFolder, fileName);
+            const stat = fs.lstatSync(absFilePath);
+
+            if (stat.isDirectory()) {
+                files.push({
+                    relFilePath: relFilePath,
+                    absFilePath: absFilePath,
+                    isDirectory: true
+                });
+                this.getFiles(absFilePath, relFilePath, files);
+            } else {
+                files.push({
+                    relFilePath: relFilePath,
+                    absFilePath: absFilePath,
+                    isDirectory: false
+                });
+            }
+        }
+
+        return files;
+    }
+
+    copy(source, dest) {
+        const files = this.getFiles(source);
+        for (const item of files) {
+            const destPath = path.join(dest, item.relFilePath);
+            if (item.isDirectory) {
+                this.createFolder(destPath);
+            } else {
+                const sourcePath = path.join(source, item.relFilePath);
+                this.copyFile(sourcePath, destPath);
+            }
+        }
+    }
+
+    createFolder(dest) {
+        try {
+            const stat = fs.lstatSync(dest);
+            if (stat.isDirectory()) {
+                return; // already exists
+            } else if (stat.isFile()) {
+                throw("cannot create directory because file with same name already exists");
+            }
+        } catch (err) {;}
+
+        fs.mkdirSync(dest, { recursive: true });
+    }
+
+    copyFile(source, dest) {
+        const destFolder = path.dirname(dest);
+        this.createFolder(destFolder);
+
+        try {
+            const stat = fs.lstatSync(dest);
+            if (stat.isDirectory()) {
+                throw("cannot copy file because directory with same name already exists");
+            } else if (stat.isFile()) {
+                /*
+                const result = vscode.window.showInformationMessage(
+                    "The file " + dest + " already exists. Do you want to overwrite or skip it?",
+                    "Overwrite",
+                    "Skip"
+                ).then((action) => {
+                    if (action && action == "Skip") {
+                        return;
+                    }
+                });
+                */
+                return; // already exists
+            }
+        } catch (err) { ; }
+
+        const data = fs.readFileSync(source);
+        fs.writeFileSync(dest, data);
     }
 
 }
