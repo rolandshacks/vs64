@@ -1215,7 +1215,7 @@ class DebugInfo {
             for (const csymInfo of scope.csymInfos) {
                 if (csymInfo.sc != "auto" || csymInfo.type != 0) continue;
                 if (csymInfo.name == symbolName) {
-                    const relativeAddress = csymInfo.offs || 0;
+                    const relativeAddress = csymInfo.offs ? parseInt(csymInfo.offs) : 0;
                     symbol = new DebugSymbol(symbolName, relativeAddress, true);
                     break;
                 }

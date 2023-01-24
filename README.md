@@ -31,11 +31,11 @@ If you want to do some manual steps or adjustments, these are the individual thi
 * Install the ACME cross-assembler and/or the CC65 C-compiler
 * Install the VICE emulator
 * Adjust your VS64 settings
-* Run "VS64: Create Project" from the command palette
+* Run "VS64: Create ACME Project" or "VS64: Create CC65 Project" from the command palette
 * Auto-compile should pick up the newly created project and build everything
 * Debug configurations should be ready to run on the internal CPU emulator or VICE
 
-> **Please notice:** The "Create Project" command does not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
+> **Please notice:** The "Create Project" commands do not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
 
 ## Setup
 
@@ -123,6 +123,7 @@ A more extensive project file for CC65 could like like this:
 }
 ```
 
+
 > name
 
 Project name, also defines the name of the output program file `name.prg`.
@@ -158,6 +159,18 @@ Arguments to be added to the compiler command line arguments.
 > compiler
 
 Overrides the path to the compiler executable. The default path is specified in the settings.
+
+### IntelliSense Support
+
+The VS64 build system supports the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense) editing features of Visual Studio Code. In order to provide project information to
+the IntelliSense system, VS64 generates a `compile_commands.json` file in the build directory.
+
+Usually, vscode will ask you to automatically create all the settings for you after first
+successful build. In case you want to do this manually, you have to change the settings or create
+a `c_cpp_properties.json` settings file in the .vscode of your workspace.
+
+Further information can be found [here](https://code.visualstudio.com/docs/cpp/cpp-ide).
+
 
 ### Background Compilation
 
@@ -245,7 +258,7 @@ Optional task name, can be `${defaultBuildTask}` to use the currently configured
 
 ### Debugger Watch Expressions
 
-The debugger supports different kinds of watch expressions: registers, constant values and addresses. Here are a few examples:
+The debugger supports different kinds of watch expressions: registers, constant values and addresses. Here are a few examples for direct, symbolic and indirect watch expressions:
 
 - `addr0` : displays the byte value which the label 'addr0' points at.
 
@@ -253,12 +266,17 @@ The debugger supports different kinds of watch expressions: registers, constant 
 
 - `addr0,8` : shows a hex dump of 8 bytes starting at the address of label 'addr0'.
 
+- `addr0+2*16,8` : shows a hex dump of 8 bytes starting at a computed address.
+
 - `y` : shows the value of the Y register
 
 - `$8400` : shows the data at memory address $8400
 
 - `$8400,3` : shows 3 bytes at memory address $8400
 
+- `$9e2,iw` : use indirect address from $9e2 to display a data word
+
+- `strref,i8` : use indirect address from pointer strref to display 8 data bytes
 
 ## Preferences/Settings Reference
 

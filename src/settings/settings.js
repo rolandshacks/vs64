@@ -28,6 +28,7 @@ const logger = new Logger("Settings");
 const Constants = {
     ProjectConfigFile: "project-config.json",
     AssemblerLanguageId: "asm",
+    CLanguageId: "c",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
     AlwaysShowOutputChannel: false,

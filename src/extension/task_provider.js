@@ -54,10 +54,7 @@ class TaskTerminal {
     }
 
     open() {
-        const result = this.doBuild();
-        if (null == result) {
-            throw("build failed: unexpected response");
-        }
+        this.doBuild();
     }
 
     close() {
@@ -83,7 +80,7 @@ class TaskTerminal {
         this._closeEmitter.fire(0);
     }
 
-    async doBuild() {
+    doBuild() {
         const thisInstance = this;
         const definition = this._definition;
         return this._builder(definition.action, definition.folder, thisInstance);
@@ -181,7 +178,7 @@ class TaskProvider {
             definition.action,
             definition.type,
             new vscode.CustomExecution(
-                async (definition) => {
+                (definition) => {
                     return new TaskTerminal(definition, instance._settings, instance._builder);
                 }
             ),

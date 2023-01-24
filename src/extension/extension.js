@@ -110,13 +110,13 @@ class Extension {
         // listen do document save
         vscode.workspace.onDidSaveTextDocument((document) => {
 
-            if (!document || null == vscode.window.activeTextEditor) {
-                thisInstance.clear();
-                return;
-            }
+            if (!document || null == vscode.window.activeTextEditor) return;
+            if (!this._project.isValid()) return;
 
             const fileName = path.basename(document.fileName);
-            if (fileName != Constants.ProjectConfigFile && document.languageId !== Constants.AssemblerLanguageId) {
+            if (fileName != Constants.ProjectConfigFile &&
+                document.languageId !== Constants.AssemblerLanguageId &&
+                document.languageId !== Constants.CLanguageId) {
                 return;
             }
 
@@ -137,10 +137,13 @@ class Extension {
             }));
         }
 
-        // register "create project" command
+        // register "create project" commands
         {
-            subscriptions.push(vscode.commands.registerCommand("vs64.createProject", function() {
-                thisInstance.onCommandCreateProject();
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAsm", function() {
+                thisInstance.onCommandCreateProject("asm");
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectC", function() {
+                thisInstance.onCommandCreateProject("c");
             }));
         }
 
@@ -248,13 +251,13 @@ class Extension {
     onDidChangeActiveTextEditor(textEditor) {
     }
 
-    onCommandCreateProject() {
+    onCommandCreateProject(templateName) {
 
         this.cancelBuild();
 
         const extensionContext = this._extensionContext;
 
-        const templateFolder = path.join(extensionContext.extensionPath, "resources", "templates");
+        const templateFolder = path.join(extensionContext.extensionPath, "resources", "templates", templateName);
 
         const workspaceRoot = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
 		? vscode.workspace.workspaceFolders[0].uri.fsPath : null;
@@ -290,9 +293,6 @@ class Extension {
                 channel.show();
             }
         }
-    }
-
-    clear() {
     }
 
     update() {
@@ -344,7 +344,7 @@ class Extension {
         this.cancelBuild();
         this.updateProject();
 
-        if (this._project.error) {
+        if (!this._project.isValid()) {
             return;
         }
 
@@ -374,7 +374,148 @@ class Extension {
 
     }
 
-    async executeBuildTask(action, folder, terminal) {
+    executeBuildTask(action, folder, terminal) {
+
+        this.cancelBuild();
+
+        if (!action) {
+            return;
+        }
+
+        const settings = this._settings;
+        const project = this._project;
+
+        if (!project.isValid()) {
+
+            let txt = null;
+            if (project.error) {
+                txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
+            } else {
+                txt = "Invalid project setup";
+            }
+
+            logger.error(txt);
+            terminal.write(txt + "\r\n");
+            terminal.done();
+
+            return;
+        }
+
+        {
+            //terminal.write('starting build...\r\n');
+
+            if (this._builder) {
+                const txt = "build process already active";
+                logger.error(txt);
+                terminal.write(txt + "\r\n");
+                terminal.done();
+                return;
+            }
+
+            const build = new Build(project);
+
+            build.onBuildOutput((txt) => {
+                terminal.write(txt + "\r\n");
+            });
+
+            if (action == "clean" || action == "rebuild") {
+                try {
+                    this.showStatus("$(gear) Cleaning build...");
+                    build.clean();
+                } catch(err) {
+                    this.showStatus("$(error) Clean failed");
+                    const txt = "clean failed: " + err;
+                    logger.error(txt);
+                    terminal.write(txt + "\r\n", AnsiColors.Red);
+                    terminal.done();
+                    throw(txt);
+                }
+
+                const txt = "clean succeeded";
+                logger.info(txt);
+                terminal.write(txt + "\r\n", AnsiColors.Green);
+                this.showStatus("$(pass) Clean succeeded");
+
+                if (action == "clean") {
+                    terminal.done();
+                    return;
+                }
+            }
+
+            if (action == "build" || action == "rebuild") {
+                this._builder = build;
+                let hasError = false;
+
+                this.showStatus("$(gear) Building...");
+
+                try {
+
+                    build.build()
+                    .then((result) => {
+                        const error = result.error;
+                        let statusText = null;
+                        let txt = null;
+                        if (error == BuildResult.Success) {
+                            txt = result.description||"build succeeded";
+                            statusText = "Build succeeded";
+                            logger.info(txt);
+                        } else if (error == BuildResult.NoNeedToBuild) {
+                            txt = result.description||"build up-to-date";
+                            statusText = "Build up-to-date";
+                            logger.info(txt);
+                        } else if (error == BuildResult.ScanError) {
+                            txt = result.description||"scan failed";
+                            statusText = "Scan failed";
+                            hasError = true;
+                            logger.error(txt);
+                        } else if (error == BuildResult.Error) {
+                            txt = result.description||"build failed";
+                            statusText = "Build failed";
+                            hasError = true;
+                            logger.error(txt);
+                        }
+
+                        if (txt) {
+                            terminal.write(txt + "\r\n", hasError ? AnsiColors.Red : AnsiColors.Green);
+                        }
+
+                        this._builder = null;
+                        terminal.done();
+
+                        if (hasError) {
+                            this.showStatus("$(error) " + statusText||txt);
+                        } else {
+                            this.showStatus("$(pass) " + statusText||txt);
+                        }
+
+                    })
+                    .catch((result) => {
+                        this._builder = null;
+                        terminal.done();
+                        this.showStatus("$(error) Build failed");
+                    });
+
+                } catch (err) {
+                    this._builder = null;
+                    this.showStatus("$(error) Build failed");
+                    const txt = "build failed: " + err;
+                    logger.error(txt);
+                    terminal.write(txt + "\r\n", AnsiColors.Red);
+                    terminal.done();
+                }
+            }
+        }
+    }
+
+/*
+
+
+
+
+
+
+
+    async executeBuildTaskAsync(action, folder, terminal) {
 
         this.cancelBuild();
 
@@ -385,11 +526,19 @@ class Extension {
         const settings = this._settings;
         const project = this._project;
 
-        if (project.error) {
-            const txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
+        if (!project.isValid()) {
+
+            let txt = null;
+            if (project.error) {
+                txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
+            } else {
+                txt = "Invalid project setup";
+            }
+
             logger.error(txt);
             terminal.write(txt + "\r\n");
             terminal.done();
+
             return null;
         }
 
@@ -508,6 +657,7 @@ class Extension {
             }
         });
     }
+*/
 
     getFiles(folder, relFolder, files) {
 

@@ -1022,16 +1022,20 @@ class ViceProcess {
 
         let proc = null;
 
-        proc = await Utils.spawn(
-            executable,
-            args,
-            (procInfo) => {
-                if (instance._proc) {
-                    if (exitFunction) exitFunction(instance._proc);
-                    instance._proc = null;
+        try {
+            proc = await Utils.spawn(
+                executable,
+                args,
+                (procInfo) => {
+                    if (instance._proc) {
+                        if (exitFunction) exitFunction(instance._proc);
+                        instance._proc = null;
+                    }
                 }
-            }
-        );
+            );
+        } catch (err) {
+            throw(err);
+        }
 
         if (proc && !proc.exited) {
             this._proc = proc;

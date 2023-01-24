@@ -75,7 +75,10 @@ class BuilderTask {
             });
 
             proc.on('error', (err) => {
-                reject("failed to spawn process '" + executable + ": " + err.code);
+                const txt = (err.code == "ENOENT") ?
+                    "executable not found: '" + executable + "'" :
+                    "failed to spawn process '" + executable + ": " + err.code;
+                reject(txt, null, err);
             });
 
             proc.on('exit', (code) => {
@@ -292,6 +295,7 @@ class Build {
         }
 
         const project = this._project;
+        let forcedRebuild = false;
 
         if (null == buildType && project.buildType != null) {
             buildType = (project.buildType.toLowerCase() == "release") ? BuildType.Release : BuildType.Debug;
@@ -327,6 +331,9 @@ class Build {
                 const timestampFile = this.#getFileTime(file);
                 if (timestampFile >= timestampOutput) {
                     modifiedFiles.push(file);
+                    if (file == project.configfile) {
+                        forcedRebuild = true;
+                    }
                 }
             }
         } else {
@@ -348,7 +355,7 @@ class Build {
         }
 
         try {
-            await this.#doBuild(modifiedFiles, buildType);
+            await this.#doBuild(modifiedFiles, buildType, forcedRebuild);
         } catch (err) {
             logger.error("build.run: failed: " + err);
             return { error: BuildResult.Error, description: err };
@@ -387,7 +394,7 @@ class Build {
         return result;
     }
 
-    async #doBuild(modifiedFiles, buildType) {
+    async #doBuild(modifiedFiles, buildType, forcedRebuild) {
         if (!this.#validate()) return;
 
         const project = this._project;
@@ -418,7 +425,7 @@ class Build {
 
                     const asmSource = path.resolve(project.builddir, path.basename(cppSource, path.extname(cppSource)) + ".s");
 
-                    const buildNeeded = (modifiedFiles.indexOf(cppSource) >= 0);
+                    const buildNeeded = forcedRebuild || (modifiedFiles.indexOf(cppSource) >= 0);
 
                     try {
                         await this.#doBuildCpp(buildType, buildNeeded, cppSource, asmSource);

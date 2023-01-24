@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.0.0-alpha3",
+	"version": "2.0.0",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -46,7 +46,8 @@
 		"onLanguage:asm",
 		"onDebug",
 		"onCommand:vs64.showWelcome",
-        "onCommand:vs64.createProject",
+        "onCommand:vs64.createProjectAsm",
+		"onCommand:vs64.createProjectC",
 		"onCommand:workbench.action.tasks.runTask"
 	],
 	"keywords": [
@@ -71,12 +72,17 @@
             },
             {
                 "command": "vs64.showSettings",
-                "title": "Settings",
+                "title": "Open Settings",
                 "category": "VS64"
             },
             {
-                "command": "vs64.createProject",
-                "title": "Create Project",
+                "command": "vs64.createProjectAsm",
+                "title": "Create ACME Project",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.createProjectC",
+                "title": "Create CC65 Project",
                 "category": "VS64"
             }
         ],
@@ -131,13 +137,11 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create Project](command:vs64.createProject)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Project](command:vs64.createProjectAsm)\n\n[Create CC65 Project](command:vs64.createProjectC)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
-						"completionEvents": [
-							"onCommand:vs64.createProject"
-						]
+						"completionEvents": []
 					},
 					{
 						"id": "read_help",
@@ -147,6 +151,7 @@
 							"markdown": "README.md"
 						},
 						"completionEvents": [
+							"onLink:https://github.com/rolandshacks/vs64"
 						]
 					}
 

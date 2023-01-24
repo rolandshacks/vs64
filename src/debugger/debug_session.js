@@ -200,20 +200,24 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         this._emulatorProcess = new ViceProcess();
 
-        await this._emulatorProcess.spawn(
-            settings.emulatorExecutable,
-            settings.emulatorArgs,
-            (proc) => {
-                if (proc) {
-                    if (proc.exitCode != 0) {
-                        const output = proc.stdout.join("\n");
-                        console.log(output);
+        try {
+            await this._emulatorProcess.spawn(
+                settings.emulatorExecutable,
+                settings.emulatorArgs,
+                (proc) => {
+                    if (proc) {
+                        if (proc.exitCode != 0) {
+                            const output = proc.stdout.join("\n");
+                            console.log(output);
+                        }
                     }
+                    instance._emulatorProcess = null;
+                    instance.sendEvent(new DebugAdapter.TerminatedEvent());
                 }
-                instance._emulatorProcess = null;
-                instance.sendEvent(new DebugAdapter.TerminatedEvent());
-            }
-        );
+            );
+        } catch (err) {
+            throw(err);
+        }
 
         return this._emulatorProcess;
 
@@ -243,14 +247,18 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         } else if (debugConfigType == Constants.DebuggerTypeVice) {
 
-            if (!attachToProcess) {
-                if (!this._emulatorProcess || !this._emulatorProcess.alive) {
-                    await this.createEmulatorProcess();
+            try {
+                if (!attachToProcess) {
+                    if (!this._emulatorProcess || !this._emulatorProcess.alive) {
+                        await this.createEmulatorProcess();
+                    }
                 }
-            }
 
-            emu = new ViceConnector(this);
-            await emu.connect(hostname, port);
+                emu = new ViceConnector(this);
+                await emu.connect(hostname, port);
+            } catch (err) {
+                return null;
+            }
 
         } else {
             return null;
@@ -347,7 +355,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (!emu) {
             response.success = false;
-            response.message ="failed to start emulator";
+            response.message ="Failed to start emulator. Please check your settings.";
             this.sendResponse(response);
             return;
         }
@@ -910,38 +918,41 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const cpuState = emu.getCpuState();
         const registers = cpuState.cpuRegisters;
 
-        let symbol = null;
+        let item = null;
 
-        const item = {
+        const info = {
             name: name
         };
 
         if (debugInfo.supportsScopes) {
             const pc = registers.PC;
-            const symbol = debugInfo.getScopedSymbol(pc, name);
-            if (symbol) {
-                item.symbol = symbol;
-                item.relativeAddress = symbol.value;
+            item = debugInfo.getScopedSymbol(pc, name);
+            if (item) {
+                info.symbol = item;
+                info.relativeAddress = item.value;
             }
         }
 
-        if (null == symbol) {
-            const symbol = debugInfo.getSymbol(name);
-            if (symbol) {
-                item.symbol = symbol;
-                item.absoluteAddress = symbol.value;
+        if (null == item) {
+            item = debugInfo.getSymbol(name);
+            if (!item && name[0]!='_') item = debugInfo.getSymbol('_'+name);
+            if (item) {
+                info.symbol = item;
+                info.absoluteAddress = item.value;
             }
         }
 
-        if (!item.symbol) {
-            const label = debugInfo.getLabel(name);
-            if (label) {
-                item.label = label;
-                item.absoluteAddress = label.address;
+        if (null == item) {
+            item = debugInfo.getLabel(name);
+            if (item) {
+                info.label = item;
+                info.absoluteAddress = item.address;
             }
         }
 
-        return item;
+        if (!item) return null;
+
+        return info;
     }
 
     parseQuery(expr) {
@@ -952,7 +963,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         let dataSize = null;
         let elementCount = null;
 
-        const pos = expr.indexOf(',');
+        let pos = expr.indexOf(',');
         const reference = pos >= 0 ? expr.substr(0, pos) : expr;
 
         let isExpression = false;
@@ -968,8 +979,17 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             address = parseInt(reference.substr(1), 16);
         }
 
+        let isIndirect = false;
+
         if (pos >= 0) {
-            const fmt = expr.substr(pos+1);
+            pos++;
+
+            if (expr[pos] == 'i') {
+                isIndirect++;
+                pos++;
+            }
+
+            const fmt = expr.substr(pos);
             if (fmt == 'b') {
                 dataSize = 8;
             } else if (fmt == 'w') {
@@ -982,6 +1002,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return {
             name: reference,
             isExpression: isExpression,
+            isIndirect: isIndirect,
             address: address,
             dataSize : dataSize,
             elementCount : elementCount
@@ -994,7 +1015,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         let address = null;
 
-        const addressInfo = this.findNamedItem(name);
+        let addressInfo = this.findNamedItem(name);
         if (!addressInfo) return null;
 
         if (addressInfo.absoluteAddress) {
@@ -1007,7 +1028,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else {
             return null;
         }
-    
+
         return address;
     }
 
@@ -1031,9 +1052,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
             query.address = computedAddress;
             query.namedValue = true;
-  
+
         } else if (query.address == null) {
-            query.address = await this.getNamedItemAddress(query.name);
+            query.address = await this.getNamedItemAddress(query.name, query.isIndirect);
             query.namedValue = true;
         }
 
@@ -1041,6 +1062,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (query.address == null) {
             return query;
+        }
+
+        if (query.isIndirect) {
+            const mem = await emu.readMemory(query.address, query.address+1);
+            query.address = (mem[1] << 8) + mem[0];
         }
 
         const prefix = query.namedValue ? ("[" + Formatter.formatWord(query.address, true) + "] ") : "";
