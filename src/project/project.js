@@ -175,18 +175,15 @@ class Project {
 
         this._outname = this._name + ".prg";
         this._outfile = path.resolve(this._builddir, this._outname);
-
-        const toolkit = this._toolkit;
-        let toolkitInitialized = false;
-
-        if (!toolkitInitialized && (!toolkit || toolkit == "acme")) {
-            toolkitInitialized = true;
-            this._outdebug = path.resolve(this._builddir, this._name + ".report");
-        }
-
         this._buildfiles = [];
 
-        if (!toolkitInitialized && (!toolkit || toolkit == "cc65")) {
+        const toolkit = this._toolkit;
+
+        if (toolkit == "acme") {
+            this._outdebug = path.resolve(this._builddir, this._name + ".report");
+        } else if (toolkit == "llvm") {
+            this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
+        } else if (toolkit == "cc65") {
             this._outmap = path.resolve(this._builddir, this._name + ".map");
             this._outlabels = path.resolve(this._builddir, this._name + ".labels");
             this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
@@ -208,7 +205,7 @@ class Project {
 
         if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme' or 'cc65')"); }
         this._toolkit = data.toolkit.toLowerCase();
-        if (this._toolkit != "acme" && this._toolkit != "cc65") { throw("property 'toolkit' needs to be either 'acme' or 'cc65'"); }
+        if (this._toolkit != "acme" && this._toolkit != "cc65" && this._toolkit != "llvm") { throw("property 'toolkit' needs to be either 'acme', 'cc65' or 'llvm'"); }
 
         const settings = this._settings;
         const projectDir = this.basedir;

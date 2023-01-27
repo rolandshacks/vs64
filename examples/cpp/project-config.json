@@ -1,0 +1,14 @@
+{
+    "name": "cppexample",
+    "description": "Example for the LLVM-MOS sdk",
+    "toolkit": "llvm",
+    "sources": [
+        "src/assem.asm",
+        "src/main.cpp"
+    ],
+    "build": "release",
+    "definitions": [],
+    "includes": [],
+    "args": [],
+    "compiler": ""
+}

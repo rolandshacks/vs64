@@ -101,6 +101,7 @@ class Settings {
 
         this.setupAcme(workspaceConfig.get("vs64.acmeInstallDir"));
         this.setupCC65(workspaceConfig.get("vs64.cc65InstallDir"));
+        this.setupLLVM(workspaceConfig.get("vs64.llvmInstallDir"));
 
         settings.buildDefines = workspaceConfig.get("vs64.buildDefines")||"";
         settings.buildIncludePaths = workspaceConfig.get("vs64.buildIncludePaths")||"";
@@ -135,6 +136,16 @@ class Settings {
             this.cc65Executable = "cc65";
             this.ca65Executable = "ca65";
             this.ld65Executable = "ld65";
+        }
+    }
+
+    setupLLVM(installDir) {
+        if (installDir) {
+            this.llvmIncludes = path.resolve(installDir);
+            this.clangExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("mos-clang++"));
+        } else {
+            this.llvmIncludes = null;
+            this.clangExecutable = "mos-clang++";
         }
     }
 

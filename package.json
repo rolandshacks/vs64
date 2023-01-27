@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -48,6 +48,7 @@
 		"onCommand:vs64.showWelcome",
         "onCommand:vs64.createProjectAsm",
 		"onCommand:vs64.createProjectC",
+		"onCommand:vs64.createProjectCpp",
 		"onCommand:workbench.action.tasks.runTask"
 	],
 	"keywords": [
@@ -77,12 +78,17 @@
             },
             {
                 "command": "vs64.createProjectAsm",
-                "title": "Create ACME Project",
+                "title": "Create ACME Assembler Project",
                 "category": "VS64"
             },
             {
                 "command": "vs64.createProjectC",
-                "title": "Create CC65 Project",
+                "title": "Create CC65 C Project",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.createProjectCpp",
+                "title": "Create LLVM-MOS C++ Project",
                 "category": "VS64"
             }
         ],
@@ -124,6 +130,17 @@
 						]
 					},
 					{
+						"id": "setup_llvm",
+						"title": "Setup LLVM-MOS C/C++ Compiler",
+						"description": "VS64 supports the LLVM-MOS C++ Compiler.\n\n[Visit LLVM-MOS Home Page](https://github.com/llvm-mos/llvm-mos-sdk)\n\n[Update Settings](command:vs64.showSettings?%22llvm%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/llvm.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.llvmInstallDir"
+						]
+					},
+					{
 						"id": "setup_vice",
 						"title": "Setup VICE Emulator",
 						"description": "VS64 supports the VICE Emulator.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Update Settings](command:vs64.showSettings?%22emulator%22)",
@@ -137,7 +154,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Project](command:vs64.createProjectAsm)\n\n[Create CC65 Project](command:vs64.createProjectC)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAsm)\n\n[Create CC65 C Project](command:vs64.createProjectC)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectCpp)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -239,6 +256,11 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to CC65 compiler installation"
+					},
+					"vs64.llvmInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to LLVM-MOS SDK installation"
 					},
 					"vs64.buildDefines": {
 						"type": "string",

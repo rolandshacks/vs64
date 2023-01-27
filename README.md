@@ -12,7 +12,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 
 ## Features
 
-* Build system for ACME assembler and CC65 compiler toolkit
+* Build system for ACME assembler, CC65 C-compiler and LLVM-MOS C/C++ compiler
 * Integrated project setup and configuration
 * Task and build system integration to vscode
 * Syntax highlighting for ACME assembler files
@@ -28,10 +28,10 @@ The quickest start is by opening the command palette and run the **"VS64: Gettin
 
 If you want to do some manual steps or adjustments, these are the individual things to look at:
 
-* Install the ACME cross-assembler and/or the CC65 C-compiler
+* Install the ACME cross-assembler and/or the CC65 C-compiler and/or the LLVM-MOS C/C++ compiler
 * Install the VICE emulator
 * Adjust your VS64 settings
-* Run "VS64: Create ACME Project" or "VS64: Create CC65 Project" from the command palette
+* Run "VS64: Create Project" from the command palette
 * Auto-compile should pick up the newly created project and build everything
 * Debug configurations should be ready to run on the internal CPU emulator or VICE
 
@@ -57,6 +57,19 @@ VS64 also supports the CC65 6502 C Compiler.
 
 In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct CC65 installation and include paths.
 
+### LLVM-MOS Compiler
+
+VS64 also supports the LLVM-MOS C/C++ Compiler.
+
+* Installation: Download and install from https://github.com/llvm-mos/llvm-mos-sdk
+
+Please make sure you updated the VS64 settings with the correct LLVM-MOS installation and include paths.
+
+> **Please notice:** The "Create Project" commands do not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
+
+
+> **Please notice:** Currently, VS64 is not able to use the debug information from the ELF output file. Plain execution of the program file in an emulation session should just work fine.
+
 ### VICE Emulator
 
 In addition to the internal 6502 cpu emulator, VS64 also supports debugging using the VICE emulator.
@@ -73,7 +86,7 @@ In case you did a manual or custom installation, please make sure you updated th
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
 
-For details, please look at the provided example projects for ACME and CC65.
+For details, please look at the provided example projects for ACME, CC65 or LLVM-MOS.
 
 ### Syntax Highlighting
 
@@ -118,6 +131,25 @@ A more extensive project file for CC65 could like like this:
     "build": "release",
     "definitions": [],
     "includes": ["libc64/include"],
+    "args": [],
+    "compiler": ""
+}
+```
+
+A more extensive project file for CC65 could like like this:
+
+```
+{
+    "name": "cppexample",
+    "description": "Example for the LLVM-MOS sdk",
+    "toolkit": "llvm",
+    "sources": [
+        "src/assem.asm",
+        "src/main.cpp"
+    ],
+    "build": "release",
+    "definitions": [],
+    "includes": [],
     "args": [],
     "compiler": ""
 }
@@ -195,6 +227,8 @@ Supported debugging features:
 - inspect registers, addresses, values
 - inspect C64 specific chip registers (VIC, SID, CIA)
 - get hover information for many elements of the source code
+
+> **Please notice:** Currently, VS64 is not able to use the debug information from the LLVM/ELF output file. Plain execution of the program file in an emulation session should just work fine.
 
 ### Debugger Launch Configuration
 
@@ -292,6 +326,10 @@ Path to Acme installation. Example: `C:\Tools\c64\acme`.
 
 Path to Cc65 installation. Example: `C:\Tools\c64\cc65`.
 
+> VS64: LLVM Install Dir
+
+Path to LLVM-MOS installation. Example: `C:\Tools\c64\llvm-mos`.
+
 > VS64: Build Defines
 
 Global build defines.
@@ -339,6 +377,8 @@ This package includes open source from other developers and I would like to than
 ## Links
 
 * The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass/
+* LLVM-MOS: https://github.com/llvm-mos/llvm-mos-sdk
+* CC65 C-Compiler: https://cc65.github.io/
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net/
 * Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js
 * Example of vscode debugging extension: https://github.com/microsoft/vscode-mock-debug

@@ -145,6 +145,9 @@ class Extension {
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectC", function() {
                 thisInstance.onCommandCreateProject("c");
             }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectCpp", function() {
+                thisInstance.onCommandCreateProject("cpp");
+            }));
         }
 
         // register task provider

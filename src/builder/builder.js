@@ -400,18 +400,20 @@ class Build {
         const project = this._project;
         const toolkit = project.toolkit;
 
-        if (!toolkit || toolkit == "acme") {
+        if (!toolkit) {
+            throw ("No toolkit specified in the project configuration");
+        }
+
+        if (toolkit == "acme") {
             const asmSources = this.querySourceByExtension("|.s|.asm|");
             if (asmSources) {
                 logger.debug("build.run: assembling files");
                 await this.#doBuildAsmAcme(buildType, true, asmSources);
                 logger.debug("build.run: assembling done");
             }
-        }
-
-        if (!toolkit || toolkit == "cc65") {
+        } else if (toolkit == "cc65") {
             const cppSources = this.querySourceByExtension("|.c|.cpp|.cc|");
-            const asmSources = this.querySourceByExtension("|.s|.asm")||[];
+            const asmSources = this.querySourceByExtension("|.s|.asm|")||[];
             const objFiles = this.querySourceByExtension("|.o|.obj|")||[];
 
             if (cppSources) {
@@ -428,7 +430,7 @@ class Build {
                     const buildNeeded = forcedRebuild || (modifiedFiles.indexOf(cppSource) >= 0);
 
                     try {
-                        await this.#doBuildCpp(buildType, buildNeeded, cppSource, asmSource);
+                        await this.#doBuildCc65(buildType, buildNeeded, cppSource, asmSource);
                     } catch (e) {
                         buildCppError = e;
                     }
@@ -465,15 +467,359 @@ class Build {
 
                 logger.debug("build.run: linking files");
 
-                await this.#doBuildLink(buildType, true, objFiles);
+                await this.#doBuildLinkCc65(buildType, true, objFiles);
 
                 logger.debug("build.run: done");
             }
+        } else if (toolkit == "llvm") {
+
+            const cppSources = this.querySourceByExtension("|.c|.cpp|.cc|");
+            const asmSources = this.querySourceByExtension("|.s|.asm|")||[];
+            const objFiles = this.querySourceByExtension("|.o|.obj|")||[];
+
+            if (cppSources) {
+                logger.debug("build.run: compiling files");
+
+                let buildCppError = null;
+
+                for (const cppSource of cppSources) {
+
+                    this.#writeBuildOutput("compiling " + cppSource);
+
+                    const objFile = path.resolve(project.builddir, path.basename(cppSource, path.extname(cppSource)) + ".o");
+
+                    const buildNeeded = forcedRebuild || (modifiedFiles.indexOf(cppSource) >= 0);
+
+                    try {
+                        await this.#doBuildCppClang(buildType, buildNeeded, cppSource, objFile);
+                    } catch (e) {
+                        buildCppError = e;
+                    }
+
+                    if (objFiles.indexOf(objFile) == -1) {
+                        objFiles.push(objFile);
+                    }
+
+                }
+
+                if (buildCppError) throw(buildCppError);
+
+                logger.debug("build.run: assembling files");
+
+                let buildAsmError = null;
+
+                for (const asmSource of asmSources) {
+
+                    this.#writeBuildOutput("assembling " + asmSource);
+
+                    const objFile = path.resolve(project.builddir, path.basename(asmSource, path.extname(asmSource)) + ".o");
+
+                    try {
+                        await this.#doBuildAsmClang(buildType, true, asmSource, objFile);
+                    } catch (e) {
+                        buildAsmError = e;
+                    }
+
+                    if (objFiles.indexOf(objFile) == -1) {
+                        objFiles.push(objFile);
+                    }
+                }
+
+                if (buildAsmError) throw(buildAsmError);
+
+                logger.debug("build.run: linking files");
+
+                await this.#doBuildLinkClang(buildType, true, objFiles);
+
+                logger.debug("build.run: done");
+            }
+
         }
 
     }
 
-    async #doBuildCpp(buildType, buildNeeded, source, output) {
+
+    async #doBuildCppClang(buildType, buildNeeded, source, output) {
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+        const executable = project.compiler || settings.clangExecutable;
+
+        const args = [
+            "--config", "mos-c64.cfg",
+            "-o", output,
+            "-c",
+            "-std=gnu++20",
+            "-g",
+            "-fstandalone-debug",
+            "-fno-limit-debug-info",
+            "-fno-discard-value-names"
+        ];
+
+        if (buildType == BuildType.Release) {
+            args.push("-O3");    // enable optimization
+        } else {
+            args.push("-O0");    // disable optimization
+        }
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG");
+        }
+
+        const includes = project.includes;
+        for (const include of includes) {
+            args.push("-I");
+            args.push(include);
+        }
+
+        args.push(...project.args);
+
+        const compileArgs = [...args];
+
+        if (settings.llvmIncludes) {
+            const compilerIncludes = [
+                path.resolve(settings.llvmIncludes, "mos-platform", "common", "include"),
+                path.resolve(settings.llvmIncludes, "mos-platform", "commodore", "include"),
+                path.resolve(settings.llvmIncludes, "mos-platform", "c64", "include"),
+                path.resolve(settings.llvmIncludes, "lib", "clang", "16", "include")
+            ];
+
+            for (const compilerInclude of compilerIncludes) {
+                compileArgs.push("-I");
+                compileArgs.push(compilerInclude);
+            }
+        }
+
+        args.push(source);
+
+        const compileCommand = {
+            directory: process.cwd(),
+            arguments: compileArgs,
+            file: source
+        };
+
+        this.#addCompileCommand(compileCommand);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+    }
+
+    async #doBuildAsmClang(buildType, buildNeeded, source, output) {
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+
+        const executable = project.assembler || settings.clangExecutable;
+
+        const args = [
+            "--config", "mos-c64.cfg",
+            "-o", output,
+            "-c",
+            "-g",
+            "-fstandalone-debug",
+            "-fno-limit-debug-info",
+            "-fno-discard-value-names",
+            "-x", "assembler-with-cpp"
+        ];
+
+        if (buildType == BuildType.Release) {
+            args.push("-O3");    // enable optimization
+        } else {
+            args.push("-O0");    // disable optimization
+        }
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG");
+        }
+
+        const includes = project.includes;
+        for (const include of includes) {
+            args.push("-I");
+            args.push(include);
+        }
+
+        args.push(...project.args);
+
+        args.push(source);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+
+    }
+
+    async #doBuildLinkClang(buildType, buildNeeded, sources) {
+
+        if (!sources || sources.length < 1) return;
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+
+        const executable = project.assembler || settings.clangExecutable;
+
+        const args = [
+            "-o", project.outfile,
+            "--config", "mos-c64.cfg",
+            "-g",
+            "-fstandalone-debug",
+            "-fno-limit-debug-info",
+            "-fno-discard-value-names"
+        ];
+
+        /*
+        if (project.startAddress) {
+            args.push("-S");
+            args.push(project.startAddress);
+        }
+        */
+
+        if (buildType == BuildType.Release) {
+            args.push("-O3");    // enable optimization
+            args.push("-flto"); // enable link-time optimization
+        } else {
+            args.push("-O0");    // disable optimization
+        }
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        args.push(...project.args);
+
+        args.push(...sources);
+
+        const libraries = [ ...project.libraries ];
+        //libraries.push("c64.lib");
+        args.push(...libraries);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+    }
+
+    async #doBuildCppClangAll(buildType, buildNeeded, sources) {
+
+        if (!sources || sources.length < 1) return;
+
+        const instance = this;
+        const project = this._project;
+        const settings = this._settings;
+        const executable = project.compiler || settings.clangExecutable;
+
+        const args = [
+            "--config", "mos-c64.cfg",
+            "-v",
+            "-g",
+            "-fstandalone-debug",
+            "-fno-limit-debug-info",
+            "-fno-discard-value-names",
+            //"-x", "assembler-with-cpp",
+            "-o", project.outfile
+        ];
+
+        if (buildType == BuildType.Release) {
+            args.push("-O3");    // enable optimization
+        } else {
+            args.push("-O0");    // disable optimization
+        }
+
+        const definitions = [ ...project.definitions ];
+        for (const define of definitions) {
+            args.push("-D" + define);
+        }
+
+        if (buildType != BuildType.Release) {
+            args.push("-DDEBUG");
+        }
+
+        const includes = project.includes;
+        for (const include of includes) {
+            args.push("-I");
+            args.push(include);
+        }
+
+        args.push(...project.args);
+
+        const compileArgs = [...args];
+
+        if (settings.llvmIncludes) {
+            const compilerIncludes = [
+                path.resolve(settings.llvmIncludes, "mos-platform", "common", "include"),
+                path.resolve(settings.llvmIncludes, "mos-platform", "commodore", "include"),
+                path.resolve(settings.llvmIncludes, "mos-platform", "c64", "include"),
+                path.resolve(settings.llvmIncludes, "lib", "clang", "16", "include")
+            ];
+
+            for (const compilerInclude of compilerIncludes) {
+                compileArgs.push("-I");
+                compileArgs.push(compilerInclude);
+            }
+        }
+
+        for (const source of sources) {
+            const compileCommand = {
+                directory: process.cwd(),
+                arguments: compileArgs,
+                file: source
+            };
+            this.#addCompileCommand(compileCommand);
+        }
+
+        args.push(...sources);
+
+        if (!buildNeeded) return;
+
+        const result = await BuilderTask.run(
+            executable,
+            args,
+            (txt) => { instance.buildOutput(txt); }
+        );
+
+        if (result.exitCode != 0) {
+            throw("failed with exit code " + result.exitCode);
+        }
+    }
+
+    async #doBuildCc65(buildType, buildNeeded, source, output) {
 
         const instance = this;
         const project = this._project;
@@ -582,7 +928,7 @@ class Build {
 
     }
 
-    async #doBuildLink(buildType, buildNeeded, sources) {
+    async #doBuildLinkCc65(buildType, buildNeeded, sources) {
 
         if (!sources || sources.length < 1) return;
 

@@ -915,6 +915,8 @@ class DebugInfo {
             this.#loadReport(filename, project);
         } else if (debugInfoType == ".dbg") {
             this.#loadDebug(filename, project);
+        } else if (debugInfoType == ".elf") {
+            this.#loadElf(filename, project);
         }
 
         this.#resolve();
@@ -931,6 +933,10 @@ class DebugInfo {
         }
 
         return list;
+    }
+
+    #loadElf(filename, project) {
+        // NOT IMPLEMENTED
     }
 
     #loadDebug(filename, project) {
