@@ -115,8 +115,7 @@ class Extension {
 
             const fileName = path.basename(document.fileName);
             if (fileName != Constants.ProjectConfigFile &&
-                document.languageId !== Constants.AssemblerLanguageId &&
-                document.languageId !== Constants.CLanguageId) {
+                Constants.SupportedLanguageIds.indexOf(document.languageId) < 0) {
                 return;
             }
 

@@ -38,7 +38,8 @@ const TokenValueType = {
 
 const TokenDescriptors = {
     "!src": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
-    "!source": { tokenType: TokenType.Include,valueType: TokenValueType.Filename }
+    "!source": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
+    "#include": { tokenType: TokenType.Include,valueType: TokenValueType.Filename }
 };
 
 class Token {
@@ -306,6 +307,8 @@ class Project {
             this._startAddress = data.startAddress;
         }
 
+        this.#createDependencyGraph();
+
     }
 
     scan() {
@@ -317,18 +320,32 @@ class Project {
         const sources = this._sources;
         if (sources) {
             for (const source of this._sources) {
-                this.#scanFile(source);
+                this.#scanFile(source, configfile);
             }
         }
     }
 
     #clearFiles() {
         this._files = null;
+        this.#clearDependencies();
     }
 
-    #addFile(filename) {
+    #addFile(filename, parentFile) {
         if (!this._files) this._files = [];
         this._files.push(filename);
+
+        if (parentFile) {
+            this.#addDependency(parentFile, filename);
+        }
+    }
+
+    #createDependencyGraph() {
+    }
+
+    #clearDependencies() {
+    }
+
+    #addDependency(parent, child) {
     }
 
     #hasFile(filename) {
@@ -380,7 +397,7 @@ class Project {
         return null;
     }
 
-    #scanFile(filename) {
+    #scanFile(filename, parentFilename) {
 
         logger.debug("scanFile: " + filename);
 
@@ -396,25 +413,24 @@ class Project {
             throw(err);
         }
 
-        const tokens = this.#parse(source);
+        const tokens = this.#parse(source, filename);
 
-        this.#addFile(filename);
+        this.#addFile(filename, parentFilename);
 
         if (tokens) {
             for (const token of tokens) {
                 if (token.type == TokenType.Include) {
                     const includedFile = this.resolveFile(token.value, dirname);
-                    if (!includedFile) {
-                        throw(filename + ", line " + (token.line+1) + ": Referenced file " + token.value + " does not exist.");
+                    if (includedFile) {
+                        this.#scanFile(includedFile, filename);
                     }
-                    this.#scanFile(includedFile);
                 }
             }
         }
 
     }
 
-    #parse(source) {
+    #parse(source, filename) {
 
         if (!source) return null;
 
@@ -473,7 +489,7 @@ class Project {
         const firstChar = source[pos];
 
         // just scan for special tokens
-        if (firstChar != '!') return null;
+        if (firstChar != '!' && firstChar != '#') return null;
 
         let token = null;
 

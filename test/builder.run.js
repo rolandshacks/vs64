@@ -31,13 +31,14 @@ const settings = {
     acmeExecutable: "C:/tools/c64/acme/acme",
     cc65Executable: "C:/tools/c64/cc65/bin/cc65",
     ca65Executable: "C:/tools/c64/cc65/bin/ca65",
-    ld65Executable: "C:/tools/c64/cc65/bin/ld65"
+    ld65Executable: "C:/tools/c64/cc65/bin/ld65",
+    clangExecutable: "C:/tools/llvm-mos/bin/mos-clang++"
 };
 
 const project = new Project(settings);
 
 async function build() {
-    let projectFile = path.resolve("project-config.json");
+    let projectFile = path.resolve("../examples/cpp/project-config.json");
     console.log(projectFile);
 
     project.fromFile(projectFile);

@@ -56,6 +56,13 @@
             "cwd": "${workspaceFolder}/test"
         },
         {
+            "name": "Run Graph",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/graph.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
             "name": "Unit Tests",
             "type": "node",
             "request": "launch",
@@ -65,7 +72,7 @@
 			"args": [
 				"--runInBand",
 				"--config", "${workspaceFolder}/test/jest.config.js",
-				"-t", "sorted_array"
+				"-t", "graph"
 			]
         }
 	]

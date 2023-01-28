@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.0.2 Minor Update _(preview)_
+
+- Fixed rebuild handling
+
 ## 2.0.1 Minor Update _(preview)_
 
 - Added support for the LLVM-MOS
