@@ -5,14 +5,12 @@
             "type": "6502",
             "request": "launch",
             "name": "Launch 6502",
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         },
         {
             "type": "vice",
             "request": "launch",
             "name": "Launch Vice",
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         },
         {
@@ -21,7 +19,6 @@
             "name": "Attach Vice",
             "hostname": "localhost",
             "port": 6502,
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         }
     ]

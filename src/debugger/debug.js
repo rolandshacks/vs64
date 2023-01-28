@@ -243,15 +243,13 @@ class VicState {
         v.irqFlags = mem[0x19];
         v.irqMask = mem[0x1a];
 
-        v.borderColor = mem[0x20];
-
-        v.backgroundColor = mem[0x21];
-        v.backgroundColorMulti1 = mem[0x22];
-        v.backgroundColorMulti2 = mem[0x23];
-        v.backgroundColorMulti3 = mem[0x24];
-
-        v.spriteColorMulti1 = mem[0x25];
-        v.spriteColorMulti2 = mem[0x26];
+        v.borderColor = mem[0x20]&0xf;
+        v.backgroundColor = mem[0x21]&0xf;
+        v.backgroundColorMulti1 = mem[0x22]&0xf;
+        v.backgroundColorMulti2 = mem[0x23]&0xf;
+        v.backgroundColorMulti3 = mem[0x24]&0xf;
+        v.spriteColorMulti1 = mem[0x25]&0xf;
+        v.spriteColorMulti2 = mem[0x26]&0xf;
         v.spriteBackgroundPriority = mem[0x1b];
 
         const spriteAddressRegisters = v.baseAddress + v.screenAddress + 0x03f8;
@@ -260,7 +258,7 @@ class VicState {
             const mask = (1<<i);
             const s = v.sprites[i];
 
-            s.x = mem[i*2] + ((mem[0x10]&mask) != 0) ? 256 : 0;
+            s.x = mem[i*2] + (((mem[0x10]&mask) != 0) ? 256 : 0);
             s.y = mem[i*2+1];
             s.color = mem[0x27+i]&0xf;
 
@@ -414,8 +412,8 @@ class CpuState {
 //-----------------------------------------------------------------------------------------------//
 
 class Breakpoint extends DebugAddressInfo {
-    constructor(address, source, line, logMessage) {
-        super(address, address, source, line);
+    constructor(address, addressEnd, source, line, logMessage) {
+        super(address, addressEnd, source, line);
         this.logMessage = logMessage;
         this.key = this.generateKey();
     }
@@ -461,7 +459,9 @@ class Breakpoints {
         let idx = start||0;
         while (idx < this.length) {
             breakpoint = this.at(idx);
-            if (null != breakpoint && breakpoint.address == address) {
+            if (null != breakpoint &&
+                address >= breakpoint.address &&
+                address <= breakpoint.address_end) {
                 return breakpoint;
             }
             idx++;
@@ -535,6 +535,11 @@ class DebugRunner {
     }
 
     fireEvent(eventName, arg1, arg2, arg3) {
+
+        if (eventName == 'stopped') {
+            this.onStopped();
+        }
+
         if (null == this._eventMap) return null;
 
         let eventFunction = this._eventMap[eventName];
@@ -544,6 +549,10 @@ class DebugRunner {
     }
 
     setBreakpoints(breakpoints) {}
+
+    onStopped() {
+        this._running = false;
+    }
 
     start() {
         this._profiler.reset();
@@ -564,6 +573,7 @@ class DebugRunner {
 
     async step(debugStepType) {
         this._profiler.reset();
+        this._running = true;
         await this.do_step(debugStepType);
     }
 

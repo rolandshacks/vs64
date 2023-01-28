@@ -164,7 +164,7 @@ class Application {
         const breakpoints = this._breakpoints;
 
         breakpoints.clear();
-        breakpoints.add(new Breakpoint(2062, "source.asm", 123, null));
+        breakpoints.add(new Breakpoint(2062, null, "source.asm", 123, null));
 
         const binaryPath = path.resolve("./data/test.prg");
 

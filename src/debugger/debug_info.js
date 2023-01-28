@@ -4,7 +4,6 @@
 
 const path = require('path');
 const fs = require('fs');
-const { Utils, SortedArray } = require('../utilities/utils');
 const { values } = require('../emulator/roms/kernal');
 
 //-----------------------------------------------------------------------------------------------//
@@ -16,6 +15,14 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
+
+const { Logger } = require('utilities/logger');
+const { Utils, SortedArray } = require('utilities/utils');
+const { Elf, ElfSymbol } = require('elf/elf');
+
+const logger = new Logger("DebugInfo");
+
+const DebugDumpAddressInfos = false;
 
 //-----------------------------------------------------------------------------------------------//
 // Types and Constants
@@ -351,7 +358,12 @@ class DebugParser {
 
                 const line = lineInfo.line;
 
-                const addrInfo = new DebugAddressInfo(addr, addrEnd, file.name, line);
+                const addrInfo = new DebugAddressInfo(
+                    addr,
+                    addrEnd,
+                    file.name,
+                    line
+                );
 
                 addrInfo.lineType = lineInfo.type;
                 addrInfo.size = size;
@@ -786,13 +798,14 @@ class ReportParser {
 //-----------------------------------------------------------------------------------------------//
 
 class DebugSymbol {
-    constructor(name, value, isAddress, source, line, data_size) {
+    constructor(name, value, isAddress, source, line, data_size, memory_size) {
         this.name = name;
         this.value = value;
         this.isAddress = isAddress;
         this.source = source;
         this.line = line;
         this.data_size = data_size||0;
+        this.memory_size = memory_size||0;
     }
 }
 
@@ -816,7 +829,7 @@ class DebugFileInfo {
 class DebugAddressInfo {
     constructor(address, address_end, source, line) {
         this.address = address;
-        this.address_end = address_end;
+        this.address_end = address_end ? address_end : address;
         this.source = path.resolve(path.normalize(source));
         this.normalizedPath = Utils.normalizePath(source);
         this.line = line;
@@ -892,6 +905,8 @@ class DebugInfo {
         this._lineListByFile = new Map();
         this._supportsScopes = null;
         this._hasCStack = null;
+        this._timestamp = null;
+        this._filename = null;
 
         // using array instead of map for
         // real constant time access
@@ -899,6 +914,14 @@ class DebugInfo {
         this._addressMap = new Array(0x1000);
 
         this.#load(filename, project);
+    }
+
+    get timestamp() {
+        return this._timestamp;
+    }
+
+    get filename() {
+        return this._filename;
     }
 
     get supportsScopes() {
@@ -912,14 +935,17 @@ class DebugInfo {
     #load(filename, project) {
         const debugInfoType = path.extname(filename).toLowerCase();
         if (debugInfoType == ".report") {
-            this.#loadReport(filename, project);
+            this.#loadAcmeReport(filename, project);
         } else if (debugInfoType == ".dbg") {
-            this.#loadDebug(filename, project);
+            this.#loadCc65Dbg(filename, project);
         } else if (debugInfoType == ".elf") {
             this.#loadElf(filename, project);
         }
 
         this.#resolve();
+
+        this._filename = filename;
+        this._timestamp = Utils.getFileTime(filename);
     }
 
     #getOrCreateLineList(filename) {
@@ -936,10 +962,87 @@ class DebugInfo {
     }
 
     #loadElf(filename, project) {
-        // NOT IMPLEMENTED
+
+        let elf = null;
+
+        try {
+            elf = new Elf();
+            elf.load(filename);
+        } catch (err) {
+            if (err.code == 'ENOENT') {
+                throw("ELF file " + filename + " does not exist");
+            } else {
+                throw("unable to read debug database file '" + filename + "'");
+            }
+        }
+
+        { // load source line information
+
+            const section = elf.getSection(".debug_line");
+            if (section) {
+                const entries = section.entries;
+                if (entries) {
+                    for (const entry of entries) {
+
+                        const addressInfo = new DebugAddressInfo(
+                            entry.address,
+                            entry.address_end,
+                            entry.source,
+                            entry.line
+                        );
+
+                        if (DebugDumpAddressInfos) {
+                            console.log(
+                                "$" + addressInfo.address.toString(16) +
+                                "-$" + addressInfo.address_end.toString(16) +
+                                ", " + addressInfo.source +
+                                ":" + addressInfo.line
+                            );
+                        }
+
+                        addressInfo.globalRef = this._addresses.length;
+                        this._addresses.push(addressInfo);
+
+                        for (let addr = addressInfo.address; addr <= addressInfo.address_end; addr++) {
+                            this._addressMap[addr] = addressInfo;
+                        }
+
+                        const normalizedPath = addressInfo.normalizedPath;
+
+                        let currentSourceRef = this.#getOrCreateLineList(normalizedPath);
+                        addressInfo.localRef = currentSourceRef.length;
+                        addressInfo.localRefTable = currentSourceRef;
+                        currentSourceRef.push(addressInfo);
+                    }
+                }
+            }
+        }
+
+        {  // load symbol table
+
+            const section = elf.getSection(".symtab");
+            if (section) {
+                const numSymbols = section.getSymbolCount();
+                for (let i=0; i<numSymbols; i++) {
+                    const symbol = section.getSymbol(i);
+                    if (symbol.name && symbol.type == ElfSymbol.TypeObject) {
+                        //console.log("Symbol: " + symbol.name + "  Value: " + symbol.value + "  Size: " + symbol.size);
+                        this.storeSymbol(new DebugSymbol(
+                            symbol.name,
+                            symbol.value,
+                            true,
+                            null,
+                            0,
+                            0, // data size type (8bit, 16bit, ...) is unknown (TODO)
+                            symbol.size
+                        ));
+                    }
+                }
+            }
+        }
     }
 
-    #loadDebug(filename, project) {
+    #loadCc65Dbg(filename, project) {
 
         let src = null;
 
@@ -958,6 +1061,15 @@ class DebugInfo {
         const addressInfos = dbg.addressInfos;
 
         for (const addressInfo of addressInfos) {
+
+            if (DebugDumpAddressInfos) {
+                console.log(
+                    "$" + addressInfo.address.toString(16) +
+                    "-$" + addressInfo.address_end.toString(16) +
+                    ", " + addressInfo.source +
+                    ":" + addressInfo.line
+                );
+            }
 
             addressInfo.globalRef = this._addresses.length;
             this._addresses.push(addressInfo);
@@ -983,7 +1095,7 @@ class DebugInfo {
 
     }
 
-    #loadReport(filename, project) {
+    #loadAcmeReport(filename, project) {
 
         let src = null;
 
@@ -1248,9 +1360,14 @@ class DebugInfo {
     }
 
     findNearestCodeLine(filename, line) {
-
         const normalizedPath = this.#getRefName(filename);
+
+        const lineListByFile = this._lineListByFile;
+        if (!lineListByFile) return null;
+
         const lineList = this._lineListByFile.get(normalizedPath);
+        if (!lineList) return null;
+
         const pos = lineList.indexOf(line);
         if (pos < 0) return null;
 

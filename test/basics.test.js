@@ -178,3 +178,37 @@ test("sorted_array_basics", () => {
 }); // test
 
 });  // describe
+
+describe('formatter', () => {
+    test("formatter_basics", () => {
+
+        const data = [ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        const buffer = Buffer.from(data);
+
+        {
+            const s = Utils.formatMemory(buffer, 4, null, " ");
+            expect(s).toBe("11 22 33 44");
+        }
+
+        {
+            const s = Utils.formatMemory(buffer, 4, 1, " ");
+            expect(s).toBe("11 22 33 44");
+        }
+
+        {
+            const s = Utils.formatMemory(buffer, 6, 2, " ");
+            expect(s).toBe("1122 3344 5566");
+        }
+
+        {
+            const s = Utils.formatMemory(buffer, 8, 3, " ");
+            expect(s).toBe("112233 445566");
+        }
+
+        {
+            const s = Utils.formatMemory(buffer, 8, 4, " ");
+            expect(s).toBe("11223344 55667788");
+        }
+
+    }); // test
+});  // describe

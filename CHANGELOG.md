@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.1.0 Major Update _(preview)_
+
+- Added elf/dwarf debugging support
+- Added ninja based build system
+- Improved launch configuration handling
+- Improved project creation tools
+- Bug fixes
+
 ## 2.0.3 Minor Update _(preview)_
 
 - Fixed bug in extension activation when no workspace is open

@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.0.3",
+	"version": "2.1.0",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -49,6 +49,8 @@
         "onCommand:vs64.createProjectAsm",
 		"onCommand:vs64.createProjectC",
 		"onCommand:vs64.createProjectCpp",
+		"onCommand:vs64.buildProject",
+		"onCommand:vs64.cleanProject",
 		"onCommand:workbench.action.tasks.runTask"
 	],
 	"keywords": [
@@ -89,6 +91,16 @@
             {
                 "command": "vs64.createProjectCpp",
                 "title": "Create LLVM-MOS C++ Project",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.buildProject",
+                "title": "Build project",
+                "category": "VS64"
+            },
+            {
+                "command": "vs64.cleanProject",
+                "title": "Clean project build",
                 "category": "VS64"
             }
         ],
@@ -276,7 +288,13 @@
 						"type": "string",
 						"default": "",
 						"description": "Global additional build command line options"
+					},
+					"vs64.ninjaExecutable": {
+						"type": "string",
+						"default": "",
+						"description": "Path to custom ninja executable. Leave empty to use the ninja executable coming with the extension package."
 					}
+
 				}
 			},
 			{
@@ -356,9 +374,7 @@
 				"runtime": "node",
 				"configurationAttributes": {
 					"launch": {
-						"required": [
-							"program"
-						],
+						"required": [],
 						"properties": {
 							"program": {
 								"type": "string",
@@ -376,13 +392,13 @@
 				"initialConfigurations": [],
 				"configurationSnippets": [
 					{
-						"label": "Launch 6502 program",
+						"label": "VS64: Launch 6502 program",
 						"description": "A new configuration for the 6502 debugger.",
 						"body": {
 							"type": "6502",
+							"name": "Launch 6502",
 							"request": "launch",
-							"name": "Launch Program",
-							"program": "${workspaceFolder}/build/program.prg"
+							"preLaunchTask": "${defaultBuildTask}"
 						}
 					}
 				],
@@ -394,9 +410,7 @@
 				"runtime": "node",
 				"configurationAttributes": {
 					"launch": {
-						"required": [
-							"program"
-						],
+						"required": [],
 						"properties": {
 							"program": {
 								"type": "string",
@@ -416,9 +430,7 @@
 						}
 					},
 					"attach": {
-						"required": [
-							"program"
-						],
+						"required": [],
 						"properties": {
 							"program": {
 								"type": "string",
@@ -441,13 +453,25 @@
 				"initialConfigurations": [],
 				"configurationSnippets": [
 					{
-						"label": "Launch in Vice Emulator",
+						"label": "VS64: Launch in Vice Emulator",
 						"description": "A new configuration for the Vice debugger.",
 						"body": {
 							"type": "vice",
+							"name": "Launch Vice",
 							"request": "launch",
-							"name": "Launch Program",
-							"program": "${workspaceFolder}/build/program.prg"
+							"preLaunchTask": "${defaultBuildTask}"
+						}
+					},
+					{
+						"label": "VS64: Attach to Vice Emulator",
+						"description": "A new configuration for Vice debugger attachment.",
+						"body": {
+							"type": "vice",
+							"name": "Attach Vice",
+							"request": "attach",
+							"hostname": "localhost",
+							"port": 6502,
+							"preLaunchTask": "${defaultBuildTask}"
 						}
 					}
 				],

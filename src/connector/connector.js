@@ -336,15 +336,29 @@ class ViceMonitorClient {
 
     }
 
-    disconnect() {
-
-        if (this._client) {
-            this.cmdExit();
-            this._client.destroy();
-            this._client = null;
+    async deleteAllBreakpoints() {
+        const checkpointList = await this.cmdCheckpointList();
+        if (checkpointList && checkpointList.checkpoints) {
+            for (const checkpoint of checkpointList.checkpoints) {
+                const id = checkpoint.checkpointNumber;
+                await this.cmdCheckpointDelete(checkpoint.checkpointNumber);
+            }
         }
+    }
 
-        this.clearBuffer();
+    async disconnect() {
+
+        const client = this._client;
+
+        if (client) {
+            await this.deleteAllBreakpoints();
+            await this.cmdExit();
+            client.destroy();
+            this.clearBuffer();
+            this._client = null;
+        } else {
+            this.clearBuffer();
+        }
     }
 
     clearBuffer() {
@@ -750,6 +764,8 @@ class ViceMonitorClient {
             };
         } else if (responseType == RequestType.CMD_AUTOSTART) { // autostart
             eventObj = { type: responseType };
+        } else if (responseType == RequestType.CMD_EXECUTE_UNTIL_RETURN) { // execute until return
+            eventObj = { type: responseType };
         } else {
             logger.warn("Unhandled response type " + responseType + ", request id " + requestId + ", body: " + bodyLen + " payload bytes");
         }
@@ -888,6 +904,10 @@ class ViceMonitorClient {
         const result = await this.sendCommand(RequestType.CMD_PALETTE_GET, body);
 
         return result;
+    }
+
+    async cmdPing(memspace) {
+        await this.sendCommand(RequestType.CMD_PINT, null);
     }
 
     async cmdRegistersGet(memspace) {
@@ -1067,7 +1087,8 @@ class ViceConnector extends DebugRunner {
         this._initialized = false;
         this._stopped = false;
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+        this._memoryCache = null;
     }
 
     init() {
@@ -1075,7 +1096,8 @@ class ViceConnector extends DebugRunner {
         this._initialized = false;
         this._stopped = false;
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+        this._memoryCache = null;
     }
 
     async connect(hostname, port) {
@@ -1084,6 +1106,8 @@ class ViceConnector extends DebugRunner {
         const vice = new ViceMonitorClient();
         await vice.connect(hostname, port);
         this._vice = vice;
+
+        this.#invalidateMemoryCache();
 
         logger.trace("connected to vice binary monitor port");
 
@@ -1094,7 +1118,7 @@ class ViceConnector extends DebugRunner {
 
     }
 
-    disconnect() {
+    async disconnect() {
         if (this._vice) {
             this._vice.disconnect();
             this._vice = null;
@@ -1113,20 +1137,39 @@ class ViceConnector extends DebugRunner {
         const debugInfo = session._debugInfo;
 
         if (event.type == RequestType.RESPONSE_STOPPED) {
+
             const vice = this._vice;
             if (vice) {
-                if (this._stepType != null) {
+                if (this._runFlags != null && this._runFlags.debugStepType != null) {
+                    // get current pc
                     const cpuState = this.getCpuState();
                     const pc = cpuState.cpuRegisters.PC;
 
                     // check if stop happend on real code line (or somewhere between)
+                    const runFlags = this._runFlags;
+                    const stepStartAddress = runFlags.stepStartAddress;
                     const addressInfo = debugInfo.getAddressInfo(pc);
-                    if (addressInfo != null) {
-                        this._stepType = null;
+
+                    let stopRun = false;
+                    if (addressInfo) {
+                        if (stepStartAddress) {
+                            if (pc < stepStartAddress.address || pc > stepStartAddress.address_end) {
+                                stopRun = true;
+                            }
+                        } else {
+                            stopRun = true;
+                        }
+                    }
+
+                    if (stopRun) {
+                        const pauseRequest = runFlags.pauseRequest;
+                        this._runFlags = null;
                         this._stopped = true;
-                        this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
+                        if (pauseRequest) this.fireEvent('break', pc);
+                        this.fireEvent('stopped', pauseRequest ? DebugInterruptReason.PAUSE : DebugInterruptReason.BREAKPOINT);
                     } else {
-                        vice.cmdAdvanceInstructions(true, 1);
+                        const stepOverSubroutines = true; //(addressInfo != null);
+                        vice.cmdAdvanceInstructions(stepOverSubroutines, 1);
                     }
 
                 } else if (this._activeBreakpoint) {
@@ -1153,6 +1196,8 @@ class ViceConnector extends DebugRunner {
         } else if (event.type == RequestType.RESPONSE_CHECKPOINT) {
             logger.trace("VICE checkpoint event");
 
+            this.#invalidateMemoryCache();
+
             const checkpoint = event.checkpoint;
             if (checkpoint.currentlyHit) {
                 if (this._initialized && !this._stopped) {
@@ -1163,7 +1208,10 @@ class ViceConnector extends DebugRunner {
                     if (breakpoint) {
                         this._activeBreakpoint = breakpoint;
                     } else {
-                        this._activeBreakpoint = new Breakpoint(checkpoint.startAddr, null, 0, null);
+                        this._activeBreakpoint = new Breakpoint(
+                            checkpoint.startAddr, null,
+                            null, 0, null
+                        );
                     }
                 }
             } else {
@@ -1173,29 +1221,54 @@ class ViceConnector extends DebugRunner {
         } else if (event.type == RequestType.RESPONSE_RESUMED) {
             this._stopped = false;
         } else if (event.type == RequestType.CMD_REGISTERS_GET) {
-
             // do nothing
-
         } else {
-
-            logger.debug("VICE EVENT: " + Utils.formatHex(event.type, 2, "0x"));
-
+            logger.trace("vice event: " + Utils.formatHex(event.type, 2, "0x"));
         }
     }
 
-    async read(addr, size) {
-        logger.info("DebugRunner.read()");
+    #invalidateMemoryCache() {
+        //logger.debug("invalidate memory cache");
+        this._memoryCache = null;
+    }
+
+    async #getMemoryCache() {
+        //logger.debug("get memory cache");
 
         const vice = this._vice;
-        if (!vice) return 0x0;
+        if (!vice) return null;
 
-        const result = await vice.cmdMemoryGet(addr, addr+size-1);
-        if (!result || !result.memory) return 0x0;
+        if (this._memoryCache) {
+            return this._memoryCache;
+        }
 
-        const mem = result.memory;
-        if (mem.length < size) return 0x0;
+        const result = await vice.cmdMemoryGet(0x0, 0xffff);
+        if (!result) return null;
 
-        const val = mem[0] + (size > 1 ? (mem[1]<<8) : 0);
+        this._memoryCache = result.memory;
+
+        return this._memoryCache;
+    }
+
+    async readMemory(startAddress, endAddress, memoryType) {
+        const memCache = await this.#getMemoryCache();
+        if (!memCache) return null;
+        const mem = memCache.subarray(startAddress, endAddress+1);
+        return mem;
+    }
+
+    async read(addr, size) {
+
+        const memCache = await this.#getMemoryCache();
+        if (!memCache) return null;
+
+        let val = 0x0;
+
+        if (size > 1) {
+            val = memCache[addr]&0xff + (memCache[addr+1]<<8);
+        } else {
+            val = memCache[addr]&0xff;
+        }
 
         return val;
     }
@@ -1239,7 +1312,8 @@ class ViceConnector extends DebugRunner {
             let exists = false;
             if (checkpointList && checkpointList.checkpoints) {
                 for (const checkpoint of checkpointList.checkpoints) {
-                    if (breakpoint.address == checkpoint.startAddr) {
+                    if (checkpoint.startAddr >= breakpoint.address &&
+                        checkpoint.endAddr <= breakpoint.address_end + 1) {
                         exists = true;
                     }
                 }
@@ -1247,7 +1321,10 @@ class ViceConnector extends DebugRunner {
 
             if (!exists) {
                 logger.info("set breakpoint: " + breakpoint.address);
-                const result = await vice.cmdCheckpointSet(breakpoint.address);
+                const result = await vice.cmdCheckpointSet(
+                    breakpoint.address,
+                    breakpoint.address_end+1
+                );
                 if (!result) break;
             }
 
@@ -1264,7 +1341,9 @@ class ViceConnector extends DebugRunner {
 
         this._initialized = false;
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+
+        this.#invalidateMemoryCache();
 
         super.start();
 
@@ -1279,58 +1358,77 @@ class ViceConnector extends DebugRunner {
 
     async resume() {
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+
+        this.#invalidateMemoryCache();
 
         const vice = this._vice;
         if (!vice) return;
 
-        if (this._stopped) {
-            this._stopped = false;
-            vice.cmdExit();
-        }
+        this._stopped = false;
+        vice.cmdExit();
 
         this.fireEvent('started');
     }
 
     async pause() {
-        this._initialized = false;
         this._stopped = true;
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+
+        this.#invalidateMemoryCache();
 
         super.stop();
 
         const vice = this._vice;
         if (!vice) return;
 
-        await vice.cmdAdvanceInstructions(false, 1);
+        this._runFlags = {
+            pauseRequest: true,
+            debugStepType: DebugStepType.STEP_IN
+        };
 
+        await vice.cmdRegistersGet(); // dummy command to activate monitor
     }
 
     async stop() {
         this._initialized = false;
         this._stopped = true;
         this._activeBreakpoint = null;
-        this._stepType = null;
+        this._runFlags = null;
+
+        this.#invalidateMemoryCache();
 
         const vice = this._vice;
         if (!vice) return;
 
-        if (this._stopped) {
-            this._stopped = false;
-            vice.cmdExit();
-        }
+        this._stopped = false;
+        vice.cmdExit();
 
         super.stop();
     }
 
     async do_step(debugStepType) {
 
+        this.#invalidateMemoryCache();
+
         this._activeBreakpoint = null;
-        this._stepType = debugStepType;
+
+        const cpuState = this.getCpuState();
+        const pc = cpuState.cpuRegisters.PC;
+
+        const session = this._session;
+        const debugInfo = session._debugInfo;
+
+        this._runFlags = {
+            debugStepType: debugStepType,
+            stepStartAddress: debugInfo.getAddressInfo(pc)
+        }
 
         logger.trace("ViceConnector.step()");
         const vice = this._vice;
+
+        this._initialized = true;
 
         if (debugStepType == DebugStepType.STEP_OUT) {
             await vice.cmdExecuteUntilReturn();
@@ -1346,6 +1444,8 @@ class ViceConnector extends DebugRunner {
 
     async loadProgram(filename, autoOffsetCorrection, forcedStartAddress) {
         logger.trace("ViceConnector.loadProgram()");
+
+        this.#invalidateMemoryCache();
 
         const vice = this._vice;
         if (!vice) return;
@@ -1363,15 +1463,6 @@ class ViceConnector extends DebugRunner {
         if (!vice) return null;
 
         return vice.getState();
-    }
-
-    async readMemory(startAddress, endAddress, memoryType) {
-        const vice = this._vice;
-        if (!vice) return null;
-
-        const result = await vice.cmdMemoryGet(startAddress, endAddress, memoryType, false);
-        if (!result) return null;
-        return result.memory;
     }
 
 }

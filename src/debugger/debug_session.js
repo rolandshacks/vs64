@@ -27,7 +27,6 @@ const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState,
 const { DebugInfo } = require('debugger/debug_info');
 const { Emulator } = require('emulator/emu');
 const { ViceConnector, ViceProcess } = require('connector/connector');
-const profiler = require('./profiler');
 const { indexOf } = require('../emulator/roms/kernal');
 
 const logger = new Logger("DebugSession");
@@ -136,6 +135,31 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         logger.debug("stop debug session");
         this.destroyEmulatorInstance();
         this._port = 0;
+    }
+
+    #loadDebugInfo() {
+
+        const project = this._project;
+        if (!project) return null;
+
+        let debugInfoPath = project.outdebug;
+
+        let needsReload = true;
+
+        if (this._debugInfo && this._debugInfo.timestamp && this._debugInfo.filename) {
+            if (debugInfoPath == this._debugInfo.filename) {
+                const filetime = Utils.getFileTime(debugInfoPath);
+                if (filetime == this._debugInfo.timestamp) {
+                    needsReload = false;
+                }
+            }
+        }
+
+        if (needsReload) {
+            const debugInfo = new DebugInfo(debugInfoPath, project);
+            this._debugInfo = debugInfo;
+        }
+
     }
 
     dispatchRequest(request) {
@@ -299,8 +323,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._emulator = null;
 
         if (emu) {
-            if (emu.disconnect) emu.disconnect();
             emu.stop();
+            if (emu.disconnect) emu.disconnect();
         }
     }
 
@@ -343,7 +367,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         let binaryPath = args.program;
         let forcedStartAddress = this.parseAddressString(args.pc);
 
-        this._debugInfo = null;
         this._launchBinary = null;
         this._launchPC = null;
 
@@ -361,11 +384,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         try {
-
-            const project = this._project;
-
-            let debugInfoPath = project.outdebug;
-            this._debugInfo = new DebugInfo(debugInfoPath, project);
+            this.#loadDebugInfo();
             await this.syncBreakpoints();
 
             await emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
@@ -414,6 +433,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
             this._breakpoints.add(new Breakpoint(
                 location.address,
+                null,
                 location.source,
                 location.line
             ));
@@ -718,10 +738,14 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                         let info = await this.formatSymbol(symbol);
 
                         if (symbol.isAddress) {
+                            const label = symbol.memory_size ?
+                                symbol.name + ": " + symbol.memory_size + " bytes at " + Formatter.formatAddress(symbol.value) :
+                                symbol.name + ": " + Formatter.formatAddress(symbol.value);
+
                             variables.push(
                                 {
                                     name: info.label,
-                                    type: "address symbol",
+                                    type: label,
                                     value: info.value,
                                     variablesReference: 0,
                                     memoryReference: symbol.value
@@ -731,7 +755,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                             variables.push(
                                 {
                                     name: info.label,
-                                    type: "symbol",
+                                    type: (symbol.name + " = " + symbol.value),
                                     value: info.value,
                                     variablesReference: 0
                                 }
@@ -772,8 +796,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                         { name: "y", type: "stat", value: Formatter.formatValue(s.y), variablesReference: 0 },
                         { name: "color", type: "stat", value: Formatter.formatValue(s.color), variablesReference: 0 },
                         { name: "multi-color", type: "stat", value: Formatter.formatBit(s.multicolor), variablesReference: 0 },
-                        { name: "doubleWidth", type: "stat", value: Formatter.formatValue(s.doubleWidth), variablesReference: 0 },
-                        { name: "doubleHeight", type: "stat", value: Formatter.formatValue(s.doubleHeight), variablesReference: 0 },
+                        { name: "doubleWidth", type: "stat", value: Formatter.formatBit(s.doubleWidth), variablesReference: 0 },
+                        { name: "doubleHeight", type: "stat", value: Formatter.formatBit(s.doubleHeight), variablesReference: 0 },
                         { name: "sprite collision", type: "stat", value: Formatter.formatBit(s.spriteCollision), variablesReference: 0 },
                         { name: "background collision", type: "stat", value: Formatter.formatBit(s.backgroundCollision), variablesReference: 0 }
 
@@ -1084,8 +1108,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     async evaluateRequest(response, args) {
 
         const debugInfo = this._debugInfo;
+        const emu = this._emulator;
 
-        if (!debugInfo || !args || !args.expression ||
+        if (!debugInfo || !emu || !args || !args.expression ||
             DebugConstants.STACKFRAME_NUMBER !== args.frameId) {
 
             response.success = false;
@@ -1094,12 +1119,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             return;
         }
 
-        const emu = this._emulator;
         const cpuState = emu.getCpuState();
         const registers = cpuState.cpuRegisters;
         const expr = args.expression;
-
-        let typeInfo = null;
 
         let value = null;
         let address = null;
@@ -1151,9 +1173,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
 
         let emu = this._emulator;
-        await emu.pause();
+        emu.pause();
 
-        this.onDebugStopped(DebugInterruptReason.PAUSE);
+        //this.onDebugStopped(DebugInterruptReason.PAUSE);
 	}
 
     async continueRequest(response, args) {
@@ -1188,9 +1210,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             return;
         }
 
-        await emu.step(debugStepType);
-
         this.sendResponse(response);
+
+        await emu.step(debugStepType);
     }
 
     async readMemoryRequest(response, args) {
@@ -1268,11 +1290,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     }
 
     onDebugStarted() {
-        logger.debug("debug started");
+        logger.trace("debug started");
     }
 
     onDebugStopped(reason) {
-        logger.debug("debug stopped");
+        logger.trace("debug stopped");
 
         if (!reason) return;
 
@@ -1280,10 +1302,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             this.sendEvent(new DebugAdapter.TerminatedEvent());
         } else if (reason == DebugInterruptReason.FAILED) {
             this.sendEvent(new DebugAdapter.TerminatedEvent());
-        } else if (reason == DebugInterruptReason.PAUSE) {
-            let e = new DebugAdapter.StoppedEvent("pause", DebugConstants.THREAD_ID);
-            e.body.text = "Successfully paused";
-            this.sendEvent(e);
         } else {
 
             this._variablesCache = {}; // clear cached state information
@@ -1299,7 +1317,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             if (reason == DebugInterruptReason.BREAKPOINT) {
                 eventReason = "breakpoint";
                 eventDescription = "Paused on breakpoint";
-            } else if (reason == DebugInterruptReason.BREAKPOINT) {
+            } else if (reason == DebugInterruptReason.BREAK) {
+                eventReason = "break";
+                eventDescription = "Break";
+            } else if (reason == DebugInterruptReason.PAUSE) {
                 eventReason = "pause";
                 eventDescription = "Paused";
             } else {
@@ -1307,7 +1328,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             }
 
             let e = new DebugAdapter.StoppedEvent(eventReason, DebugConstants.THREAD_ID);
+
             e.body.description = eventDescription;
+            e.body.preserveFocusHint = false;
+            e.body.allThreadsStopped = true;
+
             this.sendEvent(e);
 
         }
@@ -1328,7 +1353,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     onDebugBreak(pc) {
 
-        logger.break("debug break");
+        logger.trace("debug break");
 
         let msg = "BREAK at $" + Utils.fmtAddress(pc);
 
@@ -1336,6 +1361,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (debugInfo) {
             let addressInfo = debugInfo.getAddressInfo(pc);
             if (null != addressInfo) {
+                if (addressInfo.source) msg += ", file " + addressInfo.source;
                 msg += ", line " + addressInfo.line;
                 this.showCode(addressInfo);
             }
@@ -1365,12 +1391,17 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             let addrStr = "$" + Utils.fmt(symbol.value.toString(16), 4);
             info.label = "(" + addrStr + ") " + symbol.name;
 
-            const readSize = (symbol.data_size == 16 && symbol.value != 0xffff) ? 2 : 1;
-            const memValue = await emu.read(symbol.value, readSize);
-            if (readSize == 1) {
-                info.value = Formatter.formatByte(memValue);
+            if (symbol.memory_size) {
+                //const elementSize = symbol.data_size ? symbol.data_size / 8 : null;
+                info.value = await this.formatMemory(symbol.value, symbol.memory_size);
             } else {
-                info.value = (symbol.data_size == 16) ? Formatter.formatWord(memValue) : Formatter.formatByte(memValue & 255) + " / " + Formatter.formatWord(memValue);
+                const readSize = (symbol.data_size == 16 && symbol.value != 0xffff) ? 2 : 1;
+                const memValue = await emu.read(symbol.value, readSize);
+                if (readSize == 1) {
+                    info.value = Formatter.formatByte(memValue);
+                } else {
+                    info.value = (symbol.data_size == 16) ? Formatter.formatWord(memValue) : Formatter.formatByte(memValue & 255) + " / " + Formatter.formatWord(memValue);
+                }
             }
 
         } else {
@@ -1389,12 +1420,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return info;
     }
 
-    async formatMemory(address, memorySize) {
+    async formatMemory(address, memorySize, elementSize) {
         const emu = this._emulator;
         if (!memorySize) memorySize = 1;
         const readSize = Math.min(256, memorySize);
         const memBuffer = await emu.readMemory(address, address + readSize - 1);
-        return Utils.formatMemory(memBuffer, readSize, ' ');
+        return Utils.formatMemory(memBuffer, readSize, elementSize, ' ');
     }
 
 }

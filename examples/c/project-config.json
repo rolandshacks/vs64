@@ -11,7 +11,7 @@
         "libc64/src/sprite.c",
         "resources/sprites.c"
     ],
-    "build": "release",
+    "build": "debug",
     "definitions": [],
     "includes": ["libc64/include"],
     "args": [],

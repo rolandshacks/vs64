@@ -88,19 +88,32 @@ let Utils = {
         return s;
     },
 
-    formatMemory: function(mem, num, prefix, separator) {
+    formatMemory: function(mem, num, elementSize, prefix, separator) {
         if (null == mem) return;
 
         let count = 0;
 
         let s = "";
 
+        if (!elementSize) elementSize = 1;
+        const endPos = Math.min(num, mem.length) + 1 - elementSize;
 
-        for (const b of mem) {
-            count++; if (num && count > num) break;
-            let notFirst = (s.length > 0);
+        let pos = 0;
+        while (pos < endPos) {
+            const notFirst = (pos > 0);
             if (notFirst && separator) s += separator;
-            s += Utils.formatHex(b, 2, notFirst ? prefix : null);
+
+            let value = 0;
+            if (elementSize == 1) {
+                value = mem[pos];
+                pos++;
+            } else {
+                for (let i=0; i<elementSize; i++) {
+                    value = (value << 8) + mem[pos];
+                    pos++;
+                }
+            }
+            s += Utils.formatHex(value, elementSize * 2, notFirst ? prefix : null);
         }
 
         return s;
@@ -175,6 +188,13 @@ let Utils = {
         }
 
         return true;
+    },
+
+    getFileTime: function(filename) {
+        if (!fs.existsSync(filename)) return 0;
+        const filestats = fs.statSync(filename);
+        const tm = new Date(filestats.mtime).getTime();
+        return tm;
     },
 
     compareFileTime: function(fileA, fileB) {
@@ -352,7 +372,150 @@ let Utils = {
             refName = refName.toUpperCase();
         }
         return refName;
+    },
+
+    fileExists: function(filename) {
+        if (!filename || filename.length == 0) return false;
+        return (fs.existsSync(filename));
+
+    },
+
+    isFile: function(filename) {
+        if (!Utils.fileExists(filename)) return false;
+
+        try {
+            return fs.lstatSync(filename).isFile();
+        } catch (err) {}
+
+        return false;
+    },
+
+    isFolder: function(filename) {
+        if (!Utils.fileExists(filename)) return false;
+
+        try {
+            return fs.lstatSync(filename).isDirectory();
+        } catch (err) {}
+
+        return false;
+    },
+
+
+    getEnumKey: function(enumDef, enumValue) {
+        for (const element of Object.entries(enumDef)) {
+            if (element[1] == enumValue) {
+                return element[0];
+            }
+        }
+        return null;
+    },
+
+    findFiles: function(folder, filterFn, skipList) {
+        return Utils.findFilesImpl(folder, null, null, filterFn, skipList);
+    },
+
+    findFilesImpl: function(folder, _relFolder, _files, filterFn, skipList) {
+
+        _relFolder ||= "";
+        _files ||= [];
+
+        const elements = fs.readdirSync(folder);
+        for (const fileName of elements) {
+
+            if (fileName == ".git") continue;
+            if (skipList && skipList.indexOf(fileName) >= 0) continue;
+
+            const absFilePath = path.join(folder, fileName);
+            const relFilePath = path.join(_relFolder, fileName);
+            const stat = fs.lstatSync(absFilePath);
+
+            if (stat.isDirectory()) {
+                const foundFolder = {
+                    relFilePath: relFilePath,
+                    absFilePath: absFilePath,
+                    isDirectory: true,
+                    extension: ""
+                };
+
+                if (!filterFn || filterFn(foundFolder)) {
+                    _files.push(foundFolder);
+                }
+
+                Utils.findFilesImpl(absFilePath, relFilePath, _files, filterFn, skipList);
+
+            } else {
+
+                const foundFile = {
+                    relFilePath: relFilePath,
+                    absFilePath: absFilePath,
+                    isDirectory: false,
+                    extension: path.extname(relFilePath).toLowerCase()
+                };
+
+                if (!filterFn || filterFn(foundFile)) {
+                    _files.push(foundFile);
+                }
+            }
+        }
+
+        return _files;
+    },
+
+    createFolder: function(dest) {
+        try {
+            const stat = fs.lstatSync(dest);
+            if (stat.isDirectory()) {
+                return; // already exists
+            } else if (stat.isFile()) {
+                throw("cannot create directory because file with same name already exists");
+            }
+        } catch (err) {;}
+
+        fs.mkdirSync(dest, { recursive: true });
+    },
+
+    copy: function(source, dest, filterFn) {
+        const files = Utils.findFiles(source);
+        for (const item of files) {
+            if (filterFn && !filterFn(item)) continue; // skip filtered item
+            const destPath = path.join(dest, item.relFilePath);
+            if (item.isDirectory) {
+                Utils.createFolder(destPath);
+            } else {
+                const sourcePath = path.join(source, item.relFilePath);
+                Utils.copyFile(sourcePath, destPath);
+            }
+        }
+    },
+
+    copyFile: function(source, dest) {
+        const destFolder = path.dirname(dest);
+        this.createFolder(destFolder);
+
+        try {
+            const stat = fs.lstatSync(dest);
+            if (stat.isDirectory()) {
+                throw("cannot copy file because directory with same name already exists");
+            } else if (stat.isFile()) {
+                /*
+                const result = vscode.window.showInformationMessage(
+                    "The file " + dest + " already exists. Do you want to overwrite or skip it?",
+                    "Overwrite",
+                    "Skip"
+                ).then((action) => {
+                    if (action && action == "Skip") {
+                        return;
+                    }
+                });
+                */
+                return; // already exists
+            }
+        } catch (err) { ; }
+
+        const data = fs.readFileSync(source);
+        fs.writeFileSync(dest, data);
     }
+
 
 };
 

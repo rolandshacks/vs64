@@ -12,7 +12,8 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 
 ## Features
 
-* Build system for ACME assembler, CC65 C-compiler and LLVM-MOS C/C++ compiler
+* Support for ACME assembler, CC65 C-compiler and LLVM-MOS C/C++
+* Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
 * Syntax highlighting for ACME assembler files
@@ -23,6 +24,8 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * On-the-fly disassembly of C64 program files
 
 ## Quick and Start (TL;DR)
+
+### Getting Started
 
 The quickest start is by opening the command palette and run the **"VS64: Getting Started"** command.
 
@@ -35,7 +38,10 @@ If you want to do some manual steps or adjustments, these are the individual thi
 * Auto-compile should pick up the newly created project and build everything
 * Debug configurations should be ready to run on the internal CPU emulator or VICE
 
-> **Please notice:** The "Create Project" commands do not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
+### Creating Projects Quickly
+
+The "Create Project" commands are a great tool to configure and re-configure a code project. Whenever such a command is issued, the current workspace will be scanned and a fresh project configuration file will be generated based on the existing source files. Afterwards, everything should be ready to build and run.
+
 
 ## Setup
 
@@ -65,9 +71,6 @@ VS64 also supports the LLVM-MOS C/C++ Compiler.
 
 Please make sure you updated the VS64 settings with the correct LLVM-MOS installation and include paths.
 
-> **Please notice:** The "Create Project" commands do not overwrite existing files. In case you want to reset a project, please delete unwanted files first.
-
-
 > **Please notice:** Currently, VS64 is not able to use the debug information from the ELF output file. Plain execution of the program file in an emulation session should just work fine.
 
 ### VICE Emulator
@@ -81,12 +84,16 @@ In case you did a manual or custom installation, please make sure you updated th
 
 > **Please notice:** It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
 
-
 ## Basic Usage
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
 
 For details, please look at the provided example projects for ACME, CC65 or LLVM-MOS.
+
+### Build System
+
+VS64 provides a meta build system which is based on the Ninja build toolkit.
+Furthermore, dependency scanning and the generation of intellisense information is supported.
 
 ### Syntax Highlighting
 
@@ -104,7 +111,7 @@ The basic structure of the file is like this:
     "description": "Example project",
     "toolkit": "acme",
     "main": "src/main.asm",
-    "build": "debug",
+    "build": "release",
     "definitions": [],
     "includes": ["src/includes"],
     "args": [],
@@ -128,7 +135,7 @@ A more extensive project file for CC65 could like like this:
         "libc64/src/sprite.c",
         "resources/sprites.c"
     ],
-    "build": "release",
+    "build": "debug",
     "definitions": [],
     "includes": ["libc64/include"],
     "args": [],
@@ -147,7 +154,7 @@ A more extensive project file for CC65 could like like this:
         "src/assem.asm",
         "src/main.cpp"
     ],
-    "build": "release",
+    "build": "debug",
     "definitions": [],
     "includes": [],
     "args": [],
@@ -167,6 +174,10 @@ Project description, for information purposes.
 > sources
 
 Defines all used source files. The build system will keep track of changes of these files.
+
+> toolkit
+
+Specifies which build toolkit is used. Currently supported are "acme", "cc65" and "llvm".
 
 > main
 
@@ -222,13 +233,25 @@ As another option for debugging, a VICE emulator session can be launched or atta
 
 Supported debugging features:
 
-- run, pause, step in, step out, step over, stop, restart
-- define and clear breakpoints
-- inspect registers, addresses, values
-- inspect C64 specific chip registers (VIC, SID, CIA)
-- get hover information for many elements of the source code
+- Run, pause, step in, step out, step over, stop, restart
+- Define and clear breakpoints
+- Inspect registers, addresses, values
+- Inspect C64 specific chip registers (VIC, SID, CIA)
+- Get hover information for many elements of the source code
 
-> **Please notice:** Currently, VS64 is not able to use the debug information from the LLVM/ELF output file. Plain execution of the program file in an emulation session should just work fine.
+Debugging support for the CC65 toolkit
+
+- Source level debugging
+- Resolve global symbol table
+- Type information is not provided
+
+Debugging support for the LLVM Toolkit (Elf/Dwarf):
+
+- Source level debugging
+- Resolve global symbol table
+- General debug and type information are not handled, yet
+
+> **Please notice:** Debugging with a release build can be quite challenging. In order to enable correct behavior, use a "debug" build for debugging sessions.
 
 ### Debugger Launch Configuration
 
@@ -242,14 +265,12 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
             "type": "6502",
             "request": "launch",
             "name": "Launch 6502",
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         },
         {
             "type": "vice",
             "request": "launch",
             "name": "Launch Vice",
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         },
         {
@@ -258,7 +279,6 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
             "name": "Attach Vice",
             "hostname": "localhost",
             "port": 6502,
-            "program": "${workspaceFolder}/build/example.prg",
             "preLaunchTask": "${defaultBuildTask}"
         }
     ]
@@ -280,7 +300,7 @@ Any name you want to use is fine.
 
 > `program`: Path to a compiled C64 program file (.prg)
 
-The default build output path is ".cache" within the workspace root folder.
+Name of the executable program to be launched. If not specified, this is the output file of the build project.
 
 > `pc`: (6502 only) Optional parameter to overwrite the start address of the C64 program. Default is taken from the first two bytes of the program file.
 
@@ -342,6 +362,11 @@ Global build include paths.
 
 Global build command line options.
 
+> VS64: Ninja Executable
+
+Path to custom Ninja build executable. Example: `C:\Tools\bin\ninja.exe`.
+Leave blank to use the embedded Ninja executable that is distributed with the extension.
+
 > VS64: Auto Build
 
 Enable auto build before running or debugging.
@@ -370,15 +395,17 @@ Enable the welcome page. This setting is automatically disabled after the welcom
 
 This package includes open source from other developers and I would like to thank all of those:
 
+* Ninja build: Using the ninja build toolkit as the foundation for the VS64 meta build system was a great experience. Thank you for that excellent tool!
 * Gregory Estrade - 6502.js: It was great to have your 6502 emulator to form the core of the debugger. Thank you for compressing the 6502 cpu in such a nice piece of software!
 * Tony Landi - Acme Cross Assembler (C64): I started with the basic syntax definition for ACME from your package. Thanks for starting that!
 * The VICE emulator team.
 
 ## Links
 
-* The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass/
+* The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass
 * LLVM-MOS: https://github.com/llvm-mos/llvm-mos-sdk
-* CC65 C-Compiler: https://cc65.github.io/
-* VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net/
+* CC65 C-Compiler: https://cc65.github.io
+* VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net
+* Ninja build system: https://ninja-build.org
 * Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js
 * Example of vscode debugging extension: https://github.com/microsoft/vscode-mock-debug

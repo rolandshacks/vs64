@@ -75,6 +75,10 @@ class Emulator extends DebugRunner {
         return this._cpu.getState();
     }
 
+    init() {
+        super.init();
+    }
+
     async start() {
         super.start();
         this.run(null, false);
@@ -85,15 +89,15 @@ class Emulator extends DebugRunner {
         this.run(null, true);
     }
 
-    async do_step(debugStepType) {
+    async pause() {
+        super.pause();
+    }
 
-        /*
-        if (debugStepType == DebugStepType.STEP_IN) {
-            this._cpu.step();
-            this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
-            return;
-        }
-        */
+    async stop() {
+        super.stop();
+    }
+
+    async do_step(debugStepType) {
 
         const cpu = this._cpu;
         const session = this._session;
@@ -110,11 +114,8 @@ class Emulator extends DebugRunner {
 
         if (debugStepType == DebugStepType.STEP_OVER) {
             if (debugInfo) {
-                //if (cpu._opcode == 0x20) { // JSR
-                    runFlags.stopAtStackDepth = callStackDepth;
-                //}
+                runFlags.stopAtStackDepth = callStackDepth;
             }
-
         } else if (debugStepType == DebugStepType.STEP_OUT) {
             runFlags.stopAtStackDepth = (callStackDepth > 0) ? callStackDepth - 1 : null;
         }
@@ -124,11 +125,11 @@ class Emulator extends DebugRunner {
 
     run(runFlags, continueExecution) {
         let thisInstance = this;
-        setTimeout(() => { thisInstance.runLoop(runFlags, continueExecution); }, 0);
+        setTimeout(() => { thisInstance.runLoop(runFlags, continueExecution, false); }, 0);
         this.fireEvent('started');
     }
 
-    runLoop(runFlags, continueExecution) {
+    runLoop(runFlags, continueExecution, stopRun) {
 
         const cpu = this._cpu;
         const session = this._session;
@@ -153,7 +154,6 @@ class Emulator extends DebugRunner {
             endTime = startTime + EmulatorConstants.EmulatorIterationExecutionTime * 1000;
         }
         let checkCounter = 0;
-        let stopRun = false;
 
         while (true == this._running) {
 
@@ -211,12 +211,14 @@ class Emulator extends DebugRunner {
                             if (cpu._callStack.length <= runFlags.stopAtStackDepth) {
 
                                 const stepStartAddress = runFlags.stepStartAddress;
-                                const addressInfo = debugInfo.getAddressInfo(cpu.PC);
+                                const addressInfo = stepStartAddress ? debugInfo.getAddressInfo(cpu.PC) : null;
 
                                 if (stepStartAddress && addressInfo) {
                                     if (cpu.PC < stepStartAddress.address || cpu.PC > stepStartAddress.address_end) {
                                         stopRun = true;
                                     }
+                                } else if (!stepStartAddress) {
+                                    stopRun = true;
                                 } else if (runFlags.stackDepthMax > runFlags.stopAtStackDepth) {
                                     stopRun = true;
                                 }
@@ -289,27 +291,19 @@ class Emulator extends DebugRunner {
             let thisInstance = this;
             if (EmulatorConstants.EmulatorIterationSleepTime > 0) {
                 setTimeout(
-                    () => { thisInstance.runLoop(runFlags); },
+                    () => { thisInstance.runLoop(runFlags, false, stopRun); },
                     EmulatorConstants.EmulatorIterationSleepTime
                 );
             } else {
-                process.nextTick(() => { thisInstance.runLoop(runFlags); });
+                process.nextTick(() => { thisInstance.runLoop(runFlags, false, stopRun); });
             }
         } else {
             this.fireEvent('stopped', exitReason);
         }
     }
 
-    async pause() {
-        super.pause();
-    }
 
-    async stop() {
-        super.stop();
-    }
-
-    async setBreakpoints(breakpoints) {
-    }
+    async setBreakpoints(breakpoints) {}
 
     reset(startAddress) {
 

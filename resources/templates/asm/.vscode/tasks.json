@@ -7,7 +7,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "label": "build example"
+            "label": "build project"
         }
     ]
 }

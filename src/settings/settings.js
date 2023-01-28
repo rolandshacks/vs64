@@ -68,15 +68,18 @@ const AnsiColors = {
 // Settings
 //-----------------------------------------------------------------------------------------------//
 class Settings {
-    constructor() {
+    constructor(extensionContext) {
+        this.extensionContext = extensionContext;
         this.logLevel = LogLevel.Info;
         this.buildDefines = null;
         this.buildIncludePaths = null;
         this.buildArgs = null;
         this.emulatorExecutable = null;
+        this.ninjaExecutable = null;
         this.emulatorArgs = null;
         this.autoBuild = false;
         this.showWelcome = true;
+        this.compilerIncludes = null;
     }
 
     disableWelcome(workspaceConfig) {
@@ -99,6 +102,8 @@ class Settings {
         settings.logLevel = workspaceConfig.get("vs64.loglevel")||"info";
         Logger.setGlobalLevel(settings.logLevel);
 
+        this.setupNinja(workspaceConfig.get("vs64.ninjaExecutable"));
+
         this.setupAcme(workspaceConfig.get("vs64.acmeInstallDir"));
         this.setupCC65(workspaceConfig.get("vs64.cc65InstallDir"));
         this.setupLLVM(workspaceConfig.get("vs64.llvmInstallDir"));
@@ -112,6 +117,31 @@ class Settings {
         this.setupVice(workspaceConfig.get("vs64.emulatorExecutable"), workspaceConfig.get("vs64.emulatorArgs"));
 
         this.show();
+    }
+
+    setupNinja(executablePath) {
+        if (executablePath) {
+            this.ninjaExecutable = Utils.normalizeExecutableName(executablePath);
+        } else {
+
+            const extensionPath = this.extensionContext.extensionPath;
+            if (extensionPath) {
+                const platform = process.platform;
+                if (platform == "win32") {
+                    executablePath = path.resolve(extensionPath, "resources", "ninja", "win", "ninja.exe");
+                } else if (platform == "darwin") {
+                    executablePath = path.resolve(extensionPath, "resources", "ninja", "mac", "ninja");
+                } else if (platform == "linux") {
+                    executablePath = path.resolve(extensionPath, "resources", "ninja", "linux", "ninja");
+                }
+            }
+
+            if (executablePath && Utils.fileExists(executablePath)) {
+                this.ninjaExecutable = executablePath;
+            } else {
+                this.ninjaExecutable = "ninja";
+            }
+        }
     }
 
     setupAcme(installDir) {
@@ -137,6 +167,12 @@ class Settings {
             this.ca65Executable = "ca65";
             this.ld65Executable = "ld65";
         }
+
+        if (this.cc65Includes) {
+            this.compilerIncludes = [
+                this.cc65Includes
+            ];
+        }
     }
 
     setupLLVM(installDir) {
@@ -146,6 +182,15 @@ class Settings {
         } else {
             this.llvmIncludes = null;
             this.clangExecutable = "mos-clang++";
+        }
+
+        if (this.llvmIncludes) {
+            this.compilerIncludes = [
+                path.resolve(this.llvmIncludes, "mos-platform", "common", "include"),
+                path.resolve(this.llvmIncludes, "mos-platform", "commodore", "include"),
+                path.resolve(this.llvmIncludes, "mos-platform", "c64", "include"),
+                path.resolve(this.llvmIncludes, "lib", "clang", "16", "include")
+            ];
         }
     }
 

@@ -63,6 +63,13 @@
             "cwd": "${workspaceFolder}/test"
         },
         {
+            "name": "Run Elf",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/elf.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
             "name": "Unit Tests",
             "type": "node",
             "request": "launch",
@@ -72,7 +79,9 @@
 			"args": [
 				"--runInBand",
 				"--config", "${workspaceFolder}/test/jest.config.js",
-				"-t", "graph"
+				"-t",
+                //"graph"
+                "basic"
 			]
         }
 	]

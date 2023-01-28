@@ -22,6 +22,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Logger } = require('utilities/logger');
+const { Utils } = require('utilities/utils');
 const { Constants, AnsiColors, Settings } = require('settings/settings');
 const { Project } = require('project/project');
 const { VscodeUtils } = require('utilities/vscode_utils');
@@ -47,7 +48,7 @@ class Extension {
         this._extensionContext = extensionContext;
         this._debugContext = null;
         this._outputChannel = null;
-        this._settings = new Settings();
+        this._settings = new Settings(extensionContext);
         this._project = new Project(this._settings);
         this._projectFileWatcher = null;
         this._builder = null;
@@ -142,13 +143,19 @@ class Extension {
         // register "create project" commands
         {
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAsm", function() {
-                thisInstance.onCommandCreateProject("asm");
+                thisInstance.onCommandCreateProject("asm", "acme");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectC", function() {
-                thisInstance.onCommandCreateProject("c");
+                thisInstance.onCommandCreateProject("c", "cc65");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectCpp", function() {
-                thisInstance.onCommandCreateProject("cpp");
+                thisInstance.onCommandCreateProject("cpp", "llvm");
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.buildProject", function() {
+                thisInstance.triggerBuild();
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.cleanProject", function() {
+                thisInstance.triggerClean();
             }));
         }
 
@@ -256,7 +263,7 @@ class Extension {
     onDidChangeActiveTextEditor(textEditor) {
     }
 
-    onCommandCreateProject(templateName) {
+    onCommandCreateProject(templateName, toolkitName) {
 
         this.cancelBuild();
 
@@ -272,13 +279,101 @@ class Extension {
 
         const destFolder = workspaceRoot;
 
-        this.copy(templateFolder, destFolder);
+        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;";
+        const includeExtensions = ";.hpp;.hh;.h;.inc;";
+
+        let sourceFilesExist = false;
+        let includeFolders = new Set();
+
+        let sourceFiles = Utils.findFiles(destFolder, (item) => {
+            if (item.isDirectory) return false;
+            if (sourceExtensions.indexOf(";" + item.extension + ";") >= 0) {
+                sourceFilesExist = true;
+                return true;
+            } else if (includeExtensions.indexOf(";" + item.extension + ";") >= 0) {
+                const parentFolder = path.dirname(item.relFilePath);
+                includeFolders.add(parentFolder);
+            };
+            return false;
+        }, [".git", "build"]);
+
+        Utils.copy(templateFolder, destFolder, (item) => {
+            if (item.isDirectory) return true;
+            if (item.relFilePath == 'project-config.json') return false; // will be generated
+            if (sourceExtensions.indexOf(";" + item.extension + ";") == -1) return true;
+            if (sourceFilesExist) return false; // don't copy source examples if source already exist
+            sourceFiles.push(item);
+            return true; // copy
+        });
+
+        this.createProjectFile(destFolder, toolkitName, sourceFiles, [...includeFolders]);
 
         if (this._settings.autoBuild) {
             this.triggerBuild();
         } else {
             this.updateProject();
         }
+
+    }
+
+    createProjectFile(destFolder, toolkitName, sourceFiles, includeFolders) {
+
+        const filename = path.resolve(destFolder, "project-config.json");
+
+        if (Utils.fileExists(filename)) {
+            try {
+                const fileBackup = fs.readFileSync(filename);
+                fs.writeFileSync(filename + ".backup", fileBackup);
+            } catch (err) {;}
+        }
+
+        let i = "    ";
+        let s = "";
+
+        const name = vscode.workspace.name || "unnamed";
+        const desc = "Project " + name;
+
+        s += '{\n';
+        s += i + '"name": "' + name + '",\n';
+        s += i + '"description": "' + desc + '",\n';
+        s += i + '"toolkit": "' + toolkitName + '",\n';
+        s += i + '"sources": [\n';
+
+        if (sourceFiles) {
+            let idx = 0;
+            for (const sourceFile of sourceFiles) {
+                const p = sourceFile.relFilePath.replaceAll('\\', '/');
+                s += i + i + '"' + p + '"';
+                if (idx < sourceFiles.length-1) s += ',';
+                s += '\n';
+                idx++;
+            }
+        }
+
+        s += i + '],\n';
+        s += i + '"build": "debug",\n';
+        s += i + '"definitions": [],\n';
+        s += i + '"includes": [\n';
+
+        if (includeFolders) {
+            let idx = 0;
+            for (const includeFolder of includeFolders) {
+                const p = includeFolder.replaceAll('\\', '/');
+                s += i + i + '"' + p + '"';
+                if (idx < includeFolders.length-1) s += ',';
+                s += '\n';
+                idx++;
+            }
+        }
+
+        s += i + '],\n';
+        s += i + '"args": [],\n';
+        s += i + '"compiler": ""\n';
+        s += '}\n';
+
+        try {
+            fs.writeFileSync(filename, s);
+        } catch (err) {;}
 
     }
 
@@ -375,6 +470,25 @@ class Extension {
             clearTimeout(this._buildTimer);
             this._buildTimer = null;
         }
+    }
+
+    triggerClean() {
+
+        this.cancelBuild();
+        this.updateProject();
+
+        if (!this._project.isValid()) {
+            return;
+        }
+
+        if (this._builder) {
+            const txt = "build process already active";
+            logger.error(txt);
+            return;
+        }
+
+        const build = new Build(this._project);
+        build.clean(true);
     }
 
     triggerBuild() {
@@ -543,243 +657,6 @@ class Extension {
                 }
             }
         }
-    }
-
-/*
-
-
-
-
-
-
-
-    async executeBuildTaskAsync(action, folder, terminal) {
-
-        this.cancelBuild();
-
-        if (!action) {
-            return null;
-        }
-
-        const settings = this._settings;
-        const project = this._project;
-
-        if (!project.isValid()) {
-
-            let txt = null;
-            if (project.error) {
-                txt = project.configfile ? project.configfile + "(1) : Error : " + project.error : project.error;
-            } else {
-                txt = "Invalid project setup";
-            }
-
-            logger.error(txt);
-            terminal.write(txt + "\r\n");
-            terminal.done();
-
-            return null;
-        }
-
-        return new Promise((resolve, reject) => {
-            //terminal.write('starting build...\r\n');
-
-            if (this._builder) {
-                const txt = "build process already active";
-                logger.error(txt);
-                terminal.write(txt + "\r\n");
-                terminal.done();
-                resolve();
-                return;
-            }
-
-            const build = new Build(project);
-            build.onBuildOutput((txt) => {
-                terminal.write(txt + "\r\n");
-            });
-
-            if (action == "clean" || action == "rebuild") {
-                try {
-                    this.showStatus("$(gear) Cleaning build...");
-                    build.clean();
-                } catch(err) {
-                    this.showStatus("$(error) Clean failed");
-                    const txt = "clean failed: " + err;
-                    logger.error(txt);
-                    terminal.write(txt + "\r\n", AnsiColors.Red);
-                    terminal.done();
-                    reject();
-                    return;
-                }
-
-                const txt = "clean succeeded";
-                logger.info(txt);
-                terminal.write(txt + "\r\n", AnsiColors.Green);
-                this.showStatus("$(pass) Clean succeeded");
-
-                if (action == "clean") {
-                    terminal.done();
-                    resolve();
-                    return;
-                }
-            }
-
-            if (action == "build" || action == "rebuild") {
-                this._builder = build;
-                let hasError = false;
-
-                this.showStatus("$(gear) Building...");
-
-                try {
-
-                    build.build()
-                    .then((result) => {
-                        const error = result.error;
-                        let statusText = null;
-                        let txt = null;
-                        if (error == BuildResult.Success) {
-                            txt = result.description||"build succeeded";
-                            statusText = "Build succeeded";
-                            logger.info(txt);
-                        } else if (error == BuildResult.NoNeedToBuild) {
-                            txt = result.description||"build up-to-date";
-                            statusText = "Build up-to-date";
-                            logger.info(txt);
-                        } else if (error == BuildResult.ScanError) {
-                            txt = result.description||"scan failed";
-                            statusText = "Scan failed";
-                            hasError = true;
-                            logger.error(txt);
-                        } else if (error == BuildResult.Error) {
-                            txt = result.description||"build failed";
-                            statusText = "Build failed";
-                            hasError = true;
-                            logger.error(txt);
-                        }
-
-                        if (txt) {
-                            terminal.write(txt + "\r\n", hasError ? AnsiColors.Red : AnsiColors.Green);
-                        }
-
-                        this._builder = null;
-                        terminal.done();
-
-                        if (hasError) {
-                            this.showStatus("$(error) " + statusText||txt);
-                            reject(txt||"");
-                            return;
-                        } else {
-                            this.showStatus("$(pass) " + statusText||txt);
-                            resolve();
-                            return;
-                        }
-
-                    })
-                    .catch((result) => {
-                        this._builder = null;
-                        terminal.done();
-                        this.showStatus("$(error) Build failed");
-                        reject();
-                        return;
-                    });
-
-                } catch (err) {
-                    this._builder = null;
-                    this.showStatus("$(error) Build failed");
-                    const txt = "build failed: " + err;
-                    logger.error(txt);
-                    terminal.write(txt + "\r\n", AnsiColors.Red);
-                    terminal.done();
-                    reject();
-                    return;
-                }
-            }
-        });
-    }
-*/
-
-    getFiles(folder, relFolder, files) {
-
-        relFolder ||= "";
-        files ||= [];
-
-        const elements = fs.readdirSync(folder);
-        for (const fileName of elements) {
-
-            const absFilePath = path.join(folder, fileName);
-            const relFilePath = path.join(relFolder, fileName);
-            const stat = fs.lstatSync(absFilePath);
-
-            if (stat.isDirectory()) {
-                files.push({
-                    relFilePath: relFilePath,
-                    absFilePath: absFilePath,
-                    isDirectory: true
-                });
-                this.getFiles(absFilePath, relFilePath, files);
-            } else {
-                files.push({
-                    relFilePath: relFilePath,
-                    absFilePath: absFilePath,
-                    isDirectory: false
-                });
-            }
-        }
-
-        return files;
-    }
-
-    copy(source, dest) {
-        const files = this.getFiles(source);
-        for (const item of files) {
-            const destPath = path.join(dest, item.relFilePath);
-            if (item.isDirectory) {
-                this.createFolder(destPath);
-            } else {
-                const sourcePath = path.join(source, item.relFilePath);
-                this.copyFile(sourcePath, destPath);
-            }
-        }
-    }
-
-    createFolder(dest) {
-        try {
-            const stat = fs.lstatSync(dest);
-            if (stat.isDirectory()) {
-                return; // already exists
-            } else if (stat.isFile()) {
-                throw("cannot create directory because file with same name already exists");
-            }
-        } catch (err) {;}
-
-        fs.mkdirSync(dest, { recursive: true });
-    }
-
-    copyFile(source, dest) {
-        const destFolder = path.dirname(dest);
-        this.createFolder(destFolder);
-
-        try {
-            const stat = fs.lstatSync(dest);
-            if (stat.isDirectory()) {
-                throw("cannot copy file because directory with same name already exists");
-            } else if (stat.isFile()) {
-                /*
-                const result = vscode.window.showInformationMessage(
-                    "The file " + dest + " already exists. Do you want to overwrite or skip it?",
-                    "Overwrite",
-                    "Skip"
-                ).then((action) => {
-                    if (action && action == "Skip") {
-                        return;
-                    }
-                });
-                */
-                return; // already exists
-            }
-        } catch (err) { ; }
-
-        const data = fs.readFileSync(source);
-        fs.writeFileSync(dest, data);
     }
 
 }

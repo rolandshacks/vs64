@@ -6,7 +6,7 @@
         "src/assem.asm",
         "src/main.cpp"
     ],
-    "build": "release",
+    "build": "debug",
     "definitions": [],
     "includes": [],
     "args": [],
