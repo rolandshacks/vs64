@@ -49,6 +49,7 @@ class Extension {
         this._outputChannel = null;
         this._settings = new Settings();
         this._project = new Project(this._settings);
+        this._projectFileWatcher = null;
         this._builder = null;
         this._taskProvider = null;
         this._buildTimer = null;
@@ -67,17 +68,19 @@ class Extension {
         return (null != vscode.workspace.rootPath);
     }
 
+    getWorkspaceRoot() {
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) {
+            return null;
+        }
+
+		return vscode.workspace.workspaceFolders[0].uri.fsPath;
+    }
+
     activate() {
 
         const thisInstance = this;
         const extensionContext = this._extensionContext;
         const subscriptions =  extensionContext.subscriptions;
-
-        const workspaceRoot = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
-		? vscode.workspace.workspaceFolders[0].uri.fsPath : null;
-	    if (!workspaceRoot) {
-		    return;
-    	}
 
         { // create output channel
             this._outputChannel = vscode.window.createOutputChannel("VS64");
@@ -150,16 +153,16 @@ class Extension {
         }
 
         // register task provider
-        this._taskProvider = vscode.tasks.registerTaskProvider(
-            TaskProvider.Type,
-            new TaskProvider(
+        {
+            this._taskProvider = new TaskProvider(
                 this._settings,
-                workspaceRoot,
                 (action, folder, terminal) => {
                     return thisInstance.executeBuildTask(action, folder, terminal);
                 }
-            )
-        );
+            );
+
+            vscode.tasks.registerTaskProvider(TaskProvider.Type, this._taskProvider);
+        }
 
         // register disassembler editors / views
         {
@@ -261,11 +264,11 @@ class Extension {
 
         const templateFolder = path.join(extensionContext.extensionPath, "resources", "templates", templateName);
 
-        const workspaceRoot = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0))
-		? vscode.workspace.workspaceFolders[0].uri.fsPath : null;
-	    if (!workspaceRoot) {
-		    return;
-    	}
+        const workspaceRoot = this.getWorkspaceRoot();
+        if (!workspaceRoot) {
+            vscode.window.showErrorMessage("Cannot create project setup without workspace. Please create or open a workspace or folder.");
+            return;
+        }
 
         const destFolder = workspaceRoot;
 
@@ -279,13 +282,46 @@ class Extension {
 
     }
 
+    notifyConfigChange() {
+        if (this._taskProvider) {
+            this._taskProvider.notifyConfigChange();
+        }
+    }
+
     updateProject() {
+
+        this.notifyConfigChange();
+
+        if (this._projectFileWatcher) {
+            this._projectFileWatcher.dispose();
+            this._projectFileWatcher = null;
+        }
+
+        if (!this.hasWorkspace()) {
+            return;
+        }
+
         const settings = this._settings;
         const projectFile = VscodeUtils.getAbsoluteFilename(settings.projectFile||Constants.ProjectConfigFile);
+        if (!projectFile) {
+            return;
+        }
+
         const project = this._project;
+        const instance = this;
 
         try {
             project.fromFileIfChanged(projectFile);
+
+            // setup file watcher
+            if (project.isValid()) {
+                const watcher = vscode.workspace.createFileSystemWatcher(projectFile);
+                watcher.onDidChange(() => { this.notifyConfigChange(); });
+                watcher.onDidCreate(() => { this.notifyConfigChange(); });
+                watcher.onDidDelete(() => { this.notifyConfigChange(); });
+                this._projectFileWatcher = watcher;
+            }
+
         } catch (err) {
             logger.error(err);
             const txt = projectFile + " : Error : " + err;

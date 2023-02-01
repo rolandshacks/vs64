@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.0.3 Minor Update _(preview)_
+
+- Fixed bug in extension activation when no workspace is open
+
 ## 2.0.2 Minor Update _(preview)_
 
 - Fixed rebuild handling

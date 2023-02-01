@@ -90,20 +90,17 @@ class TaskTerminal {
 
 class TaskProvider {
 
-    constructor(settings, workspaceRoot, builder) {
+    constructor(settings, builder) {
         this._settings = settings;
-        this._workspaceRoot = workspaceRoot;
         this._tasksPromise = null;
         this._projectConfigName = this._settings.projectFile||Constants.ProjectConfigFile;
         this._builder = builder;
+    }
 
-        // setup file watcher to keep task lists up-to-date
-        const instance = this;
-        const pattern = path.join(workspaceRoot, this._projectConfigName);
-        const fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
-        fileWatcher.onDidChange(() => instance._tasksPromise = null);
-		fileWatcher.onDidCreate(() => instance._tasksPromise = null);
-		fileWatcher.onDidDelete(() => instance._tasksPromise = null);
+    notifyConfigChange() {
+        if (this._tasksPromise) {
+            this._tasksPromise = null;
+        }
     }
 
     provideTasks() {
