@@ -47,10 +47,6 @@ class DiagnosticProvider {
         }
     }
 
-    // Serious error - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 46 (Zone <untitled>): Missing '{'.
-    // Error - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 12 (Zone <untitled>): Value not defined (qloop).
-    // Warning - File d:\Work\vs64\test\programs\src\test aaa 2.asm, line 16 (Zone <untitled>): Label name not in leftmost column.
-
     parseError(str) {
 
         const WHITESPACES = " \t\r\n";

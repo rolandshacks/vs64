@@ -251,13 +251,6 @@ class Build {
             return { error: BuildResult.Error, description: err };
         }
 
-        for (const outfile of this.getOutputFiles(buildType)) {
-            if (!fs.existsSync(outfile)) {
-                logger.error("build.run: missing output file " + outfile);
-                return { error: BuildResult.Error, description: "missing output file " + outfile };
-            }
-        }
-
         return { error: BuildResult.Success };
     }
 

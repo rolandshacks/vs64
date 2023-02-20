@@ -82,6 +82,7 @@ class Project {
     get outfile() { return this._outfile; }
     get outdebug() { return this._outdebug; }
     get compilecommandsfile() { return this._compilecommandsfile; }
+    get cpppropertiesfile() { return this._cpppropertiesfile; }
     get buildfiles() { return this._buildfiles; }
     get includes() { return this._includes; }
     get definitions() { return this._definitions; }
@@ -123,7 +124,10 @@ class Project {
 
         if (reload) {
             this.fromFile(filename);
+            return true;
         }
+
+        return false;
     }
 
     fromFile(filename) {
@@ -164,6 +168,7 @@ class Project {
         this._builddir = path.resolve(this._basedir, "build");
         this._buildfile = path.resolve(this._builddir, "build.ninja");
         this._compilecommandsfile = path.resolve(this._builddir, "compile_commands.json");
+        this._cpppropertiesfile = path.resolve(this._basedir, ".vscode", "c_cpp_properties.json");
 
         this.#load();
 
@@ -542,22 +547,72 @@ class Project {
 
         try {
             const json = (JSON.stringify(commands, null, 4) + "\n").replace(/\\\\/g, "/");
-
             fs.writeFileSync(filename, json, 'utf8');
         } catch (e) {
             logger.error("could not write compile commands file: " + e);
         }
     }
 
+    #getCompilerExecutable() {
+
+        const toolkit = this.toolkit;
+        const settings = this._settings;
+
+        let compilerPath = "";
+        if (toolkit == "llvm") {
+            compilerPath = (this.compiler || settings.clangExecutable);
+        } else if (toolkit == "cc65") {
+            compilerPath = (this.compiler || settings.cc65Executable);
+        }
+
+        return compilerPath;
+    }
+
+    #writeCppProperties() {
+
+        const filename = this.cpppropertiesfile;
+
+        const compilerPath = this.#getCompilerExecutable();
+
+        const data = {
+            configurations: [
+                {
+                    name: "C64",
+                    configurationProvider: "rosc.vs64",
+                    compileCommands: "${workspaceFolder}/build/compile_commands.json",
+                    compilerPath: compilerPath,
+                    cppStandard: "c++20",
+                    cStandard: "c99"
+                }
+            ],
+            version: 4
+        };
+
+        try {
+            const parentDir = path.dirname(filename);
+            Utils.createFolder(parentDir);
+            const json = (JSON.stringify(data, null, 4) + "\n").replace(/\\\\/g, "/");
+            fs.writeFileSync(filename, json, 'utf8');
+        } catch (e) {
+            logger.error("could not write cpp properties file: " + e);
+        }
+
+    }
+
     #declareCompileCommand(filename, includes, defines, args) {
 
+        const toolkit = this.toolkit;
         const settings = this._settings;
         const workingDirectory = process.cwd();
+
+        const compilerPath = this.#getCompilerExecutable();
 
         const command = {
             directory: workingDirectory,
             file: filename,
-            arguments: []
+            arguments: [
+                compilerPath
+            ]
         };
 
         if (args) {
@@ -566,23 +621,26 @@ class Project {
 
         if (defines) {
             for (const define of defines) {
-                command.arguments.push("-D");
-                command.arguments.push(define);
+                command.arguments.push("-D" + define);
             }
         }
 
         if (includes) {
             for (const include of includes) {
-                command.arguments.push("-I");
-                command.arguments.push(include);
+                command.arguments.push("-I" + include);
             }
         }
 
-        const compilerIncludes = settings.compilerIncludes;
+        let compilerIncludes = null;
+        if (toolkit == "llvm") {
+            compilerIncludes = settings.llvmIncludes;
+        } else if (toolkit == "cc65") {
+            compilerIncludes = settings.cc65Includes;
+        }
+
         if (compilerIncludes) {
             for (const include of compilerIncludes) {
-                command.arguments.push("-I");
-                command.arguments.push(include);
+                command.arguments.push("-I" + include);
             }
         }
 
@@ -836,6 +894,7 @@ class Project {
         }
 
         this.#writeCompileCommands(compileCommands);
+        this.#writeCppProperties();
     }
 
 

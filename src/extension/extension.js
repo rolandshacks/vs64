@@ -5,6 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const vscode = require('vscode');
+const {CppToolsApi, Version, CustomConfigurationProvider, getCppToolsApi} = require('vscode-cpptools');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -29,6 +30,7 @@ const { VscodeUtils } = require('utilities/vscode_utils');
 const { DebugContext } = require('debugger/debug_context');
 const { Build, BuildResult } = require('builder/builder');
 const { DiagnosticProvider } = require('extension/diagnostic_provider');
+const { IntellisenseConfiguratrionProvider } = require('extension/intellisense');
 const { TaskProvider } = require('extension/task_provider');
 const { StatusBarItem } = require('extension/statusbar');
 const { DisassemblerView } = require('extension/disassembler_view');
@@ -55,6 +57,7 @@ class Extension {
         this._taskProvider = null;
         this._buildTimer = null;
         this._statusBarItem = null;
+        this._intellisenseConfiguratrionProvider = null;
     }
 
     get settings() {
@@ -66,14 +69,14 @@ class Extension {
     }
 
     hasWorkspace() {
-        return (null != vscode.workspace.rootPath);
+        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) {
+            return false;
+        }
+        return true;
     }
 
     getWorkspaceRoot() {
-        if (!vscode.workspace.workspaceFolders || !vscode.workspace.workspaceFolders.length) {
-            return null;
-        }
-
+        if (!this.hasWorkspace()) return null;
 		return vscode.workspace.workspaceFolders[0].uri.fsPath;
     }
 
@@ -215,6 +218,10 @@ class Extension {
             });
 
         }
+
+        getCppToolsApi(Version.v2).then((api) => {
+            this._intellisenseConfiguratrionProvider = new IntellisenseConfiguratrionProvider(this, api);
+        });
 
         this.showWelcome();
 
@@ -406,7 +413,12 @@ class Extension {
         const instance = this;
 
         try {
-            project.fromFileIfChanged(projectFile);
+            if (project.fromFileIfChanged(projectFile)) {
+                // project has been reloaded, notify configuration change
+                if (this._intellisenseConfiguratrionProvider) {
+                    this._intellisenseConfiguratrionProvider.notifyConfigChange();
+                }
+            }
 
             // setup file watcher
             if (project.isValid()) {

@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.1.1 Minor Update _(preview)_
+
+- Added vscode intellisense auto-configuration support
+- Minor bug fixes
+
 ## 2.1.0 Major Update _(preview)_
 
 - Added elf/dwarf debugging support

@@ -31,6 +31,7 @@ const Constants = {
     AssemblerLanguageId: "asm",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
+    CppStandard: "c++20",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
     AutoBuildDelayMs: 2000
@@ -79,7 +80,6 @@ class Settings {
         this.emulatorArgs = null;
         this.autoBuild = false;
         this.showWelcome = true;
-        this.compilerIncludes = null;
     }
 
     disableWelcome(workspaceConfig) {
@@ -154,43 +154,35 @@ class Settings {
 
     setupCC65(installDir) {
         if (installDir) {
-            this.cc65Includes = path.resolve(installDir, "include");
+            this.cc65Includes = [ path.resolve(installDir, "include") ];
             this.cc65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cc65"));
             this.ca65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("ca65"));
             this.ld65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("ld65"));
         } else {
             this.cc65Includes = null;
             if (fs.existsSync("/usr/share/cc65/include")) {
-                this.cc65Includes = "/usr/share/cc65/include";
+                this.cc65Includes = [ "/usr/share/cc65/include" ];
             }
             this.cc65Executable = "cc65";
             this.ca65Executable = "ca65";
             this.ld65Executable = "ld65";
         }
-
-        if (this.cc65Includes) {
-            this.compilerIncludes = [
-                this.cc65Includes
-            ];
-        }
     }
 
     setupLLVM(installDir) {
         if (installDir) {
-            this.llvmIncludes = path.resolve(installDir);
+            const llvmIncludesDir = path.resolve(installDir);
+            this.llvmIncludes = [
+                path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "c64", "include"),
+                path.resolve(llvmIncludesDir, "lib", "clang", "16", "include")
+            ];
+
             this.clangExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("mos-clang++"));
         } else {
             this.llvmIncludes = null;
             this.clangExecutable = "mos-clang++";
-        }
-
-        if (this.llvmIncludes) {
-            this.compilerIncludes = [
-                path.resolve(this.llvmIncludes, "mos-platform", "common", "include"),
-                path.resolve(this.llvmIncludes, "mos-platform", "commodore", "include"),
-                path.resolve(this.llvmIncludes, "mos-platform", "c64", "include"),
-                path.resolve(this.llvmIncludes, "lib", "clang", "16", "include")
-            ];
         }
     }
 

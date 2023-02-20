@@ -205,15 +205,9 @@ Overrides the path to the compiler executable. The default path is specified in 
 
 ### IntelliSense Support
 
-The VS64 build system supports the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense) editing features of Visual Studio Code. In order to provide project information to
-the IntelliSense system, VS64 generates a `compile_commands.json` file in the build directory.
+The VS64 build system supports the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense) editing features of Visual Studio Code. Project settings, include paths and defines are automatically provided to the IntelliSense system.
 
-Usually, vscode will ask you to automatically create all the settings for you after first
-successful build. In case you want to do this manually, you have to change the settings or create
-a `c_cpp_properties.json` settings file in the .vscode of your workspace.
-
-Further information can be found [here](https://code.visualstudio.com/docs/cpp/cpp-ide).
-
+Further information about IntelliSense can be found [here](https://code.visualstudio.com/docs/cpp/cpp-ide).
 
 ### Background Compilation
 
