@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",

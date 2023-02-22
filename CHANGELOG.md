@@ -1,12 +1,22 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
-## 2.1.1 Minor Update _(preview)_
+## 2.1.2 Minor Update
+
+- Improved clang-tidy support
+- Minor bug fixes
+
+## 2.1.1 Minor Update
 
 - Added vscode intellisense auto-configuration support
 - Minor bug fixes
 
-## 2.1.0 Major Update _(preview)_
+## 2.1.1 Minor Update
+
+- Added vscode intellisense auto-configuration support
+- Minor bug fixes
+
+## 2.1.0 Major Update
 
 - Added elf/dwarf debugging support
 - Added ninja based build system
@@ -14,19 +24,19 @@ All notable changes to the **VS64 Development Environment** extension will be do
 - Improved project creation tools
 - Bug fixes
 
-## 2.0.3 Minor Update _(preview)_
+## 2.0.3 Minor Update
 
 - Fixed bug in extension activation when no workspace is open
 
-## 2.0.2 Minor Update _(preview)_
+## 2.0.2 Minor Update
 
 - Fixed rebuild handling
 
-## 2.0.1 Minor Update _(preview)_
+## 2.0.1 Minor Update
 
 - Added support for the LLVM-MOS
 
-## 2.0.0 Major Update _(preview)_
+## 2.0.0 Major Update
 
 - Support for ACME assembler
 - Support for CC65 compiler

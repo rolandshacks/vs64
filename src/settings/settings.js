@@ -102,28 +102,26 @@ class Settings {
         settings.logLevel = workspaceConfig.get("vs64.loglevel")||"info";
         Logger.setGlobalLevel(settings.logLevel);
 
-        this.setupNinja(workspaceConfig.get("vs64.ninjaExecutable"));
-
-        this.setupAcme(workspaceConfig.get("vs64.acmeInstallDir"));
-        this.setupCC65(workspaceConfig.get("vs64.cc65InstallDir"));
-        this.setupLLVM(workspaceConfig.get("vs64.llvmInstallDir"));
-
         settings.buildDefines = workspaceConfig.get("vs64.buildDefines")||"";
         settings.buildIncludePaths = workspaceConfig.get("vs64.buildIncludePaths")||"";
         settings.buildArgs = workspaceConfig.get("vs64.buildArgs")||"";
         settings.autoBuild = workspaceConfig.get("vs64.autoBuild");
         if (null == settings.autoBuild) settings.autoBuild = true;
 
-        this.setupVice(workspaceConfig.get("vs64.emulatorExecutable"), workspaceConfig.get("vs64.emulatorArgs"));
+        this.setupNinja(workspaceConfig);
+        this.setupAcme(workspaceConfig);
+        this.setupCC65(workspaceConfig);
+        this.setupLLVM(workspaceConfig);
+        this.setupVice(workspaceConfig);
 
         this.show();
     }
 
-    setupNinja(executablePath) {
+    setupNinja(workspaceConfig) {
+        let executablePath = workspaceConfig.get("vs64.ninjaExecutable");
         if (executablePath) {
             this.ninjaExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
-
             const extensionPath = this.extensionContext.extensionPath;
             if (extensionPath) {
                 const platform = process.platform;
@@ -135,7 +133,6 @@ class Settings {
                     executablePath = path.resolve(extensionPath, "resources", "ninja", "linux", "ninja");
                 }
             }
-
             if (executablePath && Utils.fileExists(executablePath)) {
                 this.ninjaExecutable = executablePath;
             } else {
@@ -144,7 +141,8 @@ class Settings {
         }
     }
 
-    setupAcme(installDir) {
+    setupAcme(workspaceConfig) {
+        const installDir = workspaceConfig.get("vs64.acmeInstallDir");
         if (installDir) {
             this.acmeExecutable = path.resolve(installDir, Utils.normalizeExecutableName("acme"));
         } else {
@@ -152,7 +150,8 @@ class Settings {
         }
     }
 
-    setupCC65(installDir) {
+    setupCC65(workspaceConfig) {
+        const installDir = workspaceConfig.get("vs64.cc65InstallDir");
         if (installDir) {
             this.cc65Includes = [ path.resolve(installDir, "include") ];
             this.cc65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cc65"));
@@ -169,7 +168,8 @@ class Settings {
         }
     }
 
-    setupLLVM(installDir) {
+    setupLLVM(workspaceConfig) {
+        const installDir = workspaceConfig.get("vs64.llvmInstallDir");
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
             this.llvmIncludes = [
@@ -180,19 +180,26 @@ class Settings {
             ];
 
             this.clangExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("mos-clang++"));
+
+            const clangTidyExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("clang-tidy"));
+            if (Utils.fileExists(clangTidyExecutable)) {
+                workspaceConfig.update("C_Cpp.codeAnalysis.clangTidy.path", clangTidyExecutable, false);
+            }
+
         } else {
             this.llvmIncludes = null;
             this.clangExecutable = "mos-clang++";
         }
     }
 
-    setupVice(executablePath, args) {
+    setupVice(workspaceConfig) {
+        const executablePath = workspaceConfig.get("vs64.emulatorExecutable");
+        const args = workspaceConfig.get("vs64.emulatorArgs");
         if (executablePath) {
             this.emulatorExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
             this.emulatorExecutable = "x64sc";
         }
-
         this.emulatorArgs = args||"";
     }
 

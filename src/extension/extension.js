@@ -101,7 +101,7 @@ class Extension {
         }
 
         { // load project
-            this.updateProject();
+            this.syncProject();
         }
 
         { // create diagnostic provider
@@ -219,9 +219,12 @@ class Extension {
 
         }
 
-        getCppToolsApi(Version.v2).then((api) => {
-            this._intellisenseConfiguratrionProvider = new IntellisenseConfiguratrionProvider(this, api);
-        });
+        /*
+            // Custom configuration provider is disabled, not sure why it leads to crashes (e.g. in the git extension)
+            getCppToolsApi(Version.v2).then((api) => {
+                this._intellisenseConfiguratrionProvider = new IntellisenseConfiguratrionProvider(this, api);
+            });
+        */
 
         this.showWelcome();
 
@@ -318,7 +321,7 @@ class Extension {
         if (this._settings.autoBuild) {
             this.triggerBuild();
         } else {
-            this.updateProject();
+            this.syncProject();
         }
 
     }
@@ -330,7 +333,7 @@ class Extension {
         if (Utils.fileExists(filename)) {
             try {
                 const fileBackup = fs.readFileSync(filename);
-                fs.writeFileSync(filename + ".backup", fileBackup);
+                fs.writeFileSync(filename + "~", fileBackup);
             } catch (err) {;}
         }
 
@@ -384,20 +387,13 @@ class Extension {
 
     }
 
-    notifyConfigChange() {
+    invalidateTasks() {
         if (this._taskProvider) {
-            this._taskProvider.notifyConfigChange();
+            this._taskProvider.invalidate();
         }
     }
 
-    updateProject() {
-
-        this.notifyConfigChange();
-
-        if (this._projectFileWatcher) {
-            this._projectFileWatcher.dispose();
-            this._projectFileWatcher = null;
-        }
+    syncProject() {
 
         if (!this.hasWorkspace()) {
             return;
@@ -409,25 +405,40 @@ class Extension {
             return;
         }
 
-        const project = this._project;
-        const instance = this;
+        if (!Utils.fileExists(projectFile)) {
+            return;
+        }
 
+        const project = this._project;
         try {
+
             if (project.fromFileIfChanged(projectFile)) {
+
+                this.invalidateTasks();
+
+                if (this._projectFileWatcher) {
+                    this._projectFileWatcher.dispose();
+                    this._projectFileWatcher = null;
+                }
+
+                // setup file watcher
+                if (project.isValid()) {
+                    this._projectFileWatcher = vscode.workspace.createFileSystemWatcher(projectFile);
+
+                    const watcher = this._projectFileWatcher;
+                    const instance = this;
+                    watcher.onDidChange(() => { instance.invalidateTasks(); });
+                    watcher.onDidCreate(() => { instance.invalidateTasks(); });
+                    watcher.onDidDelete(() => { instance.invalidateTasks(); });
+
+                }
+
                 // project has been reloaded, notify configuration change
                 if (this._intellisenseConfiguratrionProvider) {
                     this._intellisenseConfiguratrionProvider.notifyConfigChange();
                 }
             }
 
-            // setup file watcher
-            if (project.isValid()) {
-                const watcher = vscode.workspace.createFileSystemWatcher(projectFile);
-                watcher.onDidChange(() => { this.notifyConfigChange(); });
-                watcher.onDidCreate(() => { this.notifyConfigChange(); });
-                watcher.onDidDelete(() => { this.notifyConfigChange(); });
-                this._projectFileWatcher = watcher;
-            }
 
         } catch (err) {
             logger.error(err);
@@ -487,7 +498,7 @@ class Extension {
     triggerClean() {
 
         this.cancelBuild();
-        this.updateProject();
+        this.syncProject();
 
         if (!this._project.isValid()) {
             return;
@@ -506,7 +517,7 @@ class Extension {
     triggerBuild() {
 
         this.cancelBuild();
-        this.updateProject();
+        this.syncProject();
 
         if (!this._project.isValid()) {
             return;

@@ -26,19 +26,14 @@ const logger = new Logger("Tasks");
 const TASK_PROVIDER_TYPE = "vs64";
 
 function addStyle(txt, ...styles) {
-
     const args = arguments.slice(1);
-
     if (args.length < 1) return;
-
     let str = "";
-
     for (const arg of args) {
         str += "\x1b[" + arg + "m";
     }
-
     str += txt + "\x1b[0m";
-}
+y}
 
 class TaskTerminal {
     constructor(definition, settings, builder) {
@@ -92,26 +87,26 @@ class TaskProvider {
 
     constructor(settings, builder) {
         this._settings = settings;
-        this._tasksPromise = null;
+        this._tasks = null;
         this._projectConfigName = this._settings.projectFile||Constants.ProjectConfigFile;
         this._builder = builder;
     }
 
-    notifyConfigChange() {
-        if (this._tasksPromise) {
-            this._tasksPromise = null;
+    invalidate() {
+        if (this._tasks) {
+            this._tasks = null;
         }
     }
 
     provideTasks() {
-        if (!this._tasksPromise) {
-            this._tasksPromise = this.getTasks();
+        if (!this._tasks) {
+            this._tasks = this.getTasks();
         }
-        return this._tasksPromise;
+        return this._tasks;
     }
 
-    resolveTask(_task) {
-        const definition = _task.definition;
+    resolveTask(task) {
+        const definition = task.definition;
         const type = definition.type;
         if (type != TASK_PROVIDER_TYPE) return null;
         return this.getTask(definition);

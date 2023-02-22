@@ -99,7 +99,7 @@ class IntellisenseConfiguratrionProvider {
         const toolkit = project.toolkit;
         if (!project || !settings || !toolkit) return [];
 
-        const releaseBuild = (project.buildType.toLowerCase() == "release") ? true : false;
+        const releaseBuild = project.releaseBuild;
 
         const includes = [];
         if (project.includes) includes.push(...project.includes);

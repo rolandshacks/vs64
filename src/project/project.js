@@ -99,6 +99,10 @@ class Project {
     get buildfile() { return this._buildfile; }
     get modificationTime() { return this._modificationTime; }
     get outputs() { return this._outputs; }
+    get releaseBuild() {
+        if (this.buildType && this.buildType.toLowerCase() == "release") return true;
+        return false;
+    }
 
     isValid() {
         if (this.error) return false;
@@ -155,12 +159,9 @@ class Project {
             this._error = err;
             throw(err);
         }
-
     }
 
     #init(data) {
-
-        const settings = this._settings;
 
         this._data = data;
 
@@ -193,6 +194,10 @@ class Project {
             this._outputs.push(this._outdebug);
         }
 
+        if (toolkit == "cc65" || toolkit == "llvm") {
+            this.#writeCompileCommands();
+            this.#writeCppProperties();
+        }
     }
 
     #load() {
@@ -244,6 +249,11 @@ class Project {
             if (data.definitions) {
                 definitions.push(...data.definitions);
             }
+
+            if (!this.releaseBuild) {
+                definitions.push("DEBUG");
+            }
+
             this._definitions = definitions;
         }
 
@@ -539,14 +549,65 @@ class Project {
         }
 
     }
+    #writeCppProperties() {
 
-    #writeCompileCommands(commands) {
-        if (!commands) return;
+        this.#createBuildDir();
 
-        const filename = this.compilecommandsfile;
+        const filename = this.cpppropertiesfile;
+        const filetime = Utils.getFileTime(filename);
+        if (filetime >= this._modificationTime) {
+            return;
+        }
+
+        let compilerPath = this.#getCompilerExecutable();
+        if (!Utils.fileExists(compilerPath)) compilerPath = "";
+
+        const data = {
+            configurations: [
+                {
+                    name: "C64",
+                    //configurationProvider: "rosc.vs64",
+                    compileCommands: "${workspaceFolder}/build/compile_commands.json",
+                    compilerPath: compilerPath,
+                    cppStandard: "c++20",
+                    cStandard: "c99"
+                }
+            ],
+            version: 4
+        };
 
         try {
-            const json = (JSON.stringify(commands, null, 4) + "\n").replace(/\\\\/g, "/");
+            const parentDir = path.dirname(filename);
+            Utils.createFolder(parentDir);
+            const json = (JSON.stringify(data, null, 4) + "\n").replace(/\\\\/g, "/");
+            fs.writeFileSync(filename, json, 'utf8');
+        } catch (e) {
+            logger.error("could not write cpp properties file: " + e);
+        }
+
+    }
+
+    #writeCompileCommands() {
+
+        this.#createBuildDir();
+
+        const filename = this.compilecommandsfile;
+        const filetime = Utils.getFileTime(filename);
+        if (filetime >= this._modificationTime) {
+            return;
+        }
+
+        const compileCommands = [];
+        const cppSources = this.querySourceByExtension("|.c|.cpp|.cc|")||[];
+        const includes = this.includes;
+        const defines = this.definitions;
+
+        for (const cppSource of cppSources) {
+            compileCommands.push(this.#declareCompileCommand(cppSource, includes, defines));
+        }
+
+        try {
+            const json = (JSON.stringify(compileCommands, null, 4) + "\n").replace(/\\\\/g, "/");
             fs.writeFileSync(filename, json, 'utf8');
         } catch (e) {
             logger.error("could not write compile commands file: " + e);
@@ -566,37 +627,6 @@ class Project {
         }
 
         return compilerPath;
-    }
-
-    #writeCppProperties() {
-
-        const filename = this.cpppropertiesfile;
-
-        const compilerPath = this.#getCompilerExecutable();
-
-        const data = {
-            configurations: [
-                {
-                    name: "C64",
-                    configurationProvider: "rosc.vs64",
-                    compileCommands: "${workspaceFolder}/build/compile_commands.json",
-                    compilerPath: compilerPath,
-                    cppStandard: "c++20",
-                    cStandard: "c99"
-                }
-            ],
-            version: 4
-        };
-
-        try {
-            const parentDir = path.dirname(filename);
-            Utils.createFolder(parentDir);
-            const json = (JSON.stringify(data, null, 4) + "\n").replace(/\\\\/g, "/");
-            fs.writeFileSync(filename, json, 'utf8');
-        } catch (e) {
-            logger.error("could not write cpp properties file: " + e);
-        }
-
     }
 
     #declareCompileCommand(filename, includes, defines, args) {
@@ -625,6 +655,11 @@ class Project {
             }
         }
 
+        if (toolkit == "cc65") {
+            command.arguments.push("-D__fastcall__=/**/");
+            command.arguments.push("-D__C64__");
+        }
+
         if (includes) {
             for (const include of includes) {
                 command.arguments.push("-I" + include);
@@ -647,18 +682,24 @@ class Project {
         return command;
     }
 
+    #createBuildDir() {
+        if (!this.builddir) return;
+
+        try {
+            if (!fs.existsSync(this.builddir)){
+                fs.mkdirSync(this.builddir);
+                logger.debug("build: created project build directory");
+            }
+        } catch (e) {;}
+    }
+
     createBuildFile() {
 
         const project = this;
 
-        const releaseBuild = (project.buildType.toLowerCase() == "release") ? true : false;
+        const releaseBuild = this.releaseBuild;
 
-        try {
-            if (!fs.existsSync(project.builddir)){
-                fs.mkdirSync(project.builddir);
-                logger.debug("build: created project build directory");
-            }
-        } catch (e) {;}
+        this.#createBuildDir();
 
         const buildFile = this.buildfile;
 
@@ -671,15 +712,10 @@ class Project {
         const settings = this._settings;
         const toolkit = project.toolkit;
 
-        const compileCommands = [];
         const defines = [];
 
         if (project.definitions) {
             defines.push(...project.definitions);
-        }
-
-        if (!releaseBuild) {
-            defines.push("DEBUG");
         }
 
         const script = [];
@@ -784,7 +820,6 @@ class Project {
 
                     script.push("build " + this.#escape(asmSource) + ": cc " + this.#escape(cppSource));
                     this.#createDependencyFile(asmSource + ".d", asmSource, [ cppSource, ...this.#getReferences(cppSource) ]);
-                    compileCommands.push(this.#declareCompileCommand(cppSource, project.includes, defines));
                 }
                 script.push("");
             }
@@ -806,7 +841,6 @@ class Project {
             }
 
         } else if (toolkit == "llvm") {
-
             const cppSources = project.querySourceByExtension("|.c|.cpp|.cc|");
             const asmSources = project.querySourceByExtension("|.s|.asm|")||[];
             const objFiles = project.querySourceByExtension("|.o|.obj|")||[];
@@ -858,7 +892,6 @@ class Project {
                         objFiles.push(objFile);
                     }
                     script.push("build " + this.#escape(objFile) + ": cc " + this.#escape(cppSource));
-                    compileCommands.push(this.#declareCompileCommand(cppSource, project.includes, defines));
                 }
                 script.push("");
             }
@@ -892,9 +925,6 @@ class Project {
         } catch (err) {
             console.log("failed to write build file: " + err);
         }
-
-        this.#writeCompileCommands(compileCommands);
-        this.#writeCppProperties();
     }
 
 

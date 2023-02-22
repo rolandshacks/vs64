@@ -17,16 +17,9 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { Project } = require('project/project');
 
 const logger = new Logger("Builder");
-
-const BuildType = {
-    Debug: 0,
-    Release: 1
-};
 
 const BuildResult = {
     Success: 0,
@@ -34,8 +27,6 @@ const BuildResult = {
     Error: 2,
     ScanError: 3
 };
-
-const GenerateClangCrashReport = false;
 
 class BuilderTask {
 
@@ -100,7 +91,6 @@ class Build {
         this._project = project;
         this._settings = project.settings||{};
         this._onBuildOutputFn = null;
-        this._compileCommands = null;
     }
 
     onBuildOutput(fn) {
@@ -119,31 +109,6 @@ class Build {
         const project = this._project;
         if (!project ||!project.isValid()) return false;
         return true;
-    }
-
-    #addCompileCommand(compileCommand) {
-        if (!this._compileCommands) {
-            this._compileCommands = [];
-        }
-
-        this._compileCommands.push(compileCommand);
-    }
-
-    #writeCompileCommands() {
-
-        if (!this._compileCommands) return;
-
-        const project = this._project;
-        const filename = project.compilecommandsfile;
-
-        try {
-            const json = (JSON.stringify(this._compileCommands, null, 4) + "\n").replace(/\\\\/g, "/");
-
-            fs.writeFileSync(filename, json, 'utf8');
-        } catch (e) {
-            logger.error("could not write compile commands file: " + e);
-        }
-
     }
 
     clean(cleanAll) {
@@ -181,7 +146,7 @@ class Build {
         }
     }
 
-    #doInitialize(buildType) {
+    #doInitialize() {
         if (!this.#validate()) return;
 
         const project = this._project;
@@ -195,9 +160,9 @@ class Build {
         } catch (e) {;}
     }
 
-    async rebuild(buildType) {
+    async rebuild() {
         this.clean();
-        return await this.build(buildType);
+        return await this.build();
     }
 
     buildOutput(txt) {
@@ -216,17 +181,13 @@ class Build {
 
     }
 
-    async build(buildType) {
+    async build() {
         if (!this.#validate()) {
             return { error: BuildResult.Error, description: "configuration error" };
         }
 
         const project = this._project;
         let forcedRebuild = false;
-
-        if (null == buildType && project.buildType != null) {
-            buildType = (project.buildType.toLowerCase() == "release") ? BuildType.Release : BuildType.Debug;
-        }
 
         const srcs = project.sources;
         if (!srcs || srcs.length < 1) {
@@ -236,7 +197,7 @@ class Build {
 
         try {
             if (forcedRebuild) this.clean(); // clean target files
-            this.#doInitialize(buildType);
+            this.#doInitialize();
         } catch (err) {
             logger.error("build.run: initialization failed: " + err);
             return { error: BuildResult.Error, description: "initialization failed: " + err };
@@ -245,7 +206,7 @@ class Build {
         project.createBuildFile();
 
         try {
-            await this.#doNinjaBuild(buildType, forcedRebuild);
+            await this.#doNinjaBuild();
         } catch (err) {
             logger.error("build.run: failed: " + err);
             return { error: BuildResult.Error, description: err };
@@ -254,7 +215,7 @@ class Build {
         return { error: BuildResult.Success };
     }
 
-    async #doNinjaBuild(buildType, forcedRebuild) {
+    async #doNinjaBuild() {
         if (!this.#validate()) return;
 
         const instance = this;

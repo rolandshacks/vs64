@@ -257,7 +257,7 @@ class Statement {
             i += 1;
             count += 1;
 
-            if (s.length > 0) s += " ";
+            if (s.length > 0) s += ",";
             s += "$" + format8(b);
 
             if (count >= maxElementsPerLine || i == this.buffer.length) {
@@ -794,7 +794,7 @@ class Disassembler {
                 if (lines.length > 1) {
                     for (let i=1; i<lines.length; i++) {
                         this.#out(Formatter.statement(this._outputLineNumber++,
-                            Formatter.tag("indentedspaces", Formatter.spaces(label.length + 1 + prefix.length + 1)) +
+                            Formatter.tag("indentedspaces", Formatter.spaces(label.length + 1) + prefix + "&nbsp;") +
                             Formatter.data(lines[i])
                         ));
                     }
