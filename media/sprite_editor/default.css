@@ -1,0 +1,158 @@
+
+/* Default */
+
+body {
+    color: #ffffff;
+    background: #303030;
+    margin: 0px;
+    padding: 0px;
+    user-select: none;
+    overflow: hidden;
+    display: block;
+}
+
+canvas, img {
+    image-rendering: optimizeSpeed;             /* Older versions of FF          */
+    image-rendering: -moz-crisp-edges;          /* FF 6.0+                       */
+    image-rendering: -webkit-optimize-contrast; /* Safari                        */
+    image-rendering: -o-crisp-edges;            /* OS X & Windows Opera (12.02+) */
+    image-rendering: pixelated;                 /* Awesome future-browsers       */
+    -ms-interpolation-mode: nearest-neighbor;   /* IE                            */
+    margin: 0px;
+    padding: 0px;
+}
+
+.editor {
+	background: none;
+    text-align: center;
+    vertical-align: middle;
+    min-width: 64px;
+    min-height: 64px;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 0;
+}
+
+.canvas {
+	background: #000000;
+}
+
+.toolbar {
+    background: #333333;
+    position: absolute;
+    border-radius: 4px;
+    box-shadow: .1em .1em .3em .0em #00000080;
+    padding: 4px 4px;
+    z-index: 10;
+}
+
+button {
+    color: c0c0c0;
+    background: none;
+    padding: 0px 0px;
+    margin: 4px 2px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 8px;
+    cursor: pointer;
+    outline: none;
+    border-radius: 4px;
+
+    /*
+    border: 1px solid none;
+    text-shadow: .05em .05em .1em #000000e0;
+    */
+
+    width: 36px;
+    height: 36px;
+    /*padding-top: 2px;*/
+
+    opacity: 0.5;
+}
+
+button.small {
+    width: 20px;
+    height: 20px;
+}
+
+button:active, button.selected, button:hover {
+    background: #3571DE;
+    opacity: 1.0;
+    box-shadow: .1em .1em .3em .1em #00000030, inset 1px 1px 1px 0px #00000020, inset -1px -1px 1px 0px #ffffff18;
+    border: 1px solid #00000030;
+
+}
+
+object {
+    pointer-events: none;
+}
+
+horizontal-bar {
+	background: none;
+    height: 44px;
+}
+
+vertical-bar {
+	background: none;
+}
+
+vertical-bar horizontal-bar {
+    display: block;
+    pointer-events: inherit;
+}
+
+vertical-bar.small horizontal-bar {
+    height: 28px;
+}
+
+horizontal-bar button {
+    float: left;
+}
+
+vertical-bar button {
+    display: block;
+}
+
+.icon {
+    width: 32px;
+    height: 32px;
+}
+
+#idCanvas {
+    cursor: crosshair;
+}
+
+#idTopPanel {
+    left: 62px;
+    top: 0px;
+}
+
+#idColorsPanel {
+    left: 200px;
+    top: 0px;
+}
+
+#idLeftPanel {
+    left: 4px;
+    top: 0px;
+}
+
+#idPalettePanel {
+    left: 4px;
+    top: 180px;
+}
+
+#idColorsPanel button, #idPalettePanel button {
+    opacity: 1.0;
+}
+
+#idColorsPanel button:active, #idColorsPanel button.selected, #idColorsPanel button:hover {
+    border: 2px solid #000000b0;
+    box-shadow: 0px 0px 0px 1px #ffffffb0;
+}
+
+#idPalettePanel button:active, #idPalettePanel button.selected, #idPalettePanel button:hover {
+    border: 2px solid #000000b0;
+    box-shadow: 0px 0px 0px 1px #ffffffb0;
+}

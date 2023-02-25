@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Editor</title>
+    <link href="../vscode.css" rel="stylesheet" />
+    <link href="default.css" rel="stylesheet" />
+</head>
+<body>
+
+    <horizontal-bar id="idTopPanel" data-property="none" class="toolbar" width="100%">
+        <button class="selected">1</button>
+        <button>2</button>
+        <button>3</button>
+    </horizontal-bar>
+
+    <horizontal-bar id="idColorsPanel" data-property="color" class="toolbar" width="100%">
+        <button id="color1" value=1></button>
+        <button id="color2" value=2></button>
+        <button id="color3" value=3></button>
+    </horizontal-bar>
+
+    <vertical-bar id="idLeftPanel" data-property="toolmode" class="toolbar" >
+        <button id="select"><img src="assets/select.png" class="icon"></button>
+        <button id="pen"><img src="assets/pen.png" class="icon"></button>
+        <button id="erase"><img src="assets/erase.png" class="icon"></button>
+        <button id="fill"><img src="assets/fill.png" class="icon"></button>
+
+    </vertical-bar>
+
+    <canvas id="idCanvas" class="canvas editor" width="256px" height="256px"></canvas>
+
+    <vertical-bar id="idPalettePanel" data-property="none" class="toolbar small" width="100%">
+        <horizontal-bar><button class="small" id="palette0" value=0></button><button class="small" id="palette1" value=1></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette2" value=2></button><button class="small" id="palette3" value=3></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette4" value=4></button><button class="small" id="palette5" value=5></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette6" value=6></button><button class="small" id="palette7" value=7></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette8" value=8></button><button class="small" id="palette9" value=9></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette10" value=10></button><button class="small" id="palette11" value=11></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette12" value=12></button><button class="small" id="palette13" value=13></button></horizontal-bar>
+        <horizontal-bar><button class="small" id="palette14" value=14></button><button class="small" id="palette15" value=15></button></horizontal-bar>
+    </vertical-bar>
+
+    <script nonce="${nonce}" src="data.js"></script>
+    <script nonce="${nonce}" src="utils.js"></script>
+    <script nonce="${nonce}" src="ui.js"></script>
+    <script nonce="${nonce}" src="sprite.js"></script>
+    <script nonce="${nonce}" src="editor.js"></script>
+    <script nonce="${nonce}" src="main.js"></script>
+</body>
+</html>

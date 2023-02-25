@@ -1,6 +1,12 @@
 {
 	"version": "0.2.0",
 	"configurations": [
+        {
+            "name": "Launch Chrome",
+            "request": "launch",
+            "type": "chrome",
+            "file": "${workspaceFolder}/media/sprite_editor/index.html"
+        },
 		{
 			"name": "Run Extension",
 			"type": "extensionHost",
