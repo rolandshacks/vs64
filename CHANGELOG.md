@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.1.3 Minor Update
+
+- Fixed dependency handling for acme and cc65 toolkits
+
 ## 2.1.2 Minor Update
 
 - Improved clang-tidy support

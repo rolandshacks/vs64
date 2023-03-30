@@ -235,6 +235,7 @@ class Build {
 
         const args = [
             "--quiet",
+            //"-d", "keepdepfile",
             "-f", ninjaBuildFile
         ];
 

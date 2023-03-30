@@ -696,6 +696,8 @@ class Project {
     createBuildFile() {
 
         const project = this;
+        const settings = this._settings;
+        const toolkit = project.toolkit;
 
         const releaseBuild = this.releaseBuild;
 
@@ -703,14 +705,19 @@ class Project {
 
         const buildFile = this.buildfile;
 
+        let buildFileDirty = true;
+
         let modificationTime = Utils.getFileTime(buildFile);
         if (modificationTime && modificationTime >= project.modificationTime) {
             // already up-to-date
-            return;
-        }
+            buildFileDirty = false;
 
-        const settings = this._settings;
-        const toolkit = project.toolkit;
+            if (toolkit == "llvm") {
+                // early exit as for llvm, there is no need
+                // to manually create depencency files for ninja
+                return;
+            }
+        }
 
         const defines = [];
 
@@ -720,20 +727,22 @@ class Project {
 
         const script = [];
 
-        script.push("################################################################################");
-        script.push("# BUILD FILE");
-        script.push("# generated file: DO NOT EDIT!");
-        script.push("################################################################################");
-        script.push("");
+        { // header information
+            script.push("################################################################################");
+            script.push("# BUILD FILE");
+            script.push("# generated file: DO NOT EDIT!");
+            script.push("################################################################################");
+            script.push("");
 
-        script.push("ninja_required_version = 1.3");
-        script.push(this.#keyValue("builddir", project.builddir));
-        script.push("");
+            script.push("ninja_required_version = 1.3");
+            script.push(this.#keyValue("builddir", project.builddir));
+            script.push("");
 
-        script.push(this.#keyValue("project", project.name));
-        script.push(this.#keyValue("target", project.outfile));
-        script.push(this.#keyValue("dbg_out", project.outdebug));
-        script.push("");
+            script.push(this.#keyValue("project", project.name));
+            script.push(this.#keyValue("target", project.outfile));
+            script.push(this.#keyValue("dbg_out", project.outdebug));
+            script.push("");
+        }
 
         if (toolkit == "acme") {
 
@@ -750,14 +759,14 @@ class Project {
 
             script.push(this.#keyValue("flags", "--msvc --maxerrors 99 -f cbm --cpu 6510 -DDEBUG=1 -r $dbg_out"));
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
-
             script.push("");
+
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
             script.push("    command = $asm_exe $flags $includes -o $out $in");
-
             script.push("");
+
             script.push("build $target | $dbg_out : asm " + this.#join(asmSources, null, null, true))
 
         } else if (toolkit == "cc65") {
@@ -765,11 +774,6 @@ class Project {
             const cppSources = project.querySourceByExtension("|.c|.cpp|.cc|");
             const asmSources = project.querySourceByExtension("|.s|.asm|")||[];
             const objFiles = project.querySourceByExtension("|.o|.obj|")||[];
-
-            script.push(this.#keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
-            script.push(this.#keyValue("asm_exe", (project.assembler || settings.ca65Executable)));
-            script.push(this.#keyValue("ln_exe", (project.linker || settings.ld65Executable)));
-            script.push("");
 
             let flags = "-t c64 -g";
 
@@ -786,6 +790,11 @@ class Project {
             if (project.startAddress) {
                 ln_flags += "-S" + project.startAddress;
             }
+
+            script.push(this.#keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
+            script.push(this.#keyValue("asm_exe", (project.assembler || settings.ca65Executable)));
+            script.push(this.#keyValue("ln_exe", (project.linker || settings.ld65Executable)));
+            script.push("");
 
             script.push(this.#keyValue("flags", flags));
             script.push(this.#keyValue("ln_flags", ln_flags));
@@ -845,9 +854,6 @@ class Project {
             const asmSources = project.querySourceByExtension("|.s|.asm|")||[];
             const objFiles = project.querySourceByExtension("|.o|.obj|")||[];
 
-            script.push(this.#keyValue("clang", (project.compiler || settings.clangExecutable)));
-            script.push("");
-
             let flags = "-Wall -std=gnu++20 -g -fstandalone-debug -fno-limit-debug-info -fno-discard-value-names -c";
             // flags += "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
 
@@ -861,6 +867,9 @@ class Project {
             } else {
                 flags += " -O0";
             }
+
+            script.push(this.#keyValue("clang", (project.compiler || settings.clangExecutable)));
+            script.push("");
 
             script.push(this.#keyValue("cfgflags", "--config mos-c64.cfg"));
             script.push(this.#keyValue("flags", flags));
@@ -918,15 +927,15 @@ class Project {
         script.push("default all");
         script.push("");
 
-        const fileData = script.join("\n");
-
-        try {
-            fs.writeFileSync(buildFile, fileData, "utf8");
-        } catch (err) {
-            console.log("failed to write build file: " + err);
+        if (buildFileDirty) {
+            const fileData = script.join("\n");
+            try {
+                fs.writeFileSync(buildFile, fileData, "utf8");
+            } catch (err) {
+                console.log("failed to write build file: " + err);
+            }
         }
     }
-
 
 }
 

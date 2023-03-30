@@ -175,7 +175,7 @@ void sprites_init() {
 
         sprite_set_address(sprite->id, 0);
         sprite_update_pos(sprite);
-       
+
     }
 }
 
