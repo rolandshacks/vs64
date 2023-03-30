@@ -514,8 +514,16 @@ let Utils = {
 
         const data = fs.readFileSync(source);
         fs.writeFileSync(dest, data);
-    }
+    },
+    
+    setExecutablePermission: function(filename) {
 
+        try {
+            const fd = fs.openSync(filename, 'r');
+            fs.fchmodSync(fd, 0o775);
+            fs.close(fd);
+        } catch (e) {}
+    }
 
 };
 

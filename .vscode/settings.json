@@ -3,5 +3,6 @@
         "*.tpp": "cpp"
     },
     "terminal.integrated.shell.windows": "cmd.exe",
-    "typescript.surveys.enabled": false
+    "typescript.surveys.enabled": false,
+    "C_Cpp.codeAnalysis.clangTidy.path": "/home/roland/llvm-mos/bin/clang-tidy"
 }

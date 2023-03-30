@@ -129,8 +129,10 @@ class Settings {
                     executablePath = path.resolve(extensionPath, "resources", "ninja", "win", "ninja.exe");
                 } else if (platform == "darwin") {
                     executablePath = path.resolve(extensionPath, "resources", "ninja", "mac", "ninja");
+                    Utils.setExecutablePermission(executablePath);
                 } else if (platform == "linux") {
                     executablePath = path.resolve(extensionPath, "resources", "ninja", "linux", "ninja");
+                    Utils.setExecutablePermission(executablePath);
                 }
             }
             if (executablePath && Utils.fileExists(executablePath)) {
