@@ -21,7 +21,6 @@ BIND(module);
 const { Constants } = require('settings/settings');
 const { Utils, Formatter } = require('utilities/utils');
 const { Expression } = require('utilities/expression');
-const { VscodeUtils } = require('utilities/vscode_utils');
 const { Logger } = require('utilities/logger');
 const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState, MemoryType } = require('debugger/debug');
 const { DebugInfo } = require('debugger/debug_info');
@@ -137,6 +136,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._port = 0;
     }
 
+    debuggerLog(message) {
+        vscode.debug.activeDebugConsole.appendLine(message);
+    }
+
     #loadDebugInfo() {
 
         const project = this._project;
@@ -226,9 +229,13 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         this._emulatorProcess = new ViceProcess();
 
+        const emulatorCommand = settings.emulatorExecutable + " " + settings.emulatorArgs;
+        logger.trace(`launch emulator: ${emulatorCommand}`)
+
         try {
             await this._emulatorProcess.spawn(
                 settings.emulatorExecutable,
+                settings.emulatorPort,
                 settings.emulatorArgs,
                 {
                     onexit:
@@ -345,6 +352,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     async launchOrAttachRequest(response, args) {
 
+        const settings = this._settings;
         const debuggerType = args.type;
         const debuggerCommand = args.request||"launch";
         const attachToProcess = (debuggerCommand == "attach");
@@ -371,7 +379,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._launchPC = null;
 
         const emuHostname = args.hostname||"localhost";
-        const emuPort = args.port||6502;
+        const emuPort = attachToProcess ? (args.port||settings.emulatorPort) : settings.emulatorPort;
 
         let emu = null;
 
@@ -505,7 +513,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     verified: false, // not found
                     message: 'No code found on this line'
                 });
-                VscodeUtils.debuggerLog("could not set breakpoint at line " + requestedBreakpoint.line);
+                this.debuggerLog("could not set breakpoint at line " + requestedBreakpoint.line);
             }
         }
 
@@ -847,9 +855,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     variables = [
                         { name: "Bank Select", type: "stat", value: vicState.bankSelect.toString(), variablesReference: 0 },
                         { name: "Base Address", type: "stat", value: Formatter.formatAddress(vicBase), variablesReference: 0, memoryReference: vicBase },
-                        { name: "Screen Address", type: "stat", value: Formatter.formatAddress(vicState.screenAddress), variablesReference: 0, memoryReference: (vicBase + vicState.screenAddress).toString() },
-                        { name: "Bitmap Address", type: "stat", value: Formatter.formatAddress(vicState.bitmapAddress), variablesReference: 0, memoryReference: (vicBase + vicState.bitmapAddress).toString() },
-                        { name: "Charset Address", type: "stat", value: Formatter.formatAddress(vicState.charsetAddress), variablesReference: 0, memoryReference: (vicBase + vicState.charsetAddress).toString() },
+                        { name: "Screen Address", type: "stat", value: Formatter.formatAddress(vicBase + vicState.screenAddress), variablesReference: 0, memoryReference: (vicBase + vicState.screenAddress).toString() },
+                        { name: "Bitmap Address", type: "stat", value: Formatter.formatAddress(vicBase + vicState.bitmapAddress), variablesReference: 0, memoryReference: (vicBase + vicState.bitmapAddress).toString() },
+                        { name: "Charset Address", type: "stat", value: Formatter.formatAddress(vicBase + vicState.charsetAddress), variablesReference: 0, memoryReference: (vicBase + vicState.charsetAddress).toString() },
                         { name: "Raster Line", type: "stat", value: Formatter.formatValue(vicState.rasterLine), variablesReference: 0 },
                         { name: "Extended Color Mode", type: "stat", value: Formatter.formatBit(vicState.extendedColorMode), variablesReference: 0 },
                         { name: "Text Mode", type: "stat", value: Formatter.formatBit(vicState.textMode), variablesReference: 0 },
@@ -1341,7 +1349,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     onDebugBreakpoint(breakpoint) {
 
-        VscodeUtils.debuggerLog(
+        this.debuggerLog(
             "BREAKPOINT at $" +
             Utils.fmtAddress(breakpoint.address) +
             ", line " +
@@ -1368,11 +1376,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             }
         }
 
-        VscodeUtils.debuggerLog(msg);
+        this.debuggerLog(msg);
     }
 
     onDebugLogpoint(breakpoint) {
-        VscodeUtils.debuggerLog(
+        this.debuggerLog(
             "LOGPOINT at $" +
             Utils.fmtAddress(breakpoint.address) +
             ", line " +

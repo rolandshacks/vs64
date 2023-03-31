@@ -5,11 +5,12 @@
 #include "libc64/video.h"
 #include "libc64/system.h"
 
-extern uint8_t __sprite_data[][64];
-extern size_t __sprite_data_size;
+extern uint8_t sprites_sprite_0[64];
+const uint8_t* __sprite_data = sprites_sprite_0;
+const size_t __sprite_data_size = 64 * 7;
 
 void sprite_init() {
-    const uint8_t* src = __sprite_data[0];
+    const uint8_t* src = __sprite_data;
     const size_t sz = __sprite_data_size;
     uint8_t* dst = (uint8_t*) (0x8000);
     memcpy(dst, src, sz);
@@ -25,7 +26,7 @@ void sprite_set_mode(uint8_t sprite, bool multicolor) {
 
 uint8_t sprite_get_address(const uint8_t* data) {
     uint8_t block;
-    if (NULL == data) data = __sprite_data[0];
+    if (NULL == data) data = __sprite_data;
     block = (uint8_t) (((uint16_t) (data) - (uint16_t) video_get_vic_base()) / 64);
     return block;
 }

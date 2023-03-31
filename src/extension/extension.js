@@ -26,7 +26,6 @@ const { Logger, LogLevel, LogLevelChars } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { Constants, AnsiColors, Settings } = require('settings/settings');
 const { Project } = require('project/project');
-const { VscodeUtils } = require('utilities/vscode_utils');
 const { DebugContext } = require('debugger/debug_context');
 const { Build, BuildResult } = require('builder/builder');
 const { DiagnosticProvider } = require('extension/diagnostic_provider');
@@ -79,6 +78,17 @@ class Extension {
         if (!this.hasWorkspace()) return null;
 		return vscode.workspace.workspaceFolders[0].uri.fsPath;
     }
+
+    getWorkspaceAbsoluteFilename(filename) {
+        if (!filename || path.isAbsolute(filename)) return filename;
+
+        const workspaceRoot = this.getWorkspaceRoot();
+	    if (!workspaceRoot) {
+		    return;
+    	}
+
+        return path.resolve(workspaceRoot, filename);
+    }    
 
     activate() {
 
@@ -291,7 +301,7 @@ class Extension {
 
         const destFolder = workspaceRoot;
 
-        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;";
+        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.res;";
         const includeExtensions = ";.hpp;.hh;.h;.inc;";
 
         let sourceFilesExist = false;
@@ -402,7 +412,7 @@ class Extension {
         }
 
         const settings = this._settings;
-        const projectFile = VscodeUtils.getAbsoluteFilename(settings.projectFile||Constants.ProjectConfigFile);
+        const projectFile = this.getWorkspaceAbsoluteFilename(settings.projectFile||Constants.ProjectConfigFile);
         if (!projectFile) {
             return;
         }

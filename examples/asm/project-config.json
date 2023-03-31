@@ -2,10 +2,11 @@
     "name": "example",
     "description": "Example project",
     "toolkit": "acme",
-    "main": "src/main.asm",
+    "sources": [
+        "src/main.asm",
+        "resources/sprites.spm"
+    ],
     "build": "debug",
     "definitions": [],
-    "includes": ["lib64/include", "resources"],
-    "args": [],
-    "compiler": ""
+    "includes": ["lib64/include", "resources"]
 }

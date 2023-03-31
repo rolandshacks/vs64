@@ -1,26 +1,40 @@
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Run Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			//"runtimeExecutable": "${execPath}",
-			"args": [
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Resource Compiler",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/rc.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--cpp",
+                "-o",
+                "${workspaceFolder}/build/charset2.cpp",
+                "${workspaceFolder}/test/data/charset2.ctm"
+            ]
+        },
+        {
+            "name": "Run Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            //"runtimeExecutable": "${execPath}",
+            "args": [
                 "--trace-deprecation",
-				"--extensionDevelopmentPath=${workspaceFolder}",
-			]
-		},
-		{
-			"name": "Extension Tests",
-			"type": "extensionHost",
-			"request": "launch",
-			//"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/test"
-			]
-		},
+                "--extensionDevelopmentPath=${workspaceFolder}",
+            ]
+        },
+        {
+            "name": "Extension Tests",
+            "type": "extensionHost",
+            "request": "launch",
+            //"runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionTestsPath=${workspaceFolder}/test"
+            ]
+        },
         {
             "name": "Run Vice Debug",
             "type": "node",
@@ -71,19 +85,27 @@
             "cwd": "${workspaceFolder}/test"
         },
         {
+            "name": "Run Python Env",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/python.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
             "name": "Unit Tests",
             "type": "node",
             "request": "launch",
-			"console": "integratedTerminal",
+            "console": "integratedTerminal",
             "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
             "cwd": "${workspaceFolder}/test",
-			"args": [
-				"--runInBand",
-				"--config", "${workspaceFolder}/test/jest.config.js",
-				"-t",
+            "args": [
+                "--runInBand",
+                "--config",
+                "${workspaceFolder}/test/jest.config.js",
+                "-t",
                 //"graph"
                 "basic"
-			]
+            ]
         }
-	]
+    ]
 }

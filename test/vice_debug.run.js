@@ -66,6 +66,7 @@ class Application {
 
         this._settings = {
             emulatorExecutable : "C:/tools/c64/vice/bin/x64sc.exe",
+            emulatorPort: 6502,
             emulatorArgs : ""
         };
 
@@ -85,6 +86,7 @@ class Application {
         this._emulatorProcess = new ViceProcess();
         await this._emulatorProcess.spawn(
             settings.emulatorExecutable,
+            settings.emulatorPort,
             settings.emulatorArgs,
             { onexit: (proc) => {
                 // exit function
@@ -126,7 +128,7 @@ class Application {
         }
 
         const emu = new ViceConnector(this);
-        await emu.connect("127.0.0.1", 6502);
+        await emu.connect("127.0.0.1", settings.emulatorPort);
 
         emu.on('error', (err) => {
             logger.error(err);

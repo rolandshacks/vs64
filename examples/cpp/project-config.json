@@ -9,6 +9,5 @@
     "build": "debug",
     "definitions": [],
     "includes": [],
-    "args": [],
-    "compiler": ""
+    "args": []
 }

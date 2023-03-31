@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.1.5",
+	"version": "2.2.0",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -165,6 +165,17 @@
 						]
 					},
 					{
+						"id": "setup_python",
+						"title": "Setup Python",
+						"description": "VS64 utilizes for extended build tools.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Update Settings](command:vs64.showSettings?%22python%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/python.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.pythonExecutable"
+						]
+					},
+					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
 						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAsm)\n\n[Create CC65 C Project](command:vs64.createProjectC)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectCpp)",
@@ -218,6 +229,15 @@
 					".s"
 				],
 				"configuration": "./language/asm.language.json"
+			},
+			{
+				"id": "res",
+				"aliases": [
+					"resource"
+				],
+				"extensions": [
+					".res"
+				]
 			}
 		],
 		"grammars": [
@@ -293,6 +313,16 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to custom ninja executable. Leave empty to use the ninja executable coming with the extension package."
+					},
+					"vs64.pythonExecutable": {
+						"type": "string",
+						"default": "",
+						"description": "Path to python executable. Leave empty to use the default python installation."
+					},
+					"vs64.resourceCompiler": {
+						"type": "string",
+						"default": "",
+						"description": "Path to custom resource compiler (Python). Leave empty to use the default resource compiler tool coming with the extension package."
 					}
 				}
 			},
@@ -305,6 +335,11 @@
 						"type": "string",
 						"default": "x64sc",
 						"description": "Path to emulator executable"
+					},
+					"vs64.emulatorPort": {
+						"type": "string",
+						"default": "6502",
+						"description": "Port of emulator binary monitor interface. Leave empty to use the default port 6502."
 					},
 					"vs64.emulatorArgs": {
 						"type": "string",

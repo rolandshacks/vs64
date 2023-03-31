@@ -267,4 +267,3 @@ main                                            ; main entry
 ; -------------------------------------------------
 
 !src "lib64/libstd64.asm"
-!src "sprites.asm"

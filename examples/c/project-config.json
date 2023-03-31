@@ -9,11 +9,10 @@
         "libc64/src/system.c",
         "libc64/src/video.c",
         "libc64/src/sprite.c",
-        "resources/sprites.c"
+        "resources/sprites.spm"
     ],
     "build": "debug",
     "definitions": [],
     "includes": ["libc64/include"],
-    "args": [],
-    "compiler": ""
+    "args": []
 }

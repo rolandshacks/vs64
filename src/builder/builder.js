@@ -18,6 +18,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 const { Logger } = require('utilities/logger');
+const { Utils } = require('utilities/utils');
 
 const logger = new Logger("Builder");
 
@@ -28,63 +29,6 @@ const BuildResult = {
     ScanError: 3
 };
 
-class BuilderTask {
-
-    static run(executable, args, outputFunction) {
-
-        const commandLine = executable + " " + args.join(" ");
-        logger.debug("build command: " + commandLine);
-
-        return new Promise((resolve, reject) => {
-
-            const proc = spawn(executable, args);
-
-            const procInfo = {
-                stdout: [],
-                stderr: [],
-                exitCode: 0
-            };
-
-            proc.stdout.on('data', (data) => {
-                const lines = (data+"").split('\n');
-                for (let i=0, line; (line=lines[i]); i++) {
-                    if (null == line) continue;
-                    if (line.trim().length > 0) {
-                        procInfo.stdout.push(line);
-                        if (outputFunction) outputFunction(line);
-                    }
-                }
-            });
-
-            proc.stderr.on('data', (data) => {
-                const lines = (data+"").split('\n');
-                for (let i=0, line; (line=lines[i]); i++) {
-                    if (null == line) continue;
-                    if (line.trim().length > 0) {
-                        procInfo.stderr.push(line);
-                        if (outputFunction) outputFunction(line);
-                    }
-                }
-            });
-
-            proc.on('error', (err) => {
-                const txt = (err.code == "ENOENT") ?
-                    "executable not found: '" + executable + "'" :
-                    "failed to spawn process '" + executable + ": " + err.code;
-                reject(txt, null, err);
-            });
-
-            proc.on('exit', (code) => {
-                procInfo.exitCode = code;
-                if (0 == code) {
-                    resolve(procInfo);
-                } else {
-                    reject("process exited with error " + code, procInfo);
-                }
-            });
-        });
-    }
-}
 
 class Build {
     constructor(project) {
@@ -95,14 +39,6 @@ class Build {
 
     onBuildOutput(fn) {
         this._onBuildOutputFn = fn;
-    }
-
-    #writeBuildOutput(txt) {
-        if (this._onBuildOutputFn) {
-            this._onBuildOutputFn(txt);
-        } else {
-            logger.info(txt);
-        }
     }
 
     #validate() {
@@ -177,7 +113,11 @@ class Build {
             }
         }
 
-        this.#writeBuildOutput(txt);
+        if (this._onBuildOutputFn) {
+            this._onBuildOutputFn(txt);
+        } else {
+            logger.info(txt);
+        }        
 
     }
 
@@ -187,16 +127,13 @@ class Build {
         }
 
         const project = this._project;
-        let forcedRebuild = false;
 
-        const srcs = project.sources;
-        if (!srcs || srcs.length < 1) {
+        if (!project.hasSources()) {
             logger.debug("build.run: empty project");
             return { error: BuildResult.NoNeedToBuild };
         }
 
         try {
-            if (forcedRebuild) this.clean(); // clean target files
             this.#doInitialize();
         } catch (err) {
             logger.error("build.run: initialization failed: " + err);
@@ -230,23 +167,35 @@ class Build {
 
         logger.debug("build.run");
 
-        const ninjaExecutable = project.ninja || settings.ninjaExecutable;
-        const ninjaBuildFile = project.buildfile;
+        const executable = project.ninja || settings.ninjaExecutable;
 
         const args = [
-            "--quiet",
+            //"--quiet",
             //"-d", "keepdepfile",
-            "-f", ninjaBuildFile
+            "-f", project.buildfile
         ];
 
-        const result = await BuilderTask.run(
-            ninjaExecutable,
-            args,
-            (txt) => { instance.buildOutput(txt); }
-        );
+        let proc = null;
 
-        if (result.exitCode != 0) {
-            throw("failed with exit code " + result.exitCode);
+        try {
+            proc = await Utils.exec(
+                executable,
+                args,
+                {
+                    sync: true,
+                    onstdout: (data) => { instance.buildOutput(data); },
+                    onstderr: (data) => { instance.buildOutput(data); }
+                }
+            );
+        } catch (procInfo) {
+            const msg = procInfo.errorInfo ? 
+                "failed to run build process \"" + executable + "\" (" + procInfo.errorInfo.code + ")" :
+                "failed with exit code " + procInfo.exitCode;
+            throw(msg);
+        }            
+
+        if (proc && proc.exitCode != 0) {
+            throw("failed with exit code " + proc.exitCode);
         }
     }
 }

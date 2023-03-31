@@ -240,7 +240,7 @@ video_wait_next_frame
 ; -------------------------------------------------
 
 sprite_init
-    +memcpy video_vic_base, sprite_data, sprite_data_end-sprite_data
+    +memcpy video_vic_base, sprites, sprites_end - sprites
     rts
 
 sprite_set_pos_fn ; (reg0: sprite, regw0: x, regw1: y)

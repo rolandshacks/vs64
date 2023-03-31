@@ -19,7 +19,6 @@ BIND(module);
 const { Constants } = require('settings/settings');
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { VscodeUtils } = require('utilities/vscode_utils');
 const { DebugSession } = require('debugger/debug_session');
 
 const logger = new Logger("DebugContext");

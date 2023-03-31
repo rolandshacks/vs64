@@ -4,7 +4,7 @@
 
 [VS64](https://github.com/rolandshacks/vs64) is an open-source extension for [Visual Studio Code](https://code.visualstudio.com).
 
-The VS64 extension makes it easy to build, debug, inspect and run C64 assembly code from Visual Studio Code. It provides in-depth editing support for the ACME assembler syntax, an integrated project and build system and support for the Visual Studio Code task and launch system.
+The VS64 extension makes it easy to build, debug, inspect and run C64 assembly code from Visual Studio Code. It provides deep integration for the ACME assembler and the CC65 and LLVM-MOS compilers, an integrated project and build system, a resource compiler, and support for the Visual Studio Code task and launch system.
 
 <p align="center">
   <img src="./resources/walkthroughs/welcome.png" alt="" />
@@ -16,6 +16,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
+* Resource compiler for sprites, charsets, tiles, maps and music (SpritePad/Pro, CharPad/Pro, SpriteMate, SID)
 * Syntax highlighting for ACME assembler files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
@@ -73,6 +74,19 @@ Please make sure you updated the VS64 settings with the correct LLVM-MOS install
 
 > **Please notice:** Currently, VS64 is not able to use the debug information from the ELF output file. Plain execution of the program file in an emulation session should just work fine.
 
+### Resource Compilation
+
+VS64 comes with an integrated resource compiler that turns media files into plain source code to be directly referenced by the code and compiled into the binary. Currently, the supported media formats are:
+
+* SpritePadPro and SpritePad 1.8.1 file format (.spd)
+* CharPad64Pro file format (.ctm)
+* SpriteMate file format (.spm)
+* SID file format
+
+In order to use the resource compiler, just add your resources files to the "sources" list of the project file.
+
+> **Please notice:** The resource compiler requires a Python 3.x interpreter to be used. On Windows, the VS64 extension is providing a minimalistic fallback setup out of the box, while on Linux and MacOS, it is assumed that Python is already installed and running just fine.
+
 ### VICE Emulator
 
 In addition to the internal 6502 cpu emulator, VS64 also supports debugging using the VICE emulator.
@@ -92,8 +106,7 @@ For details, please look at the provided example projects for ACME, CC65 or LLVM
 
 ### Build System
 
-VS64 provides a meta build system which is based on the Ninja build toolkit.
-Furthermore, dependency scanning and the generation of intellisense information is supported.
+VS64 provides a meta build system which is based on the Ninja build toolkit. Dependency scanning and the generation of intellisense information is supported.
 
 ### Syntax Highlighting
 
@@ -119,7 +132,7 @@ The basic structure of the file is like this:
 }
 ```
 
-A more extensive project file for CC65 could like like this:
+A more extensive project file for CC65 using source and resource files could like like this:
 
 ```
 {
@@ -133,7 +146,7 @@ A more extensive project file for CC65 could like like this:
         "libc64/src/system.c",
         "libc64/src/video.c",
         "libc64/src/sprite.c",
-        "resources/sprites.c"
+        "resources/sprites.spm"
     ],
     "build": "debug",
     "definitions": [],
@@ -173,7 +186,7 @@ Project description, for information purposes.
 
 > sources
 
-Defines all used source files. The build system will keep track of changes of these files.
+Defines all used source and resource files. The build system will keep track of changes of these files. Resources files will be translated to language-specific to binary data declarations.
 
 > toolkit
 
@@ -361,6 +374,15 @@ Global build command line options.
 Path to custom Ninja build executable. Example: `C:\Tools\bin\ninja.exe`.
 Leave blank to use the embedded Ninja executable that is distributed with the extension.
 
+> VS64: Python Executable
+
+Path to custom Python installation. Example: `C:\Tools\python\python.exe`.
+Leave blank to use an installed Python environment or (on Windows) use the minimalistic Python environment distributed with the extension.
+
+> VS64: Resource Compiler
+
+Path to a Python script to be used as a drop-in replacement for the VS64 resource compiler (rc.py).
+
 > VS64: Auto Build
 
 Enable auto build before running or debugging.
@@ -403,3 +425,7 @@ This package includes open source from other developers and I would like to than
 * Ninja build system: https://ninja-build.org
 * Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js
 * Example of vscode debugging extension: https://github.com/microsoft/vscode-mock-debug
+* SpritePad C64 Pro: https://subchristsoftware.itch.io/spritepad-c64-pro
+* CharPad C64 Pro: https://subchristsoftware.itch.io/charpad-c64-pro
+* SpriteMate: https://www.spritemate.com
+* GoatTracker2: https://sourceforge.net/projects/goattracker2

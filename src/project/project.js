@@ -17,6 +17,7 @@ BIND(module);
 
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
+const { Constants } = require('settings/settings');
 
 const logger = new Logger("Project");
 
@@ -59,6 +60,19 @@ class Token {
     get type() { return this._type; }
     get value() { return this._value; }
     get line() { return this._lineNumber; }
+}
+
+class ProjectItem {
+    constructor(filename) {
+        this._filename = filename;
+        let ext = path.extname(filename) || ""
+        if (ext && ext[0] == '.') ext = ext.substring(1);
+        this._extension = ext.toLowerCase();
+    }
+
+    get filename() { return this._filename; }
+    get extension() { return this._extension; }
+
 }
 
 class Project {
@@ -217,15 +231,31 @@ class Project {
         if (!data.main && !data.sources) { throw("properties 'sources' or 'main' are missing."); }
 
         const srcs = [];
+        const srcFilenames = [];
 
         if (data.main) {
-            srcs.push(path.resolve(this._basedir, data.main));
+            const filename = path.resolve(this._basedir, data.main);
+            srcFilenames.push(filename);
+            srcs.push(new ProjectItem(filename));
         }
 
         if (data.sources) {
             for (const src of data.sources) {
-                const filename = path.resolve(this._basedir, src);
-                if (srcs.indexOf(filename) == -1) srcs.push(filename);
+                let filename = null;
+                if (typeof src === 'string') {
+                    filename = src;
+                } else {
+                    filename = src.path;
+                }
+
+                if (!filename) continue;
+
+                const resolvedFilename = path.resolve(this._basedir, filename);
+
+                if (srcFilenames.indexOf(resolvedFilename) == -1) {
+                    srcFilenames.push(resolvedFilename);
+                    srcs.push(new ProjectItem(resolvedFilename));
+                }
             }
         }
 
@@ -315,6 +345,12 @@ class Project {
             this._startAddress = data.startAddress;
         }
 
+    }
+
+    hasSources() {
+        const srcs = this._sources;
+        if (!srcs || srcs.length < 1) return false;
+        return true;
     }
 
     isSource(filename) {
@@ -490,8 +526,9 @@ class Project {
 
         const result = [];
 
-        for (const src of srcs) {
-            const ext = path.extname(src).toLowerCase();
+        for (const srcItem of srcs) {
+            const src = srcItem.filename;
+            const ext = srcItem.extension;
             if (ext && extensions.indexOf('|' + ext + '|') >= 0) {
                 result.push(src);
             }
@@ -598,9 +635,18 @@ class Project {
         }
 
         const compileCommands = [];
-        const cppSources = this.querySourceByExtension("|.c|.cpp|.cc|")||[];
+
+        const cppSources = this.querySourceByExtension(Constants.CppFileFilter)||[];
         const includes = this.includes;
         const defines = this.definitions;
+
+        const resSources = this.querySourceByExtension(Constants.ResourceFileFilter);
+        if (resSources && resSources.length > 0) {
+            for (let resSource of resSources) {
+                const cppFile = this.#getBuildPath(resSource, "cpp");
+                if (cppSources.indexOf(cppFile) == -1) cppSources.push(cppFile);
+            }
+        }
 
         for (const cppSource of cppSources) {
             compileCommands.push(this.#declareCompileCommand(cppSource, includes, defines));
@@ -693,6 +739,27 @@ class Project {
         } catch (e) {;}
     }
 
+    #getRelativePath(absPath) {
+        return path.relative(this.basedir, absPath);
+    }
+
+    #getBuildPath(sourcePath, newExtension) {
+
+        const builddir = this.builddir;
+        if (!builddir) return;
+
+        let buildPath = null;
+
+        if (Utils.isSubfolderOf(sourcePath, builddir)) {
+            buildPath = path.join(path.dirname(sourcePath), path.basename(sourcePath, path.extname(sourcePath)) + "." + newExtension);
+        } else {
+            const reldir = path.dirname(this.#getRelativePath(sourcePath));
+            buildPath = path.resolve(builddir, reldir, path.basename(sourcePath, path.extname(sourcePath)) + "." + newExtension);
+        }
+
+        return buildPath;
+    }
+
     createBuildFile() {
 
         const project = this;
@@ -741,18 +808,19 @@ class Project {
             script.push(this.#keyValue("project", project.name));
             script.push(this.#keyValue("target", project.outfile));
             script.push(this.#keyValue("dbg_out", project.outdebug));
-            script.push("");
+
+            if (settings.pythonExecutable) {
+                script.push(this.#keyValue("python_exe", settings.pythonExecutable));
+            }
+
+            const extensionPath = settings.extensionPath;
+            script.push(this.#keyValue("rc_exe", settings.resourceCompiler));
         }
 
         if (toolkit == "acme") {
 
-            const asmSources = this.querySourceByExtension("|.s|.asm|");
-
-            const dependencies = [ ...asmSources ];
-            for (const asmSource of asmSources) {
-                this.#getReferences(asmSource, dependencies);
-            }
-            this.#createDependencyFile(project.outfile + ".d", project.outfile, dependencies);
+            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
+            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
 
             script.push(this.#keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
@@ -761,24 +829,47 @@ class Project {
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
             script.push("");
 
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe --asm -o $out $in");
+            script.push("");
+
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
             script.push("    command = $asm_exe $flags $includes -o $out $in");
             script.push("");
 
+            if (resSources && resSources.length > 0) {
+                for (let resSource of resSources) {
+                    const asmFile = this.#getBuildPath(resSource, "asm");
+                    if (asmSources.indexOf(asmFile) == -1) {
+                        asmSources.push(asmFile);
+                    }
+                    script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
+                }
+                script.push("");
+            }
+
+            const dependencies = [ ...asmSources ];
+            for (const asmSource of asmSources) {
+                this.#getReferences(asmSource, dependencies);
+            }
+            this.#createDependencyFile(project.outfile + ".d", project.outfile, dependencies);
+
             script.push("build $target | $dbg_out : asm " + this.#join(asmSources, null, null, true))
 
         } else if (toolkit == "cc65") {
 
-            const cppSources = project.querySourceByExtension("|.c|.cpp|.cc|");
-            const asmSources = project.querySourceByExtension("|.s|.asm|")||[];
-            const objFiles = project.querySourceByExtension("|.o|.obj|")||[];
+            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
+            const cppSources = project.querySourceByExtension(Constants.CppFileFilter)||[];
+            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+            const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
 
             let flags = "-t c64 -g";
+            let c_flags = ""
 
             if (releaseBuild) {
-                flags += " -O -Oirs";
+                c_flags += "-O -Oirs";
             }
 
             let defs = "";
@@ -797,16 +888,21 @@ class Project {
             script.push("");
 
             script.push(this.#keyValue("flags", flags));
+            script.push(this.#keyValue("c_flags", c_flags));
             script.push(this.#keyValue("ln_flags", ln_flags));
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
             script.push(this.#keyValue("defs", defs));
             script.push(this.#keyValue("libs", "c64.lib"));
             script.push("");
 
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe --cc -o $out $in");
+            script.push("");
+
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $cc_exe -o $out $flags $includes $in");
+            script.push("    command = $cc_exe -o $out $flags $c_flags $includes $in");
             script.push("");
 
             script.push("rule asm");
@@ -819,10 +915,21 @@ class Project {
             script.push("    command = $ln_exe -o $out $ln_flags $in $libs");
             script.push("");
 
+            if (resSources && resSources.length > 0) {
+                for (let resSource of resSources) {
+                    const cFile = this.#getBuildPath(resSource, "c");
+                    if (cppSources.indexOf(cFile) == -1) {
+                        cppSources.push(cFile);
+                    }
+                    script.push("build " + this.#escape(cFile) + ": res " + this.#escape(resSource));
+                }
+                script.push("");
+            }
+
             if (cppSources && cppSources.length > 0) {
                 for (let cppSource of cppSources) {
 
-                    const asmSource = path.resolve(project.builddir, path.basename(cppSource, path.extname(cppSource)) + ".s");
+                    const asmSource = this.#getBuildPath(cppSource, "s");
                     if (asmSources.indexOf(asmSource) == -1) {
                         asmSources.push(asmSource);
                     }
@@ -835,7 +942,7 @@ class Project {
 
             if (asmSources && asmSources.length > 0) {
                 for (const asmSource of asmSources) {
-                    const objFile = path.resolve(project.builddir, path.basename(asmSource, path.extname(asmSource)) + ".o");
+                    const objFile = this.#getBuildPath(asmSource, "o");
                     if (objFiles.indexOf(objFile) == -1) {
                         objFiles.push(objFile);
                     }
@@ -850,9 +957,10 @@ class Project {
             }
 
         } else if (toolkit == "llvm") {
-            const cppSources = project.querySourceByExtension("|.c|.cpp|.cc|");
-            const asmSources = project.querySourceByExtension("|.s|.asm|")||[];
-            const objFiles = project.querySourceByExtension("|.o|.obj|")||[];
+            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
+            const cppSources = project.querySourceByExtension(Constants.CppFileFilter)||[];
+            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+            const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
 
             let flags = "-Wall -std=gnu++20 -g -fstandalone-debug -fno-limit-debug-info -fno-discard-value-names -c";
             // flags += "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
@@ -878,6 +986,10 @@ class Project {
             script.push(this.#keyValue("defs", defs));
             script.push("");
 
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe --cpp -o $out $in");
+            script.push("");
+
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
@@ -894,9 +1006,20 @@ class Project {
             script.push("    command = $clang $cfgflags -O0 -o $out $in");
             script.push("");
 
+            if (resSources && resSources.length > 0) {
+                for (let resSource of resSources) {
+                    const cppFile = this.#getBuildPath(resSource, "cpp");
+                    if (cppSources.indexOf(cppFile) == -1) {
+                        cppSources.push(cppFile);
+                    }
+                    script.push("build " + this.#escape(cppFile) + ": res " + this.#escape(resSource));
+                }
+                script.push("");
+            }
+
             if (cppSources && cppSources.length > 0) {
                 for (let cppSource of cppSources) {
-                    const objFile = path.resolve(project.builddir, path.basename(cppSource, path.extname(cppSource)) + ".o");
+                    const objFile = this.#getBuildPath(cppSource, "o");
                     if (objFiles.indexOf(objFile) == -1) {
                         objFiles.push(objFile);
                     }
@@ -907,7 +1030,7 @@ class Project {
 
             if (asmSources && asmSources.length > 0) {
                     for (const asmSource of asmSources) {
-                    const objFile = path.resolve(project.builddir, path.basename(asmSource, path.extname(asmSource)) + ".o");
+                    const objFile = this.#getBuildPath(asmSource, "o");
                     if (objFiles.indexOf(objFile) == -1) {
                         objFiles.push(objFile);
                     }

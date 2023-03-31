@@ -25,9 +25,6 @@ const logger = new Logger("ViceConnector");
 
 const VICE_CONNECT_TIMEOUT = 5000000; // microseconds
 
-const REMOTE_MONITOR_PORT = 6510;
-const BINARY_MONITOR_PORT = 6502;
-
 const RequestType = {
 
     RESPONSE_JAM: 0x61,
@@ -1042,7 +1039,7 @@ class ViceProcess {
         logger.debug(data);
     }
 
-    async spawn(executable, params, options) {
+    async spawn(executable, port, params, options) {
 
         if (this.alive) {
             this.kill();
@@ -1050,23 +1047,27 @@ class ViceProcess {
 
         const args = [];
         args.push("-binarymonitor");
+
+        if (port) {
+            args.push("-binarymonitoraddress"); args.push("ip4://127.0.0.1:" + port);
+        }
+
         args.push("-autostartprgmode"); args.push("1");
+
         if (params) {
             args.push(...Utils.splitQuotedString(params));
         }
 
         const instance = this;
 
-        const commandStr = executable + " " + args.join(" ");
-        logger.debug(`launch emulator: ${commandStr}`)
-
         let proc = null;
 
         try {
-            proc = await Utils.spawn(
+            proc = await Utils.exec(
                 executable,
                 args,
                 {
+                    sync: false,
                     onexit:
                         (proc) => {
                             if (options && options.onexit) options.onexit(proc)
@@ -1084,6 +1085,10 @@ class ViceProcess {
                 }
             );
         } catch (procInfo) {
+            //const txt = (err.code == "ENOENT") ?
+            //"executable not found: '" + executable + "'" :
+            //"failed to spawn process '" + executable + ": " + err.code;
+
             throw("failed to create emulator process \"" + executable + "\"" + (procInfo.errorInfo ? " (" + procInfo.errorInfo.code + ")" : ""));
         }
 

@@ -309,7 +309,10 @@ let Utils = {
         return filename;
     },
 
-    spawn: function(executable, args, options) {
+    exec: function(executable, args, options) {
+
+        const commandLine = executable + " " + args.join(" ");
+        logger.debug("spawn child process: " + commandLine);
 
         return new Promise((resolve, reject) => {
 
@@ -319,15 +322,16 @@ let Utils = {
                 exited: false,
                 stdout: [],
                 stderr: [],
+                exitCode: 0,
                 errorInfo: null
             };
 
             const proc = spawn(executable, args);
-
             procInfo.process = proc;
 
+            proc.stdout.setEncoding('utf8');
             proc.stdout.on('data', (data) => {
-                let lines = (data+"").split('\n');
+                const lines = (data+"").split('\n');
                 for (let i=0, line; (line=lines[i]); i++) {
                     if (null == line) continue;
                     if (line.trim().length > 0) {
@@ -337,8 +341,9 @@ let Utils = {
                 }
             });
 
+            proc.stderr.setEncoding('utf8');
             proc.stderr.on('data', (data) => {
-                let lines = (data+"").split('\n');
+                const lines = (data+"").split('\n');
                 for (let i=0, line; (line=lines[i]); i++) {
                     if (null == line) continue;
                     if (line.trim().length > 0) {
@@ -351,8 +356,11 @@ let Utils = {
             proc.on('spawn', () => {
                 procInfo.created = true;
                 if (options && options.onstart) options.onstart(procInfo);
-                resolve(procInfo);
-            });
+                if (!(options && options.sync)) {
+                    // async mode: wait for start, but not for exit
+                    resolve(procInfo);
+                }
+            });            
 
             proc.on('error', (err) => {
                 procInfo.exited = true;
@@ -364,8 +372,16 @@ let Utils = {
                 procInfo.exited = true;
                 procInfo.exitCode = code;
                 if (options && options.onexit) options.onexit(procInfo);
-            });
 
+                if (options && options.sync) {
+                    // sync mode: wait for exit
+                    if (0 == code) {
+                        resolve(procInfo);
+                    } else {
+                        reject(procInfo);
+                    }
+                }
+            });
         });
     },
 
@@ -526,6 +542,38 @@ let Utils = {
             fs.fchmodSync(fd, 0o775);
             fs.close(fd);
         } catch (e) {}
+    },
+
+    findInPath: function(filename) {
+
+        const pathVar = process.env.PATH;
+        const pathDirs = pathVar.split(";")
+
+        for (const pathDir of pathDirs) {
+            const absName = path.resolve(pathDir, Utils.normalizeExecutableName(filename));
+            if (Utils.isFile(absName)) {
+                return absName;
+            }
+        }
+
+        return null;
+    },
+
+    isSubfolderOf: function(subfolder, folder) {
+        const relative = path.relative(folder, subfolder);
+        return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+    },
+
+    getDefaultPythonExecutablePath: function() {
+
+        const pythonAliases = [ "python3", "python" ];
+
+        for (const executableName of pythonAliases) {
+            const absPath = Utils.findInPath(executableName);
+            if (absPath) return absPath;
+        }
+
+        return null;
     }
 
 };

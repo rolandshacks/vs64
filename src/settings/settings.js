@@ -17,7 +17,6 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
 const { Logger, LogLevel } = require('utilities/logger');
-const { VscodeUtils } = require('utilities/vscode_utils');
 
 const logger = new Logger("Settings");
 
@@ -26,8 +25,9 @@ const logger = new Logger("Settings");
 //-----------------------------------------------------------------------------------------------//
 
 const Constants = {
+    BinaryMonitorPort: 6502,
     ProjectConfigFile: "project-config.json",
-    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh" ],
+    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "spm" ],
     AssemblerLanguageId: "asm",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
@@ -35,9 +35,10 @@ const Constants = {
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
     AutoBuildDelayMs: 2000,
-    CppFileFilter: "|.c|.cpp|.cc|",
-    AsmFileFilter: "|.s|.asm|",
-    ObjFileFilter: "|.o|.obj|"
+    ResourceFileFilter: "|res|spm|spd|ctm|sid|",
+    CppFileFilter: "|c|cpp|cc|",
+    AsmFileFilter: "|s|asm|",
+    ObjFileFilter: "|o|obj|"
 };
 
 const AnsiColors = {
@@ -80,10 +81,13 @@ class Settings {
         this.buildIncludePaths = null;
         this.buildArgs = null;
         this.emulatorExecutable = null;
+        this.emulatorPort = Constants.BinaryMonitorPort;
+        this.pythonExecutable = null;
         this.ninjaExecutable = null;
         this.emulatorArgs = null;
         this.autoBuild = false;
         this.showWelcome = true;
+        this.resourceCompiler = null;
     }
 
     disableWelcome(workspaceConfig) {
@@ -112,6 +116,8 @@ class Settings {
         settings.autoBuild = workspaceConfig.get("vs64.autoBuild");
         if (null == settings.autoBuild) settings.autoBuild = true;
 
+        this.setupPython(workspaceConfig);
+        this.setupResourceCompiler(workspaceConfig);
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
         this.setupCC65(workspaceConfig);
@@ -119,6 +125,15 @@ class Settings {
         this.setupVice(workspaceConfig);
 
         this.show();
+    }
+
+    setupResourceCompiler(workspaceConfig) {
+        let resourceCompiler = workspaceConfig.get("vs64.resourceCompiler");
+        if (resourceCompiler) {
+            this.resourceCompiler = resourceCompiler;
+        } else {
+            this.resourceCompiler = path.resolve(this.extensionPath, "tools", "rc.py");
+        }
     }
 
     setupNinja(workspaceConfig) {
@@ -200,13 +215,35 @@ class Settings {
 
     setupVice(workspaceConfig) {
         const executablePath = workspaceConfig.get("vs64.emulatorExecutable");
-        const args = workspaceConfig.get("vs64.emulatorArgs");
         if (executablePath) {
             this.emulatorExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
             this.emulatorExecutable = "x64sc";
         }
-        this.emulatorArgs = args||"";
+        this.emulatorPort = workspaceConfig.get("vs64.emulatorPort")||Constants.BinaryMonitorPort;
+        this.emulatorArgs = workspaceConfig.get("vs64.emulatorArgs")||"";
+    }
+
+    setupPython(workspaceConfig) {
+        const executablePath = workspaceConfig.get("vs64.pythonExecutable");
+        if (executablePath) {
+            this.pythonExecutable = Utils.normalizeExecutableName(executablePath)
+        } else {
+            this.pythonExecutable = null; // Utils.getDefaultPythonExecutablePath();
+            if (!this.pythonExecutable) {
+                const platform = process.platform;
+                if (platform == "win32") {
+                    const embeddedPythonPath = path.resolve(this.extensionPath, "resources", "python", "python.exe");
+                    if (Utils.fileExists(embeddedPythonPath)) {
+                        this.pythonExecutable = Utils.normalizeExecutableName(embeddedPythonPath);
+                    } else {
+                        this.pythonExecutable = "python";
+                    }
+                } else {
+                    this.pythonExecutable = "python3";
+                }
+            }
+        }
     }
 
     show() {
@@ -214,61 +251,13 @@ class Settings {
 
         logger.debug("extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
         logger.debug("auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
-
         logger.debug("acme executable: " + settings.acmeExecutable);
         logger.debug("cc65 executable: " + settings.cc65Executable);
         logger.debug("ca65 executable: " + settings.ca65Executable);
         logger.debug("ld65 executable: " + settings.ld65Executable);
         logger.debug("vice executable: " + settings.emulatorExecutable);
         logger.debug("ninja executable: " + settings.ninjaExecutable);
-
-        /*
-        this.logExecutableState(settings.acmeExecutable, "[C64] acme executable: " + settings.acmeExecutable);
-        this.logExecutableState(settings.cc65Executable, "[C64] cc65 executable: " + settings.cc65Executable);
-        this.logExecutableState(settings.ca65Executable, "[C64] ca65 executable: " + settings.ca65Executable);
-        this.logExecutableState(settings.ld65Executable, "[C64] ld65 executable: " + settings.ld65Executable);
-        this.logExecutableState(settings.emulatorExecutable, "[C64] emulator executable: " + settings.emulatorExecutable);
-        */
-    }
-
-    getExecutableState(filename) {
-
-        if (null == filename || filename == "") return " [NOT SET]";
-
-        const path = VscodeUtils.getAbsoluteFilename(filename);
-
-        if (null == path || path == "") return " [INVALID]";
-
-        try {
-            let stat = fs.lstatSync(path);
-            if (stat.isDirectory()) {
-                return " [MISMATCH: directory instead of file name specified]";
-            }
-        } catch (err) {
-            if (err.code == 'ENOENT') {
-                return " [ERROR: file not found]";
-            }
-            return " [" + err.message + "]";
-        }
-
-        try {
-            fs.accessSync(path, fs.constants.X_OK);
-        } catch (err) {
-            return " [" + err.message + "]";
-        }
-
-        return null;
-    }
-
-    logExecutableState(filename, format) {
-
-        let state = this.getExecutableState(filename);
-        if (null == state) {
-            logger.info(format + " [OK]");
-            return;
-        }
-
-        logger.warn(format + state);
+        logger.debug("python executable: " + settings.pythonExecutable);
     }
 
 }
