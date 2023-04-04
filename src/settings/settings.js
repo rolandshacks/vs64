@@ -34,7 +34,10 @@ const Constants = {
     CppStandard: "c++20",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
-    AutoBuildDelayMs: 2000
+    AutoBuildDelayMs: 2000,
+    CppFileFilter: "|.c|.cpp|.cc|",
+    AsmFileFilter: "|.s|.asm|",
+    ObjFileFilter: "|.o|.obj|"
 };
 
 const AnsiColors = {
@@ -71,6 +74,7 @@ const AnsiColors = {
 class Settings {
     constructor(extensionContext) {
         this.extensionContext = extensionContext;
+        this.extensionPath = extensionContext.extensionPath;
         this.logLevel = LogLevel.Info;
         this.buildDefines = null;
         this.buildIncludePaths = null;
@@ -122,7 +126,7 @@ class Settings {
         if (executablePath) {
             this.ninjaExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
-            const extensionPath = this.extensionContext.extensionPath;
+            const extensionPath = this.extensionPath;
             if (extensionPath) {
                 const platform = process.platform;
                 if (platform == "win32") {
@@ -208,14 +212,15 @@ class Settings {
     show() {
         const settings = this;
 
-        logger.debug("[C64] extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
-        logger.debug("[C64] auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
+        logger.debug("extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
+        logger.debug("auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
 
-        logger.debug("[C64] acme executable: " + settings.acmeExecutable);
-        logger.debug("[C64] cc65 executable: " + settings.cc65Executable);
-        logger.debug("[C64] ca65 executable: " + settings.ca65Executable);
-        logger.debug("[C64] ld65 executable: " + settings.ld65Executable);
-        logger.debug("[C64] vice executable: " + settings.emulatorExecutable);
+        logger.debug("acme executable: " + settings.acmeExecutable);
+        logger.debug("cc65 executable: " + settings.cc65Executable);
+        logger.debug("ca65 executable: " + settings.ca65Executable);
+        logger.debug("ld65 executable: " + settings.ld65Executable);
+        logger.debug("vice executable: " + settings.emulatorExecutable);
+        logger.debug("ninja executable: " + settings.ninjaExecutable);
 
         /*
         this.logExecutableState(settings.acmeExecutable, "[C64] acme executable: " + settings.acmeExecutable);

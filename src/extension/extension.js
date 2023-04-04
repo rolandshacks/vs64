@@ -22,7 +22,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger } = require('utilities/logger');
+const { Logger, LogLevel, LogLevelChars } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { Constants, AnsiColors, Settings } = require('settings/settings');
 const { Project } = require('project/project');
@@ -87,7 +87,10 @@ class Extension {
         const subscriptions =  extensionContext.subscriptions;
 
         { // create output channel
-            this._outputChannel = vscode.window.createOutputChannel("VS64");
+            this._outputChannel = vscode.window.createOutputChannel("VS64" /*, { log: true } */);
+            Logger.setGlobalListener((level, txt, location, caller) => {
+                thisInstance.writeLog(level, txt, location, caller);
+            });
         }
 
         { // load settings
@@ -118,11 +121,10 @@ class Extension {
         vscode.workspace.onDidSaveTextDocument((document) => {
 
             if (!document || null == vscode.window.activeTextEditor) return;
-            if (!this._project.isValid()) return;
 
             const fileName = path.basename(document.fileName);
             if (fileName != Constants.ProjectConfigFile &&
-                Constants.SupportedLanguageIds.indexOf(document.languageId) < 0) {
+                (!this._project.isValid() || Constants.SupportedLanguageIds.indexOf(document.languageId) < 0)) {
                 return;
             }
 
@@ -441,14 +443,46 @@ class Extension {
 
 
         } catch (err) {
-            logger.error(err);
             const txt = projectFile + " : Error : " + err;
+            logger.error(txt);
             const channel = this._outputChannel;
-            if (channel) {
-                channel.appendLine(txt);
-                channel.show();
-            }
+            if (channel) channel.show(null, true);
+
         }
+    }
+
+    writeLog(level, txt, location, caller) {
+        const channel = this._outputChannel;
+        if (!channel) return;
+
+        // use appendLine instead of levels to ensure logs
+        // are always displayed according to vs64 settings
+
+        if (Logger.getGlobalLevel() == LogLevel.Trace && caller) {
+            channel.appendLine(LogLevelChars[level] + "/" + caller + ": " + txt);
+        } else {
+            channel.appendLine(txt);
+        }
+
+        /*
+        if (level == LogLevel.Trace) {
+            if (caller) {
+                channel.trace(caller + ": " + txt);
+            } else {
+                channel.trace(txt);
+            }
+        } else if (level == LogLevel.Debug) {
+            channel.debug(txt);
+        } else if (level == LogLevel.Info) {
+            channel.info(txt);
+        } else if (level == LogLevel.Warning) {
+            channel.warn(txt);
+        } else if (level == LogLevel.Error) {
+            channel.error(txt);
+        } else {
+            channel.appendLine(txt);
+        }
+        */
     }
 
     update() {

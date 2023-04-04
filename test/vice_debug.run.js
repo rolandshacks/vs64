@@ -86,11 +86,11 @@ class Application {
         await this._emulatorProcess.spawn(
             settings.emulatorExecutable,
             settings.emulatorArgs,
-            (proc) => {
+            { onexit: (proc) => {
                 // exit function
                 instance._emulatorProcess = null;
                 logger.info("Vice executable terminated");
-            }
+            }}
         );
 
         return this._emulatorProcess;

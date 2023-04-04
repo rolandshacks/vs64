@@ -1,5 +1,5 @@
 //
-// Emulator MOS 6502
+// Vice Binary Monitor Connector
 //
 
 const net = require('net');
@@ -233,7 +233,7 @@ class Token {
     }
 
     resolve(data) {
-        logger.trace("request resolve: " + getRequestTypeName(this._cmd) + " (" + Utils.formatHex(this._cmd, 2, "0x") + ") / " + this._uid);
+        //logger.trace("request resolve: " + getRequestTypeName(this._cmd) + " (" + Utils.formatHex(this._cmd, 2, "0x") + ") / " + this._uid);
         this.resolveFn(data);
     }
 
@@ -287,14 +287,21 @@ class ViceMonitorClient {
         const ignoreCloseEventListener = function() { ; };
         client.on('close', ignoreCloseEventListener);
 
+        let connected = false;
+        let fatalError = null;
+
         const connectErrorEventListener = function(err) {
-            //logger.trace("error: " + err);
-            if (err.code == 'ENOENT' || err.code == 'ENOTFOUND') fatalError = true;
+            if (err.code == 'ECONNREFUSED') {
+                logger.trace("peer not ready when trying to connect: " + err);
+            } else {
+                logger.trace("error while trying to connect: " + err);
+                if (err.code == 'ENOENT' || err.code == 'ENOTFOUND') {
+                    fatalError = err;
+                }
+            }
+
         };
         client.on('error', connectErrorEventListener);
-
-        let connected = false;
-        let fatalError = false;
 
         client.on('connect', () => {
             logger.trace("connected");
@@ -316,7 +323,7 @@ class ViceMonitorClient {
 
         if (!connected || fatalError) {
             client.destroy();
-            throw("failed to connect to emulator process");
+            throw("failed to connect to emulator process" + (fatalError ? ": " + fatalError : ""));
         }
 
         client.off('close', ignoreCloseEventListener);
@@ -1025,7 +1032,17 @@ class ViceProcess {
         return (this._proc && !this._proc.exited);
     }
 
-    async spawn(executable, params, exitFunction) {
+    stdout(data) {
+        if (!data) return;
+        logger.debug(data);
+    }
+
+    stderr(data) {
+        if (!data) return;
+        logger.debug(data);
+    }
+
+    async spawn(executable, params, options) {
 
         if (this.alive) {
             this.kill();
@@ -1040,21 +1057,34 @@ class ViceProcess {
 
         const instance = this;
 
+        const commandStr = executable + " " + args.join(" ");
+        logger.debug(`launch emulator: ${commandStr}`)
+
         let proc = null;
 
         try {
             proc = await Utils.spawn(
                 executable,
                 args,
-                (procInfo) => {
-                    if (instance._proc) {
-                        if (exitFunction) exitFunction(instance._proc);
-                        instance._proc = null;
-                    }
+                {
+                    onexit:
+                        (proc) => {
+                            if (options && options.onexit) options.onexit(proc)
+                        },
+                    onstdout:
+                        (data) => {
+                            instance.stdout(data);
+                            if (options && options.onstdout) options.onstdout(data);
+                        },
+                    onstderr:
+                        (data) => {
+                            instance.stderr(data);
+                            if (options && options.onstderr) options.onstderr(data);
+                        }
                 }
             );
-        } catch (err) {
-            throw(err);
+        } catch (procInfo) {
+            throw("failed to create emulator process \"" + executable + "\"" + (procInfo.errorInfo ? " (" + procInfo.errorInfo.code + ")" : ""));
         }
 
         if (proc && !proc.exited) {

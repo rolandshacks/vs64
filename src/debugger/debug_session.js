@@ -213,6 +213,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return value;
     }
 
+
+
     async createEmulatorProcess() {
 
         if (this._emulatorProcess && this._emulatorProcess.alive) {
@@ -228,15 +230,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             await this._emulatorProcess.spawn(
                 settings.emulatorExecutable,
                 settings.emulatorArgs,
-                (proc) => {
-                    if (proc) {
-                        if (proc.exitCode != 0) {
-                            const output = proc.stdout.join("\n");
-                            console.log(output);
+                {
+                    onexit:
+                        (/*proc*/) => {
+                            instance._emulatorProcess = null;
+                            instance.sendEvent(new DebugAdapter.TerminatedEvent());
                         }
-                    }
-                    instance._emulatorProcess = null;
-                    instance.sendEvent(new DebugAdapter.TerminatedEvent());
                 }
             );
         } catch (err) {
@@ -281,11 +280,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 emu = new ViceConnector(this);
                 await emu.connect(hostname, port);
             } catch (err) {
-                return null;
+                logger.error("debug error: " + err);
+                throw(err);
             }
 
         } else {
-            return null;
+            throw("invalid debugger type");
         }
 
         emu.on('error', (err) => {
@@ -374,11 +374,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const emuPort = args.port||6502;
 
         let emu = null;
-        emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort);
 
-        if (!emu) {
+        try {
+            emu = await this.createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort);
+        } catch (err) {
             response.success = false;
-            response.message ="Failed to start emulator. Please check your settings.";
+            response.message ="Failed to start emulator. Please check your settings.\nError: " + err;
             this.sendResponse(response);
             return;
         }

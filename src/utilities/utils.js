@@ -309,7 +309,7 @@ let Utils = {
         return filename;
     },
 
-    spawn: function(executable, args, exitFunction) {
+    spawn: function(executable, args, options) {
 
         return new Promise((resolve, reject) => {
 
@@ -332,6 +332,7 @@ let Utils = {
                     if (null == line) continue;
                     if (line.trim().length > 0) {
                         procInfo.stdout.push(line);
+                        if (options && options.onstdout) options.onstdout(line);
                     }
                 }
             });
@@ -342,12 +343,14 @@ let Utils = {
                     if (null == line) continue;
                     if (line.trim().length > 0) {
                         procInfo.stderr.push(line);
+                        if (options && options.onstderr) options.onstderr(line);
                     }
                 }
             });
 
             proc.on('spawn', () => {
                 procInfo.created = true;
+                if (options && options.onstart) options.onstart(procInfo);
                 resolve(procInfo);
             });
 
@@ -360,7 +363,7 @@ let Utils = {
             proc.on('exit', (code) => {
                 procInfo.exited = true;
                 procInfo.exitCode = code;
-                if (exitFunction) exitFunction(procInfo);
+                if (options && options.onexit) options.onexit(procInfo);
             });
 
         });
@@ -515,7 +518,7 @@ let Utils = {
         const data = fs.readFileSync(source);
         fs.writeFileSync(dest, data);
     },
-    
+
     setExecutablePermission: function(filename) {
 
         try {

@@ -137,6 +137,10 @@ class Logger {
         Logger._sink = sink;
     }
 
+    static setGlobalListener(globalListener) {
+        Logger._globalListener = globalListener;
+    }
+
     static _col(code, txt) {
         if (Logger._enableColors != true) return txt;
         return "\x1b[" + code + "m" + txt + "\x1b[0m";
@@ -168,10 +172,9 @@ class Logger {
 
     _write(txt) {
         if (Logger._sink) {
-            Logger._sink(txt);
-        } else {
-            console.log(txt);
+            if (Logger._sink(txt) == false) return;
         }
+        console.log(txt);
     }
 
     _out(level, txt, fn) {
@@ -182,7 +185,21 @@ class Logger {
         const caller = this._getCaller();
         const str = this._format(time, caller, level, txt);
 
+        if (Logger._globalListener) {
+            const l = caller ? caller.file + ":" + caller.line + " " : "";
+            const c = caller ? this._name + "." + caller.name : this._name;
+            if (Logger._globalListener(level, txt, l, c) == false) return;
+        }
+
         this._write(str);
+    }
+
+    _formatPlain(time, caller, level, txt) {
+        const l = caller ? caller.file + ":" + caller.line + " " : "";
+        const c = caller ? this._name + "." + caller.name : this._name;
+        return this._formatTime(time) + " " +
+               l + LogLevelChars[level] + "/" + c +
+               ": " + txt;
     }
 
     _format(time, caller, level, txt) {
@@ -269,8 +286,9 @@ class Logger {
 }
 
 Logger._globalLevel = LogLevel.Debug;
-Logger._enableColors = true;
 Logger._sink = null;
+Logger._globalListener = null;
+Logger._enableColors = true;
 
 
 //-----------------------------------------------------------------------------------------------//
@@ -279,5 +297,7 @@ Logger._sink = null;
 
 module.exports = {
     Logger: Logger,
-    LogLevel: LogLevel
+    LogLevel: LogLevel,
+    LogLevelNames: LogLevelNames,
+    LogLevelChars: LogLevelChars
 };
