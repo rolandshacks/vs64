@@ -16,7 +16,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
-* Resource compiler for sprites, charsets, tiles, maps and music (SpritePad/Pro, CharPad/Pro, SpriteMate, SID)
+* Resource compiler for sprites, charsets, tiles, maps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, SID)
 * Syntax highlighting for ACME assembler files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
@@ -81,7 +81,8 @@ VS64 comes with an integrated resource compiler that turns media files into plai
 * SpritePadPro and SpritePad 1.8.1 file format (.spd)
 * CharPad64Pro file format (.ctm)
 * SpriteMate file format (.spm)
-* SID file format
+* SID file format (.sid)
+* Raw binary data (.raw)
 
 In order to use the resource compiler, just add your resources files to the "sources" list of the project file.
 

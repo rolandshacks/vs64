@@ -17,7 +17,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
+const { Logger, LogLevel } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 
 const logger = new Logger("Builder");
@@ -170,10 +170,17 @@ class Build {
         const executable = project.ninja || settings.ninjaExecutable;
 
         const args = [
-            //"--quiet",
-            //"-d", "keepdepfile",
             "-f", project.buildfile
         ];
+
+        logger.when(LogLevel.Trace, () => {
+            args.push("-d");
+            args.push("keepdepfile");
+        });
+
+        logger.notWhen(LogLevel.Debug, () => {
+            args.push("--quiet");
+        });
 
         let proc = null;
 

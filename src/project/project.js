@@ -362,7 +362,7 @@ class Project {
         if (!srcs || srcs.length < 1) return false;
 
         for (const src of srcs) {
-            const srcPath = Utils.normalizePath(src);
+            const srcPath = Utils.normalizePath(src.filename);
             if (srcPath == normalizedFilename) return true;
         }
 
@@ -746,15 +746,21 @@ class Project {
     #getBuildPath(sourcePath, newExtension) {
 
         const builddir = this.builddir;
-        if (!builddir) return;
+        const basedir = this.basedir;
+
+        if (!builddir || !basedir) return null;
 
         let buildPath = null;
 
         if (Utils.isSubfolderOf(sourcePath, builddir)) {
             buildPath = path.join(path.dirname(sourcePath), path.basename(sourcePath, path.extname(sourcePath)) + "." + newExtension);
-        } else {
-            const reldir = path.dirname(this.#getRelativePath(sourcePath));
+        } else if (Utils.isSubfolderOf(sourcePath, this.basedir)) {
+            const relpath = this.#getRelativePath(sourcePath);
+            const reldir = path.dirname(relpath);
             buildPath = path.resolve(builddir, reldir, path.basename(sourcePath, path.extname(sourcePath)) + "." + newExtension);
+        } else {
+            const locationHash = Utils.md5(path.dirname(sourcePath));
+            buildPath = path.resolve(builddir, "extern", locationHash, path.basename(sourcePath, path.extname(sourcePath)) + "." + newExtension);
         }
 
         return buildPath;

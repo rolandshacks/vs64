@@ -250,6 +250,7 @@ class ViceMonitorClient {
         this._tokenMap = new Map();
 
         this._client = null;
+        this._disconnecting = false;
 
         this._registerIdMap = new Map();
         this._bankIdMap = new Map();
@@ -269,8 +270,9 @@ class ViceMonitorClient {
         this._tokenMap = new Map();
 
         this.disconnect();
-
         this.clearBuffer();
+
+        this._disconnecting = false;
 
         const app = this;
 
@@ -350,19 +352,33 @@ class ViceMonitorClient {
         }
     }
 
-    async disconnect() {
+    isConnected() {
+        if (this._client != null && this._disconnecting == false);
+    }
+
+    async disconnect(destroyClient) {
 
         const client = this._client;
 
         if (client) {
-            await this.deleteAllBreakpoints();
-            await this.cmdExit();
-            client.destroy();
-            this.clearBuffer();
-            this._client = null;
+
+            if (!this._disconnecting) {
+                this._disconnecting = true;
+                destroyClient = true;
+                await this.deleteAllBreakpoints();
+                await this.cmdExit();
+                this.clearBuffer();
+            }
+
+            if (destroyClient) {
+                this._client = null;
+                client.destroy();
+            }
+
         } else {
             this.clearBuffer();
         }
+
     }
 
     clearBuffer() {
@@ -475,7 +491,8 @@ class ViceMonitorClient {
 
     onClose() {
         logger.trace('Connection closed');
-        this.disconnect();
+        this._disconnecting = true;
+        this.disconnect(true);
     }
 
     onError(e) {
@@ -1438,7 +1455,10 @@ class ViceConnector extends DebugRunner {
         if (!vice) return;
 
         this._stopped = false;
-        vice.cmdExit();
+
+        if (vice.isConnected()) {
+            vice.cmdExit();
+        }
 
         super.stop();
     }

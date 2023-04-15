@@ -5,6 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
+const crypto = require('crypto');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -360,7 +361,7 @@ let Utils = {
                     // async mode: wait for start, but not for exit
                     resolve(procInfo);
                 }
-            });            
+            });
 
             proc.on('error', (err) => {
                 procInfo.exited = true;
@@ -574,6 +575,12 @@ let Utils = {
         }
 
         return null;
+    },
+
+    md5: function(str) {
+        if (!str || str.length < 1) return "0".repeat(32);
+        const result = crypto.createHash('md5').update(str).digest("hex");
+        return result;
     }
 
 };

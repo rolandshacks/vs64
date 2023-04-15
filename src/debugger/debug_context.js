@@ -24,6 +24,68 @@ const { DebugSession } = require('debugger/debug_session');
 const logger = new Logger("DebugContext");
 
 //-----------------------------------------------------------------------------------------------//
+// DebugConfigurationProvider
+//-----------------------------------------------------------------------------------------------//
+class DebugConfigurationProvider {
+    constructor(debugType, debugContext) {
+        this._debugType = debugType;
+        this._debugContext = debugContext;
+    }
+
+    provideDebugConfigurations(folder, token) {
+        const debugConfig = {
+            type: this._debugType,
+            request: "launch",
+            name: "Launch " + this._debugType,
+            preLaunchTask: "${defaultBuildTask}"
+        };
+
+        return debugConfig;
+    }
+
+    resolveDebugConfiguration(folder, debugConfig, token) {
+
+        const session = this._debugContext._session;
+        const project = this._debugContext._project;
+
+        if (null == session) return;
+
+        if (!debugConfig) debugConfig = {};
+
+        if (null == debugConfig.type || debugConfig.type == "") {
+            debugConfig.type = this._debugType;
+        }
+
+        if (null == debugConfig.request || debugConfig.request == "") {
+            debugConfig.request = "launch";
+        }
+
+        if (null == debugConfig.name || debugConfig.name == "") {
+            debugConfig.name = "Launch Program";
+        }
+
+        if (null == debugConfig.program || debugConfig.program == "") {
+
+            if (project) {
+                debugConfig.program = project.outfile;
+            } else {
+                const errMsg = "Could not launch debugger: Program file not specified.";
+                logger.error(errMsg);
+                vscode.window.showErrorMessage(errMsg);
+                return null;
+            }
+        }
+
+        if (null == debugConfig.debugServer) {
+            if (null != session) debugConfig.debugServer = session._port;
+        }
+
+        return debugConfig;
+    }
+
+}
+
+//-----------------------------------------------------------------------------------------------//
 // DebugContext
 //-----------------------------------------------------------------------------------------------//
 class DebugContext {
@@ -35,6 +97,9 @@ class DebugContext {
         this._project = extension._project;
         this._settings = extension._settings;
         this._session = null;
+
+        this._6502DebugConfigProvider = null;
+        this._ViceDebugConfigProvider = null;
     }
 
     // start debugger
@@ -49,10 +114,18 @@ class DebugContext {
             return;
         }
 
-        vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerType6502, this);
-        vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this);
+        //vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerType6502, this);
+        //vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this);
+        //this._context.subscriptions.push(this);
 
-        this._context.subscriptions.push(this);
+        this._6502DebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerType6502, this);
+        vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerType6502, this._6502DebugConfigProvider);
+        this._context.subscriptions.push(this._6502DebugConfigProvider);
+
+        this._ViceDebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerTypeVice, this);
+        vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this._ViceDebugConfigProvider);
+        this._context.subscriptions.push(this._ViceDebugConfigProvider);
+
 
     }
 
@@ -82,58 +155,6 @@ class DebugContext {
         }
 
         return prg;
-    }
-
-    // create DebugAdapter configuration
-    provideDebugConfigurations(folder, token) {
-        const debugConfig = {
-            type: "6502",
-            request: "launch",
-            name: "Launch 6502",
-            program: ""
-        };
-
-        return debugConfig;
-    }
-
-    // update DebugAdapter configuration
-    resolveDebugConfiguration(folder, debugConfig, token) {
-
-        if (null == this._session) return;
-
-        if (!debugConfig) debugConfig = {};
-
-        const project = this._project;
-
-        if (null == debugConfig.type || debugConfig.type == "") {
-            debugConfig.type = "6502";
-        }
-
-        if (null == debugConfig.request || debugConfig.request == "") {
-            debugConfig.request = "launch";
-        }
-
-        if (null == debugConfig.name || debugConfig.name == "") {
-            debugConfig.name = "Launch Program";
-        }
-
-        if (null == debugConfig.program || debugConfig.program == "") {
-
-            if (project) {
-                debugConfig.program = project.outfile;
-            } else {
-                const errMsg = "Could not launch debugger: Program file not specified.";
-                logger.error(errMsg);
-                vscode.window.showErrorMessage(errMsg);
-                return null;
-            }
-        }
-
-        if (null == debugConfig.debugServer) {
-            if (null != this._session) debugConfig.debugServer = this._session._port;
-        }
-
-        return debugConfig;
     }
 }
 

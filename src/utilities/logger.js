@@ -146,6 +146,22 @@ class Logger {
         return "\x1b[" + code + "m" + txt + "\x1b[0m";
     }
 
+    _checkLevel(level) {
+        if (level < Logger._globalLevel) return false;
+        if (this._level != null && level < this._level) return false;
+        return true;
+    }
+    
+    when(level, fn) {
+        if (!this._checkLevel(level)) return;
+        fn();
+    }
+
+    notWhen(level, fn) {
+        if (this._checkLevel(level)) return;
+        fn();
+    }
+
     log(txt) {
         this._out(this._defaultLevel, txt);
     }
@@ -178,8 +194,7 @@ class Logger {
     }
 
     _out(level, txt, fn) {
-        if (level < Logger._globalLevel) return; // global log level
-        if (this._level != null && level < this._level) return; // this instance log level
+        if (!this._checkLevel(level)) return;
 
         const time = Time.millis;
         const caller = this._getCaller();

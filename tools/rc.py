@@ -600,7 +600,7 @@ class SpriteResource(Resource):
             if self.editor_info: s += formatter.comment(f"Editor:       {self.editor_info}\n")
             s += formatter.comment(f"Name:         {sprite.name}\n")
             s += formatter.comment(f"Palette:      {{{self.palette}}} (screen, multicolor 1, multicolor 2)\n")
-            s += formatter.comment(f"Color:        {sprite.color}")
+            s += formatter.comment(f"Color:        {sprite.color}\n")
             s += formatter.comment(f"Multicolor:   {sprite.multicolor}\n")
             s += formatter.comment(f"Double X:     {sprite.double_x}\n")
             s += formatter.comment(f"Double Y:     {sprite.double_y}\n")

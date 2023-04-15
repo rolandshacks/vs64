@@ -3,8 +3,9 @@
     "description": "Example for the LLVM-MOS sdk",
     "toolkit": "llvm",
     "sources": [
-        "src/assem.asm",
-        "src/main.cpp"
+        "src/assembler.asm",
+        "src/main.cpp",
+        "src/data.raw"
     ],
     "build": "debug",
     "definitions": [],

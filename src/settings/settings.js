@@ -27,15 +27,15 @@ const logger = new Logger("Settings");
 const Constants = {
     BinaryMonitorPort: 6502,
     ProjectConfigFile: "project-config.json",
-    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "spm" ],
+    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "raw", "spm" ],
     AssemblerLanguageId: "asm",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
     CppStandard: "c++20",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
-    AutoBuildDelayMs: 2000,
-    ResourceFileFilter: "|res|spm|spd|ctm|sid|",
+    AutoBuildDelayMs: 1250,
+    ResourceFileFilter: "|res|raw|spm|spd|ctm|sid|",
     CppFileFilter: "|c|cpp|cc|",
     AsmFileFilter: "|s|asm|",
     ObjFileFilter: "|o|obj|"

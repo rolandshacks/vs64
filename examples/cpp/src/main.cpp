@@ -5,9 +5,12 @@
 #include <stdio.h>
 
 extern "C" void testfunc(void);
+extern const unsigned char data[];
+
+extern 
 
 int main(void) {
     testfunc();
-    printf("HELLO, %s!\n", "WORLD");
+    printf("%s\n", data);
     return 0;
 }
