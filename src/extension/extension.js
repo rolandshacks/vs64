@@ -46,6 +46,7 @@ class Extension {
      * @param {vscode.ExtensionContext} extensionContext
      */
     constructor(extensionContext) {
+        this._activated = false;
         this._extensionContext = extensionContext;
         this._debugContext = null;
         this._outputChannel = null;
@@ -57,6 +58,10 @@ class Extension {
         this._buildTimer = null;
         this._statusBarItem = null;
         this._intellisenseConfiguratrionProvider = null;
+    }
+
+    isActivated() {
+        return this._activated;
     }
 
     get settings() {
@@ -108,6 +113,9 @@ class Extension {
 
             let disposable = vscode.workspace.onDidChangeConfiguration(function(e) {
                 thisInstance.updateSettings();
+                if (!thisInstance._builder && !thisInstance._buildTimer) {
+                    thisInstance.triggerAutoBuild();
+                }
             });
 
             subscriptions.push(disposable);
@@ -201,11 +209,11 @@ class Extension {
             );
         }
 
+        this._activated = true;
+
         if (this.hasWorkspace()) {
 
-            if (this._settings.autoBuild) {
-                this.triggerBuild();
-            }
+            this.triggerAutoBuild();
 
             vscode.window.onDidChangeActiveTextEditor(function(textEditor) {
                 thisInstance.onDidChangeActiveTextEditor(textEditor);
@@ -301,7 +309,7 @@ class Extension {
 
         const destFolder = workspaceRoot;
 
-        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.res;";
+        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.raw;.res;";
         const includeExtensions = ";.hpp;.hh;.h;.inc;";
 
         let sourceFilesExist = false;
@@ -508,9 +516,7 @@ class Extension {
 
     onSave(document) {
         if (!this.hasWorkspace()) return;
-        if (this._settings.autoBuild) {
-            this.triggerBuild();
-        }
+        this.triggerAutoBuild();
     }
 
     clearDiagnostics() {
@@ -522,6 +528,9 @@ class Extension {
     }
 
     deactivate() {
+
+        this._activated = false;
+        
         if (null != this._debugContext) {
             this._debugContext.stop();
             this._debugContext = null;
@@ -556,6 +565,13 @@ class Extension {
 
         const build = new Build(this._project);
         build.clean(true);
+    }
+
+    triggerAutoBuild() {
+        if (!this.isActivated()) return;
+        if (this._settings.autoBuild) {
+            this.triggerBuild();
+        }
     }
 
     triggerBuild() {

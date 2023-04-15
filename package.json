@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.2.0",
+	"version": "2.2.1",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -123,7 +123,7 @@
 					{
 						"id": "setup_acme",
 						"title": "Setup ACME Cross-Assembler",
-						"description": "In order to use ACME, please download, install and add the ACME install directory to the VS64 preferences.\n\n[Visit ACME Home Page](https://sourceforge.net/projects/acme-crossass)\n\n[Update Settings](command:vs64.showSettings?%22acme%22)",
+						"description": "In order to use ACME, please download, install and add the ACME install directory to the VS64 preferences.\n\n[Visit ACME Home Page](https://sourceforge.net/projects/acme-crossass)\n\n[Customize ACME Setup](command:vs64.showSettings?%22acme%22)",
 						"media": {
 							"markdown": "resources/walkthroughs/acme.md"
 						},
@@ -134,7 +134,7 @@
 					{
 						"id": "setup_cc65",
 						"title": "Setup CC65 C-Compiler",
-						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Update Settings](command:vs64.showSettings?%22cc65%22)",
+						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Customize CC65 Setup](command:vs64.showSettings?%22cc65%22)",
 						"media": {
 							"markdown": "resources/walkthroughs/cc65.md"
 						},
@@ -145,7 +145,7 @@
 					{
 						"id": "setup_llvm",
 						"title": "Setup LLVM-MOS C/C++ Compiler",
-						"description": "VS64 supports the LLVM-MOS C++ Compiler.\n\n[Visit LLVM-MOS Home Page](https://github.com/llvm-mos/llvm-mos-sdk)\n\n[Update Settings](command:vs64.showSettings?%22llvm%22)",
+						"description": "VS64 supports the LLVM-MOS C++ Compiler.\n\n[Visit LLVM-MOS Home Page](https://github.com/llvm-mos/llvm-mos-sdk)\n\n[Customize LLVM Setup](command:vs64.showSettings?%22llvm%22)",
 						"media": {
 							"markdown": "resources/walkthroughs/llvm.md"
 						},
@@ -156,7 +156,7 @@
 					{
 						"id": "setup_vice",
 						"title": "Setup VICE Emulator",
-						"description": "VS64 supports the VICE Emulator.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Update Settings](command:vs64.showSettings?%22emulator%22)",
+						"description": "VS64 supports the VICE Emulator.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Customize VICE Setup](command:vs64.showSettings?%22emulator%22)",
 						"media": {
 							"markdown": "resources/walkthroughs/vice.md"
 						},
@@ -165,15 +165,13 @@
 						]
 					},
 					{
-						"id": "setup_python",
-						"title": "Setup Python",
-						"description": "VS64 utilizes for extended build tools.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Update Settings](command:vs64.showSettings?%22python%22)",
+						"id": "setup_resource_compiler",
+						"title": "Setup Resource Compiler",
+						"description": "VS64 utilizes the Python programming language for the integrated resource compiler features.\n\n[Visit Python Home Page](https://www.python.org/)\n\n[Customize Python Environment](command:vs64.showSettings?%22python%22)",
 						"media": {
-							"markdown": "resources/walkthroughs/python.md"
+							"markdown": "resources/walkthroughs/resource_compiler.md"
 						},
-						"completionEvents": [
-							"onSettingChanged:vs64.pythonExecutable"
-						]
+						"completionEvents": []
 					},
 					{
 						"id": "setup_project",

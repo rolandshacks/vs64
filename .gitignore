@@ -8,3 +8,5 @@ node_modules
 build
 *~
 *.vsix
+examples/**/settings.json
+examples/**/c_cpp_properties.json

@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.2.1 Minor Update
+
+- Minor clean-up, enhancements and bug-fixes
+
 ## 2.2.0 Major Update
 
 - Added resource compiler feature

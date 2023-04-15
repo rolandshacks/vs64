@@ -362,7 +362,7 @@ class Project {
         if (!srcs || srcs.length < 1) return false;
 
         for (const src of srcs) {
-            const srcPath = Utils.normalizePath(src);
+            const srcPath = Utils.normalizePath(src.filename);
             if (srcPath == normalizedFilename) return true;
         }
 

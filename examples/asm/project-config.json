@@ -4,9 +4,9 @@
     "toolkit": "acme",
     "sources": [
         "src/main.asm",
-        "resources/sprites.spm"
+        "src/data.raw"
     ],
     "build": "debug",
     "definitions": [],
-    "includes": ["lib64/include", "resources"]
+    "includes": []
 }
