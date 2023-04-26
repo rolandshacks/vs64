@@ -71,10 +71,10 @@
             "cwd": "${workspaceFolder}/test"
         },
         {
-            "name": "Run Graph",
+            "name": "Run Language",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/graph.run.js",
+            "program": "${workspaceFolder}/test/language.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {
@@ -103,8 +103,8 @@
                 "--config",
                 "${workspaceFolder}/test/jest.config.js",
                 "-t",
-                //"graph"
-                "basic"
+                "language"
+                //"basic"
             ]
         }
     ]

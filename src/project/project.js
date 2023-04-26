@@ -766,6 +766,29 @@ class Project {
         return buildPath;
     }
 
+    queryAllAsmFiles() {
+
+        const project = this;
+        const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
+        const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+
+        if (resSources && resSources.length > 0) {
+            for (let resSource of resSources) {
+                const asmFile = this.#getBuildPath(resSource, "asm");
+                if (asmSources.indexOf(asmFile) == -1) {
+                    asmSources.push(asmFile);
+                }
+            }
+        }
+
+        const queryResult = [ ...asmSources ];
+        for (const asmSource of asmSources) {
+            this.#getReferences(asmSource, queryResult);
+        }
+
+        return queryResult;
+    }
+
     createBuildFile() {
 
         const project = this;

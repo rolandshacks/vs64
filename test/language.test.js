@@ -1,5 +1,5 @@
 //
-// Test basics
+// Parser tests
 //
 
 const assert = require('assert');
@@ -20,16 +20,13 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { DependencyGraph, DependencyGraphNode } = require('project/dependency_graph');
+const { AcmeParser } = require('parser/parser');
 const { Logger, LogLevel } = require('utilities/logger');
 
-const logger = new Logger("TestGraph");
+const logger = new Logger("TestParser");
 
-describe('graph', () => {
-test("graph_basics", () => {
-
-    const graph = new DependencyGraph();
-
+describe('language', () => {
+test("language_basics", () => {
 
 }); // test
 

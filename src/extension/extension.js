@@ -24,7 +24,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel, LogLevelChars } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
-const { Constants, AnsiColors, Settings } = require('settings/settings');
+const { Constants, AnsiColors, Settings, Opcodes } = require('settings/settings');
 const { Project } = require('project/project');
 const { DebugContext } = require('debugger/debug_context');
 const { Build, BuildResult } = require('builder/builder');
@@ -33,6 +33,7 @@ const { IntellisenseConfiguratrionProvider } = require('extension/intellisense')
 const { TaskProvider } = require('extension/task_provider');
 const { StatusBarItem } = require('extension/statusbar');
 const { DisassemblerView } = require('extension/disassembler_view');
+const { LanguageFeatureProvider } = require('language/language');
 
 const logger = new Logger("Extension");
 
@@ -93,7 +94,7 @@ class Extension {
     	}
 
         return path.resolve(workspaceRoot, filename);
-    }    
+    }
 
     activate() {
 
@@ -127,6 +128,15 @@ class Extension {
 
         { // create diagnostic provider
             this._diagnostics = new DiagnosticProvider(this);
+        }
+
+        { // register language feature providers
+            subscriptions.push(vscode.languages.registerDefinitionProvider(
+                "asm", new LanguageFeatureProvider(this._project, (filename) => { return vscode.Uri.file(filename); })
+            ));
+            subscriptions.push(vscode.languages.registerReferenceProvider(
+                "asm", new LanguageFeatureProvider(this._project, (filename) => { return vscode.Uri.file(filename); })
+            ));
         }
 
         { // create status bar item
@@ -530,7 +540,7 @@ class Extension {
     deactivate() {
 
         this._activated = false;
-        
+
         if (null != this._debugContext) {
             this._debugContext.stop();
             this._debugContext = null;

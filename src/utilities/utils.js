@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
+const process = require('process');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -581,6 +582,25 @@ let Utils = {
         if (!str || str.length < 1) return "0".repeat(32);
         const result = crypto.createHash('md5').update(str).digest("hex");
         return result;
+    },
+
+    isWhitespace: function(c) {
+        return c === ' '
+            || c === '\n'
+            || c === '\t'
+            || c === '\r'
+            || c === '\f'
+            || c === '\v'
+            || c === '\u00a0'
+            || c === '\u1680'
+            || c === '\u2000'
+            || c === '\u200a'
+            || c === '\u2028'
+            || c === '\u2029'
+            || c === '\u202f'
+            || c === '\u205f'
+            || c === '\u3000'
+            || c === '\ufeff';
     }
 
 };
@@ -816,11 +836,89 @@ class SortedArray {
 }
 
 //-----------------------------------------------------------------------------------------------//
+// StopWatch
+//-----------------------------------------------------------------------------------------------//
+
+class StopWatch {
+    constructor() {
+        this._start = null;
+        this._elapsed = 0;
+    }
+
+    get elapsedNanos() { return this._elapsed; }
+    get elapsedMicros() { return this._elapsed / 1000; }
+    get elapsedMillis() { return this._elapsed / 1000000; }
+    get elapsedSeconds() { return this._elapsed / 1000000000; }
+
+    get elapsed() { return this.elapsedNanos; }
+
+    start() {
+        this._start = process.hrtime.bigint();
+    }
+
+    stop() {
+        const current = process.hrtime.bigint();
+        this._elapsed = Number(current - this._start);
+    }
+}
+
+//-----------------------------------------------------------------------------------------------//
+// Character Codes
+//-----------------------------------------------------------------------------------------------//
+
+const CharCode = {
+    A: 'A'.charCodeAt(0),
+    Z: 'Z'.charCodeAt(0),
+    a: 'a'.charCodeAt(0),
+    z: 'z'.charCodeAt(0),
+    _0: '0'.charCodeAt(0),
+    _9: '9'.charCodeAt(0),
+    Semicolon: ';'.charCodeAt(0),
+    LineFeed: '\n'.charCodeAt(0),
+    CarriageReturn: '\r'.charCodeAt(0),
+    Tabulator: '\t'.charCodeAt(0),
+    Period: '.'.charCodeAt(0),
+    SingleQuote: '\''.charCodeAt(0),
+    DoubleQuote: '\"'.charCodeAt(0),
+    Underscore: '_'.charCodeAt(0),
+    Colon: ':'.charCodeAt(0),
+    NumberSign: '#'.charCodeAt(0),
+    Exclamation: '!'.charCodeAt(0)
+};
+
+//-----------------------------------------------------------------------------------------------//
+// ParserHelper
+//-----------------------------------------------------------------------------------------------//
+
+class ParserHelper {
+
+    static isNumeric(c) {
+        return (c >= CharCode._0 && c <= CharCode._9); // 0-9
+    }
+
+    static isAlpha(c) {
+        return ((c >= CharCode.A && c <= CharCode.Z) || (c >= CharCode.a && c <= CharCode.z)); // A-Z | a-z
+    }
+
+    static isAlphaNumeric(c) {
+        return ParserHelper.isNumeric(c) || ParserHelper.isAlpha(c);
+    }
+
+    static isSymbolChar(c) {
+        return (ParserHelper.isAlphaNumeric(c) || c == CharCode.Underscore);
+    }
+
+}
+
+//-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
     Utils: Utils,
     Formatter: Formatter,
-    SortedArray: SortedArray
+    SortedArray: SortedArray,
+    StopWatch: StopWatch,
+    ParserHelper: ParserHelper,
+    CharCode: CharCode
 };

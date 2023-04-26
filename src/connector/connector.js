@@ -262,6 +262,7 @@ class ViceMonitorClient {
         this._messageBufferUsage = 0;
 
         this._eventFn = null;
+        this._errorFn = null;
     }
 
     async connect(hostname, port) {
@@ -332,7 +333,9 @@ class ViceMonitorClient {
 
         client.off('error', connectErrorEventListener);
         client.on('error', (e) => {
-            throw(e);
+            logger.error(e);
+            app.onClose();
+            app.fireError(e);
         });
 
         client.setNoDelay(true);
@@ -838,6 +841,16 @@ class ViceMonitorClient {
         }
     }
 
+    onError(fn) {
+        this._errorFn = fn;
+    }
+
+    fireError(err) {
+        if (this._errorFn) {
+            this._errorFn(err);
+        }
+    }
+
     sendCommand(id, data) {
 
         const token = this.allocToken(id);
@@ -1063,6 +1076,7 @@ class ViceProcess {
         }
 
         const args = [];
+        args.push("+remotemonitor");
         args.push("-binarymonitor");
 
         if (port) {
@@ -1164,9 +1178,14 @@ class ViceConnector extends DebugRunner {
         logger.trace("connected to vice binary monitor port");
 
         const instance = this;
+
         vice.onEvent((event) => {
             instance.onEvent(event);
-        })
+        });
+
+        vice.onError((err) => {
+            instance.onError(err);
+        });
 
     }
 
@@ -1177,6 +1196,10 @@ class ViceConnector extends DebugRunner {
 
             logger.trace("disconnected from vice binary monitor port");
         }
+    }
+
+    onError(err) {
+        this.fireEvent('stopped', DebugInterruptReason.FAILED);
     }
 
     onEvent(event) {

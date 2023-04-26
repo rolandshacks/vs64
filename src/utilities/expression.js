@@ -55,7 +55,7 @@ class ExpressionLanguage {
         } else if (base == 16) {
             return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
         }
-        return (c >= '0' && c <= '9')        
+        return (c >= '0' && c <= '9')
     }
 
     isSymbol(c) {
