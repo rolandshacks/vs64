@@ -39,10 +39,12 @@ function runLanguage() {
         src += "; This is a comment\n";
         src += ";\n";
         src += "!set variable" + i + "=99\n";
+        src += "data_label" + i + " !byte 1,2,3,4\n";
         src += "\n";
         src += "global_label" + i + " ; Global Label\n";
         src += "pha\n";
         src += "lda #$1\n";
+        src += "jsr data_label\n";
         src += ".local_label" + i + " ; Local Label\n";
         src += "sta $0400\n";
         src += "pla\n";

@@ -184,15 +184,15 @@ class AcmeParser extends ParserBase {
         const token = tokens[ofs];
         const tokenType = token.type;
 
-        if (count == 1) {
-            if (tokenType == TokenType.Identifier) {
-                if (!token.isOpcode()) {
-                    statement = new Statement(StatementType.Definition, tokens, ofs, count);
-                }
-            } else if (tokenType == TokenType.Comment) {
-                statement = new Statement(StatementType.Comment, tokens, ofs, 1);
+        const _tokenText = token.text;
+
+        if (tokenType == TokenType.Identifier) {
+            if (!token.isOpcode()) {
+                statement = new Statement(StatementType.Definition, tokens, ofs, 1);
             }
-        } else {
+        } else if (tokenType == TokenType.Comment) {
+            statement = new Statement(StatementType.Comment, tokens, ofs, 1);
+        } else if (count > 1) {
             const token2 = tokens[ofs+1];
             const macroCommand = token.text;
             if (tokenType == TokenType.Macro
