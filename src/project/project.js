@@ -484,9 +484,7 @@ class Project {
         let pos = 0;
         let endpos = source.length;
 
-        while (pos < endpos && isWhitespace(source[pos])) {
-            pos++;
-        }
+        while (pos < endpos && isWhitespace(source[pos])) { pos++; }
 
         if (pos == endpos) return null;
 
@@ -495,6 +493,15 @@ class Project {
         // just scan for special tokens
         if (firstChar != '!' && firstChar != '#') return null;
 
+        if (source.startsWith("!if", pos)) {
+            pos += 3;
+            while (pos < endpos && source[pos] != '!') {
+                pos++;
+            }
+
+            if (pos == endpos) return null;
+        }
+
         let token = null;
 
         for (const tokenName of Object.keys(TokenDescriptors)) {
@@ -502,17 +509,39 @@ class Project {
 
             if (source.startsWith(tokenName, pos)) {
                 pos += tokenName.length;
-                let value = source.substring(pos).trim();
 
-                if (value.length > 0) {
-                    if (value[0] == '"') {
-                        value = value.substring(1, value.length-1);
-                    } else if (value[0] == '<') {
-                        value = value.substring(1, value.length-1);
+                while (pos < endpos && isWhitespace(source[pos])) { pos++; }
+                if (pos == endpos) break;
+
+                const startChar = source.charAt(pos);
+                if (startChar != '\"' && startChar != '\'' && startChar != '<') break;
+
+                pos++;
+                const startPos = pos;
+
+                let escaped = false;
+                while (pos < endpos) {
+                    const c = source.charAt(pos);
+                    if (escaped) {
+                        escaped = false;
+                    } else {
+                        if (c == '>') {
+                            if (startChar == '<') break;
+                        } else if (c == startChar) {
+                            break;
+                        } else if (c == '\\') {
+                            escaped = true;
+                        }
                     }
+                    pos++;
                 }
 
-                token = new Token(tokenDescriptor, value, lineNumber);
+                let value = source.substring(startPos, pos).trim();
+
+                if (value.length > 0) {
+                    token = new Token(tokenDescriptor, value, lineNumber);
+                }
+
                 break;
             }
         }

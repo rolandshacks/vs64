@@ -33,7 +33,7 @@ function addStyle(txt, ...styles) {
         str += "\x1b[" + arg + "m";
     }
     str += txt + "\x1b[0m";
-y}
+}
 
 class TaskTerminal {
     constructor(definition, settings, builder) {

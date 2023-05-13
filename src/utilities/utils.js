@@ -883,7 +883,10 @@ const CharCode = {
     Underscore: '_'.charCodeAt(0),
     Colon: ':'.charCodeAt(0),
     NumberSign: '#'.charCodeAt(0),
-    Exclamation: '!'.charCodeAt(0)
+    Exclamation: '!'.charCodeAt(0),
+    Space: ' '.charCodeAt(0),
+    Plus: '+'.charCodeAt(0),
+    Minus: '-'.charCodeAt(0)
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -906,6 +909,10 @@ class ParserHelper {
 
     static isSymbolChar(c) {
         return (ParserHelper.isAlphaNumeric(c) || c == CharCode.Underscore);
+    }
+
+    static isWhitespace(c) {
+        return (c == CharCode.Space || c == CharCode.Tabulator || c == CharCode.LineFeed || c == CharCode.CarriageReturn);
     }
 
 }

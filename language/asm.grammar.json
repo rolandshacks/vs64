@@ -55,9 +55,12 @@
 					"include": "#meta-declaration"
 				},
 				{
+					"include": "#meta-macro-declaration"
+				},
+				{
 					"include": "#meta-macro-call"
 				}
-			]
+            ]
 		},
 		"meta-declaration": {
 			"patterns": [
@@ -95,7 +98,7 @@
 			"patterns": [
 				{
 					"name": "meta.diff.header",
-					"match": "\\!(if|ifdef|for|set|do|warn|error|serious|endoffile|pseudopc)\\b"
+					"match": "\\!(if|ifdef|for|do|warn|error|serious|endoffile|pseudopc)\\b"
 				}
 			]
 		},

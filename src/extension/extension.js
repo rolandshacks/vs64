@@ -59,6 +59,7 @@ class Extension {
         this._buildTimer = null;
         this._statusBarItem = null;
         this._intellisenseConfiguratrionProvider = null;
+        this._languageFeatureProvider = null;
     }
 
     isActivated() {
@@ -131,12 +132,15 @@ class Extension {
         }
 
         { // register language feature providers
-            subscriptions.push(vscode.languages.registerDefinitionProvider(
-                "asm", new LanguageFeatureProvider(this._project, (filename) => { return vscode.Uri.file(filename); })
-            ));
-            subscriptions.push(vscode.languages.registerReferenceProvider(
-                "asm", new LanguageFeatureProvider(this._project, (filename) => { return vscode.Uri.file(filename); })
-            ));
+
+            const languageFeatureSelector = "asm";
+            const languageFeatureProvider = new LanguageFeatureProvider(this._project);
+
+            subscriptions.push(vscode.languages.registerDefinitionProvider(languageFeatureSelector, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerReferenceProvider(languageFeatureSelector, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerCompletionItemProvider(languageFeatureSelector, languageFeatureProvider));
+
+            this._languageFeatureProvider = languageFeatureProvider;
         }
 
         { // create status bar item

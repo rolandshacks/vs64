@@ -22,7 +22,42 @@ const { Definition, Location, Range, ParserBase, DefinitionProvider, AbstractSyn
 const logger = new Logger("AsmLanguage");
 
 //-----------------------------------------------------------------------------------------------//
-// ACME Parser
+// ACME Grammar
+//-----------------------------------------------------------------------------------------------//
+
+const AcmeGrammar = {
+    pseudoOpcodes: [
+        "fill", "fi", "align", "convtab", "ct", "text", "tx", "pet", "raw", "scr", "scrxor", "to",
+        "source", "src","binary", "bin", "zone", "zn", "sl", "svl", "sal", "pdb", "if", "ifdef",
+        "for", "do", "endoffile", "warn", "error", "serious", "macro", "set", "initmem", "pseudopc",
+        "cpu", "al", "as", "rl", "rs", "cbm", "subzone", "sz", "realpc", "previouscontext", "byte",
+        "by", "word", "wo"
+    ],
+
+    fuzzySearch: function(query) {
+
+        if (!query || query.length < 1) return null;
+
+        const items = [];
+
+        if (query.charCodeAt(0) == CharCode.Exclamation) {
+            for (let item of AcmeGrammar.pseudoOpcodes) {
+                const token = "!" + item;
+                if (token.startsWith(query)) {
+                    items.push(token);
+                }
+            }
+        }
+
+        if (items.length < 1) return null;
+
+        return items;
+    }
+
+};
+
+//-----------------------------------------------------------------------------------------------//
+// Parser Iterator
 //-----------------------------------------------------------------------------------------------//
 
 class ParserIterator {
@@ -54,8 +89,12 @@ class ParserIterator {
         this.col = 0;
     }
 
-
 }
+
+
+//-----------------------------------------------------------------------------------------------//
+// ACME Parser
+//-----------------------------------------------------------------------------------------------//
 
 class AcmeParser extends ParserBase {
     constructor() {
@@ -77,7 +116,9 @@ class AcmeParser extends ParserBase {
         while (!it.eof()) {
 
             const c = it.peek();
-            let token = null;
+            const c2 = (it.ofs+1 < len) ? src.charCodeAt(it.ofs+1) : 0;
+
+            let tokens = [];
 
             if (c == CharCode.CarriageReturn || c == CharCode.LineFeed) {
 
@@ -89,7 +130,7 @@ class AcmeParser extends ParserBase {
                 }
                 it.nextline();
 
-                token = new Token(TokenType.LineBreak, src, range);
+                tokens.push(new Token(TokenType.LineBreak, src, range));
 
             } else if (c == CharCode.Semicolon) {
 
@@ -99,18 +140,40 @@ class AcmeParser extends ParserBase {
                     range.inc(); it.next();
                 }
 
-                token = new Token(TokenType.Comment, src, range);
+                tokens.push(new Token(TokenType.Comment, src, range));
 
-            } else if (c == CharCode.Period || c == CharCode.Underscore || ParserHelper.isAlpha(c)) {
+            } else if (c == CharCode.Plus && c2 == CharCode.Plus) {
+                it.next(); // skip ++
+                it.next();
+            } else if (c == CharCode.Period || c == CharCode.Underscore || ParserHelper.isAlpha(c) || (c == CharCode.Plus && ParserHelper.isSymbolChar(c2))) {
 
-                const range = new Range(it.ofs, it.row, it.col);
-                range.inc(); it.next();
+                let range = null;
+
+                let isReference = false;
+
+                if (c == CharCode.Plus && ParserHelper.isSymbolChar(c2)) {
+                    if (tokensPerLineCount == 0) {
+                        // '+macro' expression
+                        isReference = true;
+                        const prefixRange = new Range(it.ofs, it.row, it.col);
+                        prefixRange.inc(); it.next();
+                        tokens.push(new Token(TokenType.Reference, src, prefixRange));
+                    } else {
+                        // just a '+' operator in front of identifier
+                        it.next();
+                    }
+                }
+
+                range = new Range(it.ofs, it.row, it.col);
+                if (!isReference) {
+                    range.inc(); it.next();
+                }
 
                 while (it.ofs < len && ParserHelper.isSymbolChar(src.charCodeAt(it.ofs))) {
                     range.inc(); it.next();
                 }
 
-                token = new Token(TokenType.Identifier, src, range);
+                tokens.push(new Token(TokenType.Identifier, src, range));
 
             } else if (c == CharCode.Exclamation) {
 
@@ -121,7 +184,7 @@ class AcmeParser extends ParserBase {
                     range.inc(); it.next();
                 }
 
-                token = new Token(TokenType.Macro, src, range);
+                tokens.push(new Token(TokenType.Macro, src, range));
 
             } else if (c == CharCode.SingleQuote || c == CharCode.DoubleQuote) {
                 const quoteChar = c;
@@ -138,26 +201,28 @@ class AcmeParser extends ParserBase {
                     it.next(); // skip closing quote char
                 }
 
-                token = new Token(TokenType.String, src, range);
+                tokens.push(new Token(TokenType.String, src, range));
 
             } else {
                 it.next();
             }
 
-            if (token) {
-                
-                ast.addToken(token);
-                if (tokensPerLineCount == 0) token.setFirstFlag();
+            if (tokens.length > 0) {
 
-                if (token.type == TokenType.LineBreak || token.type == TokenType.Comment) {
-                    if (tokensPerLineCount > 0) {
-                        this.lexer(tokensPerLineOfs, tokensPerLineCount);
-                        tokensPerLineOfs = -1;
-                        tokensPerLineCount = 0;
+                for (const token of tokens) {
+                    ast.addToken(token);
+                    if (tokensPerLineCount == 0) token.setFirstFlag();
+
+                    if (token.type == TokenType.LineBreak || token.type == TokenType.Comment) {
+                        if (tokensPerLineCount > 0) {
+                            this.lexer(tokensPerLineOfs, tokensPerLineCount);
+                            tokensPerLineOfs = -1;
+                            tokensPerLineCount = 0;
+                        }
+                    } else {
+                        if (tokensPerLineOfs == -1) tokensPerLineOfs = ast.tokens.length - 1;
+                        tokensPerLineCount++;
                     }
-                } else {
-                    if (tokensPerLineOfs == -1) tokensPerLineOfs = ast.tokens.length - 1;
-                    tokensPerLineCount++;
                 }
             }
 
@@ -212,7 +277,7 @@ class AcmeParser extends ParserBase {
         }
     }
 
-    getTokenAtDocumentPos(document, position) {
+    getTokenAtDocumentPos(document, position, leftOnly, greedyParsing) {
         if (!document || !position) return null;
 
         const textLine = document.lineAt(position.line);
@@ -221,24 +286,31 @@ class AcmeParser extends ParserBase {
         const source = textLine.text;
         const offset = position.character;
 
-        return this.getTokenAtSourcePos(source, offset);
+        return this.getTokenAtSourcePos(source, offset, leftOnly, greedyParsing);
     }
 
-    getTokenAtSourcePos(source, offset) {
+    getTokenAtSourcePos(source, offset, leftOnly, greedyParsing) {
 
         let startPos = offset;
         while (startPos > 0) {
             const c = source.charCodeAt(startPos-1);
-            if (c != CharCode.Period && !ParserHelper.isSymbolChar(c)) break;
+            if (greedyParsing) {
+                if (ParserHelper.isWhitespace(c)) break;
+            } else {
+                if (c != CharCode.Period && !ParserHelper.isSymbolChar(c)) break;
+            }
             startPos--;
             if (c == '.') break; // just accept single '.' as prefix to label
         }
 
         let endPos = offset + 1;
-        while (endPos < source.length) {
-            const c = source.charCodeAt(endPos);
-            if (!ParserHelper.isSymbolChar(c)) break;
-            endPos++;
+
+        if (!leftOnly) {
+            while (endPos < source.length) {
+                const c = source.charCodeAt(endPos);
+                if (!ParserHelper.isSymbolChar(c)) break;
+                endPos++;
+            }
         }
 
         const token = source.substring(startPos, endPos).trim();
@@ -254,5 +326,6 @@ class AcmeParser extends ParserBase {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    AcmeParser: AcmeParser
+    AcmeParser: AcmeParser,
+    AcmeGrammar: AcmeGrammar
 }

@@ -32,7 +32,8 @@ const TokenType = {
     String: 4,
     Number: 5,
     LineBreak: 6,
-    Macro: 7
+    Macro: 7,
+    Reference: 8
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -84,6 +85,7 @@ class Token {
         if (type == TokenType.String) return "string";
         if (type == TokenType.Number) return "number";
         if (type == TokenType.Macro) return "macro";
+        if (type == TokenType.Reference) return "reference";
 
         return "unknown";
     }

@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.3.2 Minor Update
+
+- Added code completion for ACME pseudo opcodes
+- Improved parsing for ACME language support features
+- Minor bug-fixes
+
 ## 2.3.1 Minor Update
 
 - Minor bug-fix

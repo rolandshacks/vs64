@@ -12,13 +12,18 @@ const fs = require('fs');
 BIND(module);
 
 //-----------------------------------------------------------------------------------------------//
+// Vscode Module
+//-----------------------------------------------------------------------------------------------//
+const vscode = require('vscode');
+
+//-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Logger } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { Constants, Opcodes } = require('settings/settings');
 const { TokenType } = require('language/language_base');
-const { AcmeParser } = require('language/language_asm');
+const { AcmeParser, AcmeGrammar } = require('language/language_asm');
 
 const logger = new Logger("Language");
 
@@ -55,10 +60,10 @@ class Parser {
         return parser._impl.ast;
     }
 
-    static getTokenAtDocumentPos(document, position) {
+    static getTokenAtDocumentPos(document, position, leftOnly, greedyParsing) {
         const parser = Parser.fromType("asm");
         if (!parser) return null;
-        return parser._impl.getTokenAtDocumentPos(document, position);
+        return parser._impl.getTokenAtDocumentPos(document, position, leftOnly, greedyParsing);
     }
 
 }
@@ -68,9 +73,31 @@ class Parser {
 //-----------------------------------------------------------------------------------------------//
 
 class LanguageFeatureProvider {
-    constructor(project, pathToUriFn) {
+    constructor(project) {
         this._project = project;
-        this._pathToUriFn = pathToUriFn;
+    }
+
+    // CompletionProvider
+
+    async provideCompletionItems(document, position, cancellationToken) {
+        const identifier = Parser.getTokenAtDocumentPos(document, position, true, true);
+        if (!identifier) return null;
+
+        const completedItems = AcmeGrammar.fuzzySearch(identifier);
+        if (!completedItems || completedItems.length < 1) return null;
+
+        const startPosition = new vscode.Position(position.line, position.character - identifier.length);
+
+        const items = [];
+
+        for (const item of completedItems) {
+            const completionItem = new vscode.CompletionItem(item);
+            completionItem.kind = vscode.CompletionItemKind.Keyword;
+            completionItem.range = new vscode.Range(startPosition, position);
+            items.push(completionItem);
+        }
+
+        return items;
     }
 
     // DefinitionProvider
@@ -87,8 +114,6 @@ class LanguageFeatureProvider {
 
         const project = this._project;
         if (!project.isValid()) return null;
-
-        const pathToUriFn = this._pathToUriFn;
 
         const sources = project.queryAllAsmFiles();
         const locations = [];
@@ -112,7 +137,7 @@ class LanguageFeatureProvider {
                     isEmpty: false,
                     isSingleLine: true
                 },
-                uri: pathToUriFn ? pathToUriFn(filename) : filename
+                uri: vscode.Uri.file(filename)
             });
 
         }
@@ -136,8 +161,6 @@ class LanguageFeatureProvider {
 
         const project = this._project;
         if (!project.isValid()) return null;
-
-        const pathToUriFn = this._pathToUriFn;
 
         const sources = project.queryAllAsmFiles();
         const locations = [];
@@ -167,7 +190,7 @@ class LanguageFeatureProvider {
                         isEmpty: false,
                         isSingleLine: true
                     },
-                    uri: pathToUriFn ? pathToUriFn(filename) : filename
+                    uri: vscode.Uri.file(filename)
                 });
             }
         }

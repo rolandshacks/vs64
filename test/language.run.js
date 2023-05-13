@@ -10,7 +10,9 @@ const fs = require('fs');
 //-----------------------------------------------------------------------------------------------//
 
 global._sourcebase = path.resolve(__dirname, "../src");
+global._mockup = path.resolve(__dirname, "../test/mockup");
 global.BIND = function (_module) {
+    _module.paths.push(global._mockup);
     _module.paths.push(global._sourcebase);
 };
 
@@ -34,6 +36,7 @@ function runLanguage() {
 
     let src = "";
 
+    /*
     for (let i=0; i<100000; i++) {
         src += ";\n";
         src += "; This is a comment\n";
@@ -51,6 +54,17 @@ function runLanguage() {
         src += "rts\n";
         src += "\n";
     }
+    */
+
+    src += ";\n";
+    src += "!macro testmacro {\n";
+    src += "    rts\n";
+    src += "}\n";
+    src += "\n";
+    src += "testlabel\n"
+    src += "    +testmacro 123\n";
+    src += "    rts\n";
+    src += "\n";
 
     const stopWatch = new StopWatch();
 
