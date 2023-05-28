@@ -63,16 +63,43 @@ class Token {
 }
 
 class ProjectItem {
-    constructor(filename) {
+    constructor(filename, attributes) {
         this._filename = filename;
         let ext = path.extname(filename) || ""
         if (ext && ext[0] == '.') ext = ext.substring(1);
         this._extension = ext.toLowerCase();
+        this._args = null;
+        this.setArgs(attributes);
     }
 
     get filename() { return this._filename; }
     get extension() { return this._extension; }
 
+    setArgs(attributes) {
+        if (!attributes) return;
+
+        let args = "";
+
+        for (const key of Object.keys(attributes)) {
+            if (key == "path") continue;
+            const value = attributes[key];
+            const s = "--" + key + "=" + value;
+            if (args.length > 0) args += " ";
+            args += s;
+        }
+
+        if (args.length < 1) return;
+
+        this._args = args;
+    }
+
+    hasArgs() {
+        return (this._args != null);
+    }
+
+    getArgs() {
+        return this._args;
+    }
 }
 
 class Project {
@@ -242,10 +269,12 @@ class Project {
         if (data.sources) {
             for (const src of data.sources) {
                 let filename = null;
+                let isStructuredData = false;
                 if (typeof src === 'string') {
                     filename = src;
                 } else {
                     filename = src.path;
+                    isStructuredData = true;
                 }
 
                 if (!filename) continue;
@@ -254,7 +283,7 @@ class Project {
 
                 if (srcFilenames.indexOf(resolvedFilename) == -1) {
                     srcFilenames.push(resolvedFilename);
-                    srcs.push(new ProjectItem(resolvedFilename));
+                    srcs.push(new ProjectItem(resolvedFilename, isStructuredData ? src : null));
                 }
             }
         }
@@ -553,7 +582,7 @@ class Project {
         return token;
     }
 
-    querySourceByExtension(extensions) {
+    querySourceItemsByExtension(extensions) {
         const srcs = this.sources;
         if (!srcs || srcs.length < 1) return null;
 
@@ -563,8 +592,25 @@ class Project {
             const src = srcItem.filename;
             const ext = srcItem.extension;
             if (ext && extensions.indexOf('|' + ext + '|') >= 0) {
-                result.push(src);
+                result.push(srcItem);
             }
+        }
+
+        if (result.length < 1) return null;
+
+        return result;
+    }
+
+    querySourceByExtension(extensions) {
+
+        const srcItems = this.querySourceItemsByExtension(extensions);
+        if (!srcItems || srcItems.length < 1) return null;
+
+        const result = [];
+
+        for (const srcItem of srcItems) {
+            const src = srcItem.filename;
+            result.push(src);
         }
 
         if (result.length < 1) return null;
@@ -868,6 +914,7 @@ class Project {
             script.push("");
 
             script.push(this.#keyValue("project", project.name));
+            script.push(this.#keyValue("config", project.configfile));
             script.push(this.#keyValue("target", project.outfile));
             script.push(this.#keyValue("dbg_out", project.outdebug));
 
@@ -899,7 +946,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --asm -o $out $in");
+            script.push("    command = $python_exe $rc_exe --asm --config $config -o $out $in");
             script.push("");
 
             script.push("rule asm");
@@ -979,7 +1026,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --cc -o $out $in");
+            script.push("    command = $python_exe $rc_exe --cc --config $config -o $out $in");
             script.push("");
 
             script.push("rule cc");
@@ -1086,7 +1133,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --cpp -o $out $in");
+            script.push("    command = $python_exe $rc_exe --cpp --config $config -o $out $in");
             script.push("");
 
             script.push("rule cc");

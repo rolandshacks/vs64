@@ -3,6 +3,7 @@
 import sys
 import os
 import getopt
+import math
 
 from enum import Enum
 from typing import Optional
@@ -10,7 +11,8 @@ from datetime import datetime
 
 import json
 
-#import png
+#import matplotlib.pyplot as plt
+#import matplotlib as mpl
 
 #############################################################################
 # Helpers
@@ -25,6 +27,9 @@ class Constants:
                    "0123456789"\
                    "_"
     MAX_LINE_LENGTH = 80
+    RESOURCE_CONFIG_ROOT = "resources"
+    DEFAULT_SAMPLE_FREQUENCY = 4000
+    DEFAULT_SAMPLE_BITS = 4
 
 class OutputFormat(Enum):
     """Output format identifiers."""
@@ -33,6 +38,10 @@ class OutputFormat(Enum):
     CPP = 1
     C = 2
     ASM = 3
+
+def clamp(value, min_value, max_value):
+    """Clamp value"""
+    return max(min_value, min(value, max_value))
 
 
 #############################################################################
@@ -53,6 +62,7 @@ class BaseFormatter:
         self.bytearray_linebegin: str = '  '
         self.bytearray_singlelinemode: bool = False
         self.bytearray_end: str = '}};\n'
+        self.bytearray_size: str = '{0}_size = {1};\n'
 
     def begin_namespace(self, name: str):
         """Return namespace opening."""
@@ -123,11 +133,22 @@ class BaseFormatter:
                    bitmask: Optional[int]=None, bitscale: Optional[int]=None,
                    elements_per_line: Optional[int]=None):
         """Format named byte array as hex value block."""
+
+        data_len = sz if sz else len(data)
+
         s = ""
-        s += self.bytearray_begin.format(name, len(data))
-        s += self.binary(data, ofs, sz, bitmask, bitscale, elements_per_line)
-        s += self.bytearray_end.format(name, len(data))
+        s += self.bytearray_begin.format(name, data_len)
+        s += self.binary(data, ofs, data_len, bitmask, bitscale, elements_per_line)
+        s += self.bytearray_end.format(name, data_len)
+        s += '\n'
+        s += self.byte_array_size(name, data_len)
         return s
+
+    def byte_array_size(self, name: str, sz: int):
+        """Format byte array size info."""
+        s = self.bytearray_size.format(name, sz)
+        return s
+
 
     def binary(self, data, ofs: Optional[int]=None, sz: Optional[int]=None,
                bitmask: Optional[int]=None, bitscale: Optional[int]=None, elements_per_line: Optional[int]=None,
@@ -186,6 +207,7 @@ class CppFormatter(BaseFormatter):
         self.commentline_char = '/'
         self.bytearray_begin = 'extern const unsigned char {0}[] = {{\n'
         self.bytearray_end = '}}; // {0}\n'
+        self.bytearray_size = 'extern const unsigned short {0}_size = {1};\n'
 
 class CFormatter(BaseFormatter):
     """C formatter."""
@@ -197,6 +219,7 @@ class CFormatter(BaseFormatter):
         self.commentline_char = '/'
         self.bytearray_begin = 'unsigned char {0}[{1}] = {{\n'
         self.bytearray_end = '}}; // {0}\n'
+        self.bytearray_size = 'const unsigned short {0}_size = {1};\n'
 
 class AsmFormatter(BaseFormatter):
     """Assembler formatter."""
@@ -211,7 +234,7 @@ class AsmFormatter(BaseFormatter):
         self.bytearray_linebegin = '    !byte '
         self.bytearray_singlelinemode = True
         self.bytearray_end = '{0}_end\n'
-
+        self.bytearray_size = ''
 
 class CompileError:
     """Compile errors."""
@@ -222,7 +245,10 @@ class CompileError:
 
     def to_string(self):
         """Get string representation fo error."""
-        return f"{self.resource.filename}: error: {self.error}"
+        if self.resource and hasattr(self.resource, "filename"):
+            return f"{self.resource.filename}: error: {self.error}"
+        else:
+            return f"error: {self.error}"
 
 def has_bit(value, bit: int):
     """Check if specific bit of integer value is set."""
@@ -293,6 +319,8 @@ class ResourceType():
             resource_type = ResourceType("sprite", "spritepad")
         elif ext == ".ctm":
             resource_type = ResourceType("charset", "charpad")
+        elif ext == ".wav":
+            resource_type = ResourceType("music", "wave")
         else:
             resource_type = ResourceType()
 
@@ -314,6 +342,8 @@ class ResourceFactory:
             resource = SpritePadResource(filename, resource_type)
         elif resource_type.equals("charset.charpad"):
             resource = CharPadResource(filename, resource_type)
+        elif resource_type.equals("music.wave"):
+            resource = WaveResource(filename, resource_type)
         else:
             resource = Resource(filename, resource_type)
         return resource
@@ -342,6 +372,11 @@ class Resource:
         """Attach resource package reference."""
         self.package = package
 
+    def get_config(self, name: str, default_value: Optional[str]):
+        """Get configuration value."""
+        if not self.package: return default_value
+        return self.package.get_config(name, default_value)
+
     def read(self):
         """Read data from file."""
         data = None
@@ -369,10 +404,24 @@ class Resource:
         self.input_ofs = newpos
         self.input_avail = self.input_size - self.input_ofs
 
+    def read_skip(self, num_bytes: int):
+        """Skip bytes in buffer."""
+        if num_bytes < 1 or num_bytes > self.input_avail: return
+        self.input_ofs += num_bytes
+        self.input_avail -= num_bytes
+
     def read_int(self, num_bytes: int):
         """Read int from buffer."""
         if num_bytes > self.input_avail: return -1
         value = int.from_bytes(self.input[self.input_ofs:self.input_ofs+num_bytes], self.input_endianness)
+        self.input_ofs += num_bytes
+        self.input_avail -= num_bytes
+        return value
+
+    def read_signed_int(self, num_bytes: int):
+        """Read signed int from buffer."""
+        if num_bytes > self.input_avail: return -1
+        value = int.from_bytes(self.input[self.input_ofs:self.input_ofs+num_bytes], self.input_endianness, signed=True)
         self.input_ofs += num_bytes
         self.input_avail -= num_bytes
         return value
@@ -427,6 +476,9 @@ class Resource:
 
     def parse(self) -> Optional[CompileError]:
         """Parse resource data."""
+        if not self.filename:
+            return CompileError(self, "missing filename")
+
         self.identifier = self.package.get_unique_id(self.filename)
         return None
 
@@ -451,10 +503,235 @@ class Resource:
         s += formatter.comment_line() + "\n"
         s += formatter.comment("Type:         Binary Data\n")
         s += formatter.comment(f"Name:         {self.identifier}\n")
-        s += formatter.comment(f"Data size:    {self.input_size} bytes\n")
+        s += formatter.comment(f"Data size:    {self.input_size} bytes (0x{self.input_size:04x})\n")
         s += formatter.comment_line() + "\n"
 
-        s +=  formatter.byte_array(self.identifier, self.input, ofs, sz)
+        s += formatter.byte_array(self.identifier, self.input, ofs, sz)
+
+        return s
+
+class WaveResource(Resource):
+    """Wave file resource."""
+
+    def __init__(self, filename: str, resource_type: ResourceType):
+        super().__init__(filename, resource_type)
+        self.chunks_ofs = 0
+
+    def find_chunk(self, id: str) -> int:
+        """Find chunk in chunk file."""
+        self.read_set_pos(12) # start of chunks
+
+        while self.input_avail >= 8:
+            chunk_id = self.read_str(4)
+            chunk_size = self.read_int(4)
+            if chunk_id == id:
+                return chunk_size
+            self.read_skip(chunk_size)
+
+        return 0
+
+    def parse(self) -> Optional[CompileError]:
+        """Parset resource data."""
+        err = super().parse()
+        if err: return err
+
+        target_sample_rate = self.get_config('sampleFrequency', Constants.DEFAULT_SAMPLE_FREQUENCY)
+        target_bits_per_sample = self.get_config('sampleBits', Constants.DEFAULT_SAMPLE_BITS)
+
+        wave = self.input
+        wave_size = self.input_size
+
+        if wave_size < 12:
+            return CompileError(self, "invalid wave file size")
+
+        magic = chr(wave[0]) + chr(wave[1]) + chr(wave[2]) + chr(wave[3])
+        self.magic_num = self.read_int(4)
+
+        if magic != "RIFF":
+            return CompileError(self, f"invalid file magic bytes: {magic}")
+
+        self.read_endianness('little')
+
+        wave_chunk_size = self.read_int(4)
+        wave_format = self.read_str(4)
+        if wave_format != "WAVE":
+            return CompileError(self, f"unsupported wave format: {wave_format}")
+
+        chunk_size = self.find_chunk("fmt ")
+        if not chunk_size:
+            return CompileError(self, f"wave file does not contain format info")
+
+        if chunk_size < 16:
+            return CompileError(self, "unexpected wave format info size")
+
+        format_type = self.read_int(2)
+        if format_type != 1:
+            return CompileError(self, "unsupported wave sample format")
+
+        format_num_channels = self.read_int(2)
+        format_sample_rate = self.read_int(4)
+        format_byte_rate = self.read_int(4)
+        format_bytes_per_sample_block = self.read_int(2)
+        format_bits_per_sample = self.read_int(2)
+        if not format_bits_per_sample in [8, 16, 24]:
+            return CompileError(self, "unsupported wave sample size")
+
+        chunk_size = self.find_chunk("data")
+        if not chunk_size:
+            return CompileError(self, f"wave file does not contain PCM data chunk")
+
+        chunk_end_ofs = self.input_ofs + chunk_size
+
+        self.read_endianness('little')
+
+        # setup conversion parameters
+
+        target_max_output_size = int((32767 * 8) / target_bits_per_sample)
+
+        sample_rate = format_sample_rate if not target_sample_rate else min(format_sample_rate, target_sample_rate)
+        sample_step = int(format_sample_rate / sample_rate) * format_bytes_per_sample_block
+        sample_start = self.input_ofs
+        sample_ofs = 0.0
+
+        max_idx = chunk_size - format_bytes_per_sample_block * 2
+
+        # decoding, interpolation and resampling
+
+        logical_data = []
+        loudness_rms = 0.0 # root-mean-square
+
+        while True:
+            idx = int(sample_ofs)
+
+            idx_alignment_ofs = idx % format_bytes_per_sample_block
+            if idx_alignment_ofs:
+                idx += format_bytes_per_sample_block - idx_alignment_ofs
+
+            if idx > max_idx - format_bytes_per_sample_block: break
+            ratio = sample_ofs - idx
+
+            self.read_set_pos(sample_start + idx)
+
+            if format_num_channels == 1:
+                s0 = self.read_sample(format_bits_per_sample)
+                s1 = self.read_sample(format_bits_per_sample)
+            elif format_num_channels == 2:
+                s0 = (self.read_sample(format_bits_per_sample) + self.read_sample(format_bits_per_sample))/2.0
+                s1 = (self.read_sample(format_bits_per_sample) + self.read_sample(format_bits_per_sample))/2.0
+            else:
+                s0 = 0.0
+                for channel in range(0, format_num_channels):
+                    s0 += self.read_sample(format_bits_per_sample)
+                s0 /= format_num_channels
+                s1 = 0.0
+                for channel in range(0, format_num_channels):
+                    s1 += self.read_sample(format_bits_per_sample)
+                s1 /= format_num_channels
+
+            s = ((s0 * (1.0-ratio)) + (s1 * ratio) / 2.0)
+            loudness_rms += (s * s)
+            logical_data.append(s)
+
+            if len(logical_data) >= target_max_output_size:
+                break
+
+            sample_ofs += sample_step
+
+        if len(logical_data) > 0: loudness_rms /= len(logical_data)
+        if loudness_rms > 0.0: loudness_rms = math.sqrt(loudness_rms)
+
+        normalization_factor = (1.0 / max(0.01, loudness_rms))
+
+        # normalize, quantize and compress to byte array
+
+        data = bytearray()
+
+        if target_bits_per_sample == 4:
+            # 4-bit output
+            idx = 0
+            while idx < len(logical_data) - 1:
+                s0 = clamp(normalization_factor * logical_data[idx+0], -1.0, 1.0)
+                nibble0 = (self.float_to_byte(s0) >> 4)
+
+                s1 = clamp(normalization_factor * logical_data[idx+1], -1.0, 1.0)
+                nibble1 = (self.float_to_byte(s1) >> 4)
+
+                data.append((nibble0 << 4) | nibble1)
+                idx += 2
+
+        else:
+            # 8-bit output
+            idx = 0
+            while idx < len(logical_data) - 1:
+                s = clamp(normalization_factor * logical_data[idx], -1.0, 1.0)
+                b = self.float_to_byte(s)
+                data.append(b)
+                idx += 1
+
+        self.sample_rate = sample_rate
+        self.sample_count = len(data)
+        self.sample_bits = target_bits_per_sample
+        self.sample_data = data
+
+        '''
+
+        plot_data = []
+
+        for item in data:
+            if target_bits_per_sample == 4:
+                sample0 = (item >> 4)
+                plot_data.append(sample0)
+                sample1 = (item & 0x0f)
+                plot_data.append(sample1)
+            else:
+                plot_data.append(item)
+
+        mpl.rcParams['lines.linewidth'] = 0.1
+        plt.plot(plot_data)
+        plt.ylabel('sample')
+        plt.savefig("./build/fig.png", dpi=300.0, format='png')
+
+        '''
+
+        return None
+
+    def float_to_byte(self, f):
+        b = int(128.0 + f * 128.0) if f < 0.0 else int(128.0 + f * 127.0)
+        return b
+
+    def read_sample(self, bits_per_sample):
+
+        if bits_per_sample == 8:
+            s = self.read_byte()
+            v = (s - 128) / 128.0
+        elif bits_per_sample == 16:
+            s = self.read_signed_int(2)
+            #v = ((s ^ 0x8000) - 0x8000) / 32768.0
+            v = s / 32768.0
+        elif bits_per_sample == 24:
+            s = self.read_signed_int(3)
+            #v = ((s ^ 0x8000) - 0x8000) / 32768.0
+            v = s / 8388608.0
+        else:
+            v = 0.0
+
+        return v
+
+
+    def to_string(self, formatter: BaseFormatter, ofs: Optional[int]=None, sz: Optional[int]=None,
+                  name: Optional[str]=None):
+        """Convert resource data to string."""
+
+        s = ""
+        s += formatter.comment_line() + "\n"
+        s += formatter.comment("Type:             Wave Sample Data\n")
+        s += formatter.comment(f"Name:             {self.identifier}\n")
+        s += formatter.comment(f"Bits per sample:  {self.sample_bits}\n")
+        s += formatter.comment(f"Sample rate:      {self.sample_rate}\n")
+        s += formatter.comment(f"Data size:        {self.sample_count} bytes (0x{self.sample_count:04x})\n")
+        s += formatter.comment_line() + "\n"
+
+        s += formatter.byte_array(self.identifier, self.sample_data, 0, self.sample_count)
 
         return s
 
@@ -624,7 +901,8 @@ class SpriteResource(Resource):
             s += '\n'
             idx += 1
 
-        s += formatter.bytearray_end.format(self.identifier, data_size)
+        s += formatter.bytearray_end.format(self.identifier, data_size) + '\n'
+        s += formatter.byte_array_size(self.identifier, data_size)
 
         return s
 
@@ -877,7 +1155,8 @@ class CharsetResource(Resource):
             s += formatter.binary(self.charset_data, i*8, 8, bits_per_pixel, scale, 1, continued)
             s += '\n'
 
-        s += formatter.bytearray_end.format(self.identifier, data_size)
+        s += formatter.bytearray_end.format(self.identifier, data_size) + '\n'
+        s += formatter.byte_array_size(self.identifier, data_size)
 
         ######
 
@@ -1091,6 +1370,52 @@ class ResourcePackage:
         self.identifier: str = None
         self.resources: list[Resource] = []
         self.ids: set[str] = set()
+        self.config = None
+
+    def read_config(self, config_file: Optional[str]) -> Optional[CompileError]:
+        if not config_file:
+            return None
+
+        data = None
+        try:
+            with open(config_file, "rb") as in_file:
+                data = in_file.read()
+        except:
+            return CompileError(None, "could not read config file")
+
+        try:
+            config = json.loads(data)
+            self.config = config
+        except:
+            return CompileError(None, "invalid config file")
+
+        return None
+
+    def get_config(self, name: str, default_value: Optional[str]):
+        """Get configuration value."""
+
+        config = self.config
+
+        if not config: return default_value
+
+        config_path = os.path.normpath(os.path.join(Constants.RESOURCE_CONFIG_ROOT, name))
+        config_keys = config_path.split(os.path.sep)
+
+        node = config
+
+        for idx, config_key in enumerate(config_keys):
+            if config_key in node:
+                if idx == len(config_keys)-1:
+                    config_value = node[config_key]
+                    if isinstance(config_value, str) and len(config_value) == 0:
+                        break
+                    return config_value
+                else:
+                    node = node[config_key]
+            else:
+                break
+
+        return default_value
 
     def set_name(self, filename: str):
         """Set resource package name."""
@@ -1175,12 +1500,15 @@ class ResourceCompiler:
     def __init__(self):
         self.resources = ResourcePackage()
 
-    def compile(self, inputs: list[str], output: Optional[str], formatter: BaseFormatter) -> Optional[CompileError]:
+    def compile(self, inputs: 'list[str]', output: Optional[str], formatter: BaseFormatter, config_file: Optional[str]) -> Optional[CompileError]:
         """Compile resources and generate output using given formatter."""
 
         resources = self.resources
-
         resources.set_name(output)
+
+        err = resources.read_config(config_file)
+        if err:
+            return err
 
         for filename in inputs:
             resource = Resource.from_file(filename)
@@ -1219,11 +1547,12 @@ class ResourceCompiler:
 def usage():
     """Print tool usage information."""
 
-    print("Usage: rc [--cpp|--cc|--asm] -o output input...")
+    print("Usage: rc [--cpp|--cc|--asm] [--config config] -o output input...")
     print("")
     print("--cpp             : Generate C++ data")
     print("--cc              : Generate plain C data")
     print("--asm             : Generate assembler data")
+    print("--config          : path to JSON configuration file")
     print("-o                : Name of file to be generated")
     print("input             : Resource files")
 
@@ -1231,7 +1560,7 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "o:", ["cpp", "cc", "asm", "help", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "o:", ["cpp", "cc", "asm", "config=", "help", "output="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -1239,6 +1568,7 @@ def main():
     output: Optional[str] = None
 
     output_format = OutputFormat.CPP
+    config_file = None
 
     for option, arg in opts:
         if option in ("--cpp"):
@@ -1247,6 +1577,8 @@ def main():
             output_format = OutputFormat.C
         if option in ("--asm"):
             output_format = OutputFormat.ASM
+        if option in ("--config"):
+            config_file = arg
         if option in ("-h", "--help"):
             usage()
             sys.exit()
@@ -1265,7 +1597,7 @@ def main():
 
     resource_compiler = ResourceCompiler()
 
-    err = resource_compiler.compile(args, output, formatter)
+    err = resource_compiler.compile(args, output, formatter, config_file)
     if err:
         print(err.to_string())
         sys.exit(1)

@@ -6,6 +6,10 @@
       "data/ctest.c",
       "data/cmodule.c"
     ],
+    "resources": {
+        "sampleFrequency": 4000,
+        "sampleBits": 4
+    },
     "definitions": [],
     "includes": ["data"],
     "args": []

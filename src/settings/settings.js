@@ -34,7 +34,7 @@ const Constants = {
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
     AutoBuildDelayMs: 1250,
-    ResourceFileFilter: "|res|raw|spm|spd|ctm|sid|",
+    ResourceFileFilter: "|res|raw|spm|spd|ctm|sid|wav|",
     CppFileFilter: "|c|cpp|cc|",
     AsmFileFilter: "|s|asm|",
     ObjFileFilter: "|o|obj|"

@@ -7,5 +7,9 @@
     "C_Cpp.codeAnalysis.clangTidy.path": "C:\\tools\\llvm-mos\\bin\\clang-tidy.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
-    "ros.distro": "humble"
+    "ros.distro": "humble",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.python"
+    },
+    "python.formatting.provider": "none"
 }

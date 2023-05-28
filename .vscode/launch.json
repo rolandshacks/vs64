@@ -2,6 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Run Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            //"runtimeExecutable": "${execPath}",
+            "args": [
+                "--trace-deprecation",
+                "--extensionDevelopmentPath=${workspaceFolder}",
+            ]
+        },
+        {
             "name": "Resource Compiler",
             "type": "python",
             "request": "launch",
@@ -10,19 +20,10 @@
             "justMyCode": true,
             "args": [
                 "--cpp",
+                "--config", "${workspaceFolder}/test/project-config.json",
                 "-o",
-                "${workspaceFolder}/build/charset2.cpp",
-                "${workspaceFolder}/test/data/charset2.ctm"
-            ]
-        },
-        {
-            "name": "Run Extension",
-            "type": "extensionHost",
-            "request": "launch",
-            //"runtimeExecutable": "${execPath}",
-            "args": [
-                "--trace-deprecation",
-                "--extensionDevelopmentPath=${workspaceFolder}",
+                "${workspaceFolder}/build/waveout.cpp",
+                "${workspaceFolder}/test/data/voice.wav"
             ]
         },
         {

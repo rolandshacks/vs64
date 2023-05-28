@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.3.4 Minor Update
+
+- Added support for PCM wave files in resource compiler
+- Added optional resource compiler config section to project file
+- Improved ACME language support features
+- Minor bug-fixes and improvements
+
 ## 2.3.3 Minor Update
 
 - Added project settings for assembler, compiler and linker flags

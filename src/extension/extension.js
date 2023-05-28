@@ -116,7 +116,7 @@ class Extension {
             let disposable = vscode.workspace.onDidChangeConfiguration(function(e) {
                 thisInstance.updateSettings();
                 if (!thisInstance._builder && !thisInstance._buildTimer) {
-                    thisInstance.triggerAutoBuild();
+                    thisInstance.triggerAutoBuild(true);
                 }
             });
 
@@ -154,9 +154,15 @@ class Extension {
 
             if (!document || null == vscode.window.activeTextEditor) return;
 
+            if (!thisInstance.hasWorkspace()) return;
+
             const fileName = path.basename(document.fileName);
-            if (fileName != Constants.ProjectConfigFile &&
-                (!this._project.isValid() || Constants.SupportedLanguageIds.indexOf(document.languageId) < 0)) {
+            if (fileName == Constants.ProjectConfigFile) {
+                thisInstance.onSaveProject();
+                return;
+            }
+
+            if (!thisInstance._project.isValid() || Constants.SupportedLanguageIds.indexOf(document.languageId) < 0) {
                 return;
             }
 
@@ -528,8 +534,12 @@ class Extension {
         statusBarItem.set(txt);
     }
 
+
+    onSaveProject() {
+        this.triggerAutoBuild(true);
+    }
+
     onSave(document) {
-        if (!this.hasWorkspace()) return;
         this.triggerAutoBuild();
     }
 
@@ -581,14 +591,14 @@ class Extension {
         build.clean(true);
     }
 
-    triggerAutoBuild() {
+    triggerAutoBuild(fullRebuild) {
         if (!this.isActivated()) return;
         if (this._settings.autoBuild) {
-            this.triggerBuild();
+            this.triggerBuild(fullRebuild);
         }
     }
 
-    triggerBuild() {
+    triggerBuild(fullRebuild) {
 
         this.cancelBuild();
         this.syncProject();
@@ -601,22 +611,24 @@ class Extension {
 
         this._buildTimer = setTimeout(() => {
             this._buildTimer = null;
-            instance.triggerBuildTask();
+            instance.triggerBuildTask(fullRebuild);
         }, Constants.AutoBuildDelayMs);
 
     }
 
-    async triggerBuildTask() {
+    async triggerBuildTask(fullRebuild) {
         const tasks = await vscode.tasks.fetchTasks({
             type: TaskProvider.Type
         });
 
         if (!tasks) return;
 
+        const action = fullRebuild ? "rebuild" : "build"
+
         for (const task of tasks) {
             const definition = task.definition;
             if (!definition) continue;
-            if (definition.action == 'build') {
+            if (definition.action == action) {
                 vscode.tasks.executeTask(task);
             }
         }
@@ -670,7 +682,7 @@ class Extension {
             if (action == "clean" || action == "rebuild") {
                 try {
                     this.showStatus("$(gear) Cleaning build...");
-                    build.clean();
+                    build.clean(true);
                 } catch(err) {
                     this.showStatus("$(error) Clean failed");
                     const txt = "clean failed: " + err;

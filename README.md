@@ -16,7 +16,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
-* Resource compiler for sprites, charsets, tiles, maps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, SID)
+* Resource compiler for sprites, charsets, tiles, maps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, SID, PCM Wave)
 * Syntax highlighting for ACME assembler files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
@@ -171,7 +171,8 @@ A more extensive project file for CC65 could like like this:
     "assemblerFlags": "",
     "compilerFlags": "",
     "linkerFlags": "",
-    "compiler": ""
+    "compiler": "",
+    "resources: {}
 }
 ```
 
@@ -227,6 +228,12 @@ Optional arguments to be added to the linker command.
 > compiler
 
 Overrides the path to the compiler executable. The default path is specified in the settings.
+
+> resources
+
+Optional parameters for the resource compiler. Currently, the following list of parameters is supported:
+- sampleFrequency: resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
+- sampleBits: target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
 
 ### IntelliSense Support
 
