@@ -339,6 +339,10 @@ class Project {
             }
 
             this._args = args;
+
+            this._assemblerFlags = data.assemblerFlags;
+            this._compilerFlags = data.compilerFlags;
+            this._linkerFlags = data.linkerFlags;
         }
 
         { // additional settings
@@ -883,7 +887,14 @@ class Project {
             script.push(this.#keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
 
-            script.push(this.#keyValue("flags", "--msvc --maxerrors 99 -f cbm --cpu 6510 -DDEBUG=1 -r $dbg_out"));
+            let flags = "--msvc --maxerrors 99 -DDEBUG=1 -r $dbg_out";
+            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
+            if (this._assemblerFlags) flags += " " + this._assemblerFlags;
+
+            if (flags.indexOf("-f") == -1) flags += " -f cbm";
+            if (flags.indexOf("--cpu") == -1) flags += " --cpu 6510";
+
+            script.push(this.#keyValue("flags", flags.trim()));
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
             script.push("");
 
@@ -923,21 +934,34 @@ class Project {
             const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
             const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
 
-            let flags = "-t c64 -g";
-            let c_flags = ""
+            let flags = "-g";
+            let c_flags = "";
+            let asm_flags = "";
 
             if (releaseBuild) {
                 c_flags += "-O -Oirs";
             }
 
+            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
+            if (this._assemblerFlags) asm_flags += " " + this._assemblerFlags;
+            if (this._compilerFlags) c_flags += " " + this._compilerFlags;
+
+            let ln_flags = "--dbgfile $dbg_out";
+            if (project.startAddress) {
+                ln_flags += " -S" + project.startAddress;
+            }
+
+            if (this._linkerFlags) ln_flags += " " + this._linkerFlags;
+
+            // default target
+            const defaultTargetConf = "-t c64";
+            if (flags.indexOf("-t ") == -1 && ln_flags.indexOf("-C ") == -1 && ln_flags.indexOf("-t ") == -1) ln_flags += " " + defaultTargetConf;
+            if (flags.indexOf("-t ") == -1 && c_flags.indexOf("-t ") == -1) c_flags += " " + defaultTargetConf;
+            if (flags.indexOf("-t ") == -1 && asm_flags.indexOf("-t ") == -1) asm_flags += " " + defaultTargetConf;
+
             let defs = "";
             if (defines && defines.length > 0) {
                 defs += this.#join(defines, "-D");
-            }
-
-            let ln_flags = "-t c64 --dbgfile $dbg_out";
-            if (project.startAddress) {
-                ln_flags += "-S" + project.startAddress;
             }
 
             script.push(this.#keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
@@ -945,9 +969,10 @@ class Project {
             script.push(this.#keyValue("ln_exe", (project.linker || settings.ld65Executable)));
             script.push("");
 
-            script.push(this.#keyValue("flags", flags));
-            script.push(this.#keyValue("c_flags", c_flags));
-            script.push(this.#keyValue("ln_flags", ln_flags));
+            script.push(this.#keyValue("flags", flags.trim()));
+            script.push(this.#keyValue("asm_flags", asm_flags.trim()));
+            script.push(this.#keyValue("c_flags", c_flags.trim()));
+            script.push(this.#keyValue("ln_flags", ln_flags.trim()));
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
             script.push(this.#keyValue("defs", defs));
             script.push(this.#keyValue("libs", "c64.lib"));
@@ -966,7 +991,7 @@ class Project {
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $asm_exe -o $out $flags $includes $in");
+            script.push("    command = $asm_exe -o $out $flags $asm_flags $includes $in");
             script.push("");
 
             script.push("rule link");
@@ -1020,26 +1045,42 @@ class Project {
             const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
             const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
 
-            let flags = "-Wall -std=gnu++20 -g -fstandalone-debug -fno-limit-debug-info -fno-discard-value-names -c";
-            // flags += "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
+            const defaultTargetConf = "--config mos-c64.cfg";
+            let defaultFlags = "-Wall -std=gnu++20 -g -fstandalone-debug -fno-limit-debug-info -fno-discard-value-names -c";
+            // defaultFlags += "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
+
+            if (releaseBuild) {
+                defaultFlags += " -Ofast";
+            } else {
+                defaultFlags += " -O0";
+            }
 
             let defs = "";
             if (defines && defines.length > 0) {
                 defs += this.#join(defines, "-D");
             }
 
-            if (releaseBuild) {
-                flags += " -Ofast";
-            } else {
-                flags += " -O0";
-            }
+            let flags = "";
+            let asm_flags = defaultFlags + " -x assembler-with-cpp";
+            let c_flags = defaultFlags;
+            let ld_flags = "";
+
+            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
+            if (this._assemblerFlags) asm_flags += " " + this._assemblerFlags;
+            if (this._compilerFlags) c_flags += " " + this._compilerFlags;
+            if (this._linkerFlags) ld_flags += " " + this._linkerFlags;
+
+            if (flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags += " " + defaultTargetConf;
+            if (flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags += " " + defaultTargetConf;
+            if (flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags += " " + defaultTargetConf;
 
             script.push(this.#keyValue("clang", (project.compiler || settings.clangExecutable)));
             script.push("");
 
-            script.push(this.#keyValue("cfgflags", "--config mos-c64.cfg"));
-            script.push(this.#keyValue("flags", flags));
-            script.push(this.#keyValue("asmflags", "-x assembler-with-cpp"));
+            script.push(this.#keyValue("flags", flags.trim()));
+            script.push(this.#keyValue("asmflags", asm_flags.trim()));
+            script.push(this.#keyValue("cflags", c_flags.trim()));
+            script.push(this.#keyValue("ldflags", ld_flags.trim()));
             script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
             script.push(this.#keyValue("defs", defs));
             script.push("");
@@ -1051,17 +1092,17 @@ class Project {
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $clang $cfgflags -MD -MF $out.d $flags $defs $includes -o $out $in");
+            script.push("    command = $clang -MD -MF $out.d $flags $cflags $defs $includes -o $out $in");
             script.push("");
 
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $clang $cfgflags -MD -MF $out.d $flags $asmflags $defs $includes -o $out $in");
+            script.push("    command = $clang -MD -MF $out.d $flags $asmflags $defs $includes -o $out $in");
             script.push("");
 
             script.push("rule link");
-            script.push("    command = $clang $cfgflags -O0 -o $out $in");
+            script.push("    command = $clang $flags $ldflags -O0 -o $out $in");
             script.push("");
 
             if (resSources && resSources.length > 0) {

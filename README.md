@@ -127,9 +127,7 @@ The basic structure of the file is like this:
     "main": "src/main.asm",
     "build": "release",
     "definitions": [],
-    "includes": ["src/includes"],
-    "args": [],
-    "compiler": ""
+    "includes": ["src/includes"]
 }
 ```
 
@@ -151,9 +149,7 @@ A more extensive project file for CC65 using source and resource files could lik
     ],
     "build": "debug",
     "definitions": [],
-    "includes": ["libc64/include"],
-    "args": [],
-    "compiler": ""
+    "includes": ["libc64/include"]
 }
 ```
 
@@ -172,10 +168,12 @@ A more extensive project file for CC65 could like like this:
     "definitions": [],
     "includes": [],
     "args": [],
+    "assemblerFlags": "",
+    "compilerFlags": "",
+    "linkerFlags": "",
     "compiler": ""
 }
 ```
-
 
 > name
 
@@ -211,7 +209,20 @@ Optional project include paths for the compiler. The project specific include pa
 
 > args
 
-Arguments to be added to the compiler command line arguments.
+Optional argument list to be added to the build tool command line arguments. For more fine grained setting, use the 'assemblerFlags', 'compilerFlags' and 'linkerFlags'
+attributes.
+
+> assemblerFlags
+
+Optional arguments to be added to the assembler command.
+
+> compilerFlags
+
+Optional arguments to be added to the compiler command.
+
+> linkerFlags
+
+Optional arguments to be added to the linker command.
 
 > compiler
 
