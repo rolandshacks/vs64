@@ -391,6 +391,10 @@ let Utils = {
         let refName = path.resolve(path.normalize(filename));
         if (process.platform === "win32") {
             refName = refName.toUpperCase();
+            if (refName.length >= 2 && refName.charAt(1) == ':') {
+                refName = refName.substring(0, 1).toUpperCase() + refName.substring(1);
+            }
+
         }
         return refName;
     },

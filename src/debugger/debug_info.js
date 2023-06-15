@@ -434,7 +434,16 @@ const ReportStatementType = {
 
 class ReportParser {
 
-    static scan(line) {
+    constructor(project) {
+        this.project = project;
+        this.sources = project.getAsmSourceFiles();
+        this.sourceIndex = 0;
+    }
+
+    scan(line) {
+        const project = this.project;
+        const sources = this.sources;
+
         const tokens = [];
         let source = null;
         let comment = null;
@@ -450,17 +459,27 @@ class ReportParser {
 
                     let j = line.indexOf("Source:", i+1);
                     if (j >= 0) {
-                        source = path.normalize(line.substr(j+7).trim());
-                        if (source.charAt(1) == ':') {
-                            source = source.substr(0, 1).toUpperCase() + source.substr(1);
+                        const relPath = line.substring(j+7).trim();
+                        const absPath = project.resolveFile(relPath);
+                        if (absPath) {
+                            source = Utils.normalizePath(absPath);
                         }
                     } else {
-                        comment = line.substr(i+1);
+                        comment = line.substring(i+1);
                     }
                     break;
                 }
 
-                if ("=,".indexOf(line[i]) >= 0) {
+                if (line.charCodeAt(i) == 65533) {
+                    i++; // ignore '�' char at the beginning of a new file
+
+                    if (sources && this.sourceIndex < sources.length - 1) {
+                        this.sourceIndex++;
+                        const sourceItem = sources[this.sourceIndex];
+                        source = Utils.normalizePath(sourceItem);
+                    }
+
+                } else if ("=,".indexOf(line[i]) >= 0) {
                     tokens.push(line[i]);
                     i++;
                 } else if (line[i] == ':') {
@@ -480,7 +499,7 @@ class ReportParser {
 
                     let pos2 = i;
                     if (pos2>pos1) {
-                        tokens.push(line.substr(pos1, pos2-pos1));
+                        tokens.push(line.substring(pos1, pos2));
                     }
                 }
             }
@@ -493,7 +512,7 @@ class ReportParser {
         };
     }
 
-    static lex(tokens) {
+    lex(tokens) {
         const elements = [];
 
         let isCodeLine = false;
@@ -538,7 +557,7 @@ class ReportParser {
                     element = { type: ReportElementType.DATA_SIZE, value: 32, desc: "data-size" };
                 } else {
 
-                    let num = ReportParser.parseNumber(token);
+                    let num = this.parseNumber(token);
 
                     if (1 == i) {
                         if (null == num) {
@@ -552,10 +571,10 @@ class ReportParser {
                         //  a hex letters only token like 'cafe' be detected as unknown instead of address
                         if (2 == i && null != num && i < tokens.length && tokens[i] != "=") {
                             isCodeLine = true;
-                            element = { type: ReportElementType.ADDRESS, value: ReportParser.parseNumber(token, true), desc: "address" };
+                            element = { type: ReportElementType.ADDRESS, value: this.parseNumber(token, true), desc: "address" };
                         } else if ( 3 == i && isCodeLine) {
                             element = { type: ReportElementType.DATA, value: token, desc: "data" };
-                        } else if ( 4 == i && isCodeLine && ReportParser.isValidSymbol(token)) {
+                        } else if ( 4 == i && isCodeLine && this.isValidSymbol(token)) {
                             element = { type: ReportElementType.SYMBOL, name: token, desc: "symbol" };
                         } else {
                             element = { type: ReportElementType.UNKNOWN, value: token, desc: "unknown" };
@@ -574,25 +593,30 @@ class ReportParser {
         return elements;
     }
 
-    static parseLine(line) {
+    parseLine(line) {
 
-        const parseResult = ReportParser.scan(line);
+        const parseResult = this.scan(line);
         if (!parseResult) return null;
 
         const tokens = parseResult.tokens;
-        const elements = ReportParser.lex(tokens);
+        const elements = this.lex(tokens);
 
-        let statement = null;
+        const statements = [];
 
         if (null != parseResult.source) {
 
-            statement = {
+            const statement = {
                 type: ReportStatementType.SOURCE,
                 path: parseResult.source,
                 desc: "source"
             };
 
-        } else if (elements.length == 2 && elements[1].type == ReportElementType.UNKNOWN) {
+            statements.push(statement);
+        }
+
+        let statement = null;
+
+        if (elements.length == 2 && elements[1].type == ReportElementType.UNKNOWN) {
 
             statement = {
                 type: ReportStatementType.LABEL,
@@ -624,7 +648,7 @@ class ReportParser {
             elements[2].type == ReportElementType.EQUALS &&
             elements[3].type == ReportElementType.UNKNOWN) {
 
-            const num = ReportParser.parseNumber(elements[3].value);
+            const num = this.parseNumber(elements[3].value);
             if (null != num) {
 
                 statement = {
@@ -646,7 +670,7 @@ class ReportParser {
 
             // parsing "!addr symbol = value" assignments (expressions are not supported, yet)
 
-            const num = ReportParser.parseNumber(elements[4].value);
+            const num = this.parseNumber(elements[4].value);
             if (null != num) {
                 statement = {
                     type: ReportStatementType.SYMBOL,
@@ -666,7 +690,7 @@ class ReportParser {
 
             // parsing "!set symbol = value" assignments (expressions are not supported, yet)
 
-            const num = ReportParser.parseNumber(elements[4].value);
+            const num = this.parseNumber(elements[4].value);
             if (null != num) {
                 statement = {
                     type: ReportStatementType.SYMBOL,
@@ -682,7 +706,7 @@ class ReportParser {
         } else if (elements.length >= 2 &&
                    elements[1].type == ReportElementType.UNKNOWN) {
 
-            const num = ReportParser.parseNumber(elements[1].value, true);
+            const num = this.parseNumber(elements[1].value, true);
             if (null != num) {
                 statement = {
                     type: ReportStatementType.ADDRESS,
@@ -719,12 +743,16 @@ class ReportParser {
                 tokens: tokens,
                 elements: elements
             };
+
+            statements.push(statement);
         }
 
-        return statement;
+        if (statements.length < 1) return null;
+
+        return statements;
     }
 
-    static isValidSymbol(token) {
+    isValidSymbol(token) {
         if (token.charAt(0) != '.' && token.charAt(0) != '_') {
             let ch = token.charAt(0).toLowerCase();
             if (ch < 'a' || ch > 'z' || (token.length == 3 && OPCODES.indexOf(token.toLowerCase()) >= 0)) {
@@ -734,7 +762,7 @@ class ReportParser {
         return true;
     }
 
-    static parseNumber(s, hex) {
+    parseNumber(s, hex) {
 
         if (null == s) return null; // empty
         if (s.length > 16) return null; // overflow
@@ -1116,122 +1144,128 @@ class DebugInfo {
         let insideMacro = false;
         let lastLabel = null;
 
+        const parser = new ReportParser(project);
+
         let lines = src.split("\n").filter(s => (s.trim().length > 0));
         for (let line of lines) {
 
-            const statement = ReportParser.parseLine(line);
-            if (!statement) continue;
+            const statements = parser.parseLine(line);
+            if (!statements) continue;
 
-            const statementType = statement.type;
+            for (const statement of statements) {
+                if (!statement) continue;
 
-            if (insideMacro) {
-                if (statementType == ReportStatementType.SCOPE_END) {
-                    insideMacro = false;
-                }
-                continue;
-            }
+                const statementType = statement.type;
 
-            switch (statementType) {
-
-                case ReportStatementType.MACRO_BEGIN: {
-                    insideMacro = true;
-                    break;
+                if (insideMacro) {
+                    if (statementType == ReportStatementType.SCOPE_END) {
+                        insideMacro = false;
+                    }
+                    continue;
                 }
 
-                case ReportStatementType.SOURCE: {
+                switch (statementType) {
 
-                    lastLabel = null;
-                    source = statement.path;
+                    case ReportStatementType.MACRO_BEGIN: {
+                        insideMacro = true;
+                        break;
+                    }
 
-                    if (project && !path.isAbsolute(source)) {
-                        source = project.resolveFile(source);
-                        if (!source && baseDir) {
-                            source = path.resolve(baseDir, source);
+                    case ReportStatementType.SOURCE: {
+
+                        lastLabel = null;
+                        source = statement.path;
+
+                        if (project && !path.isAbsolute(source)) {
+                            source = project.resolveFile(source);
+                            if (!source && baseDir) {
+                                source = path.resolve(baseDir, source);
+                            }
+                        } else {
+                            source = path.resolve(source);
                         }
-                    } else {
-                        source = path.resolve(source);
+
+                        if (null == baseDir) {
+                            baseDir = path.dirname(source);
+                        }
+
+                        const normalizedPath = this.#getRefName(source);
+                        currentSourceRef = this.#getOrCreateLineList(normalizedPath);
+
+                        break;
                     }
+                    case ReportStatementType.LABEL: {
+                        labelStatements.push(statement);
+                        break;
 
-                    if (null == baseDir) {
-                        baseDir = path.dirname(source);
                     }
+                    case ReportStatementType.ADDRESS: {
 
-                    const normalizedPath = this.#getRefName(source);
-                    currentSourceRef = this.#getOrCreateLineList(normalizedPath);
-
-                    break;
-                }
-                case ReportStatementType.LABEL: {
-                    labelStatements.push(statement);
-                    break;
-
-                }
-                case ReportStatementType.ADDRESS: {
-
-                    const addressInfo = new DebugAddressInfo(
-                        statement.value,
-                        statement.value,
-                        source,
-                        statement.line
-                    );
-
-                    addressInfo.globalRef = this._addresses.length;
-                    this._addresses.push(addressInfo);
-
-                    for (let addr = addressInfo.address; addr <= addressInfo.address_end; addr++) {
-                        this._addressMap[addr] = addressInfo;
-                    }
-
-                    if (null != currentSourceRef) {
-                        addressInfo.localRef = currentSourceRef.length;
-                        addressInfo.localRefTable = currentSourceRef;
-                        currentSourceRef.push(addressInfo);
-                    }
-
-                    if (statement.symbol) {
-                        const debugSymbol = new DebugSymbol(
-                            statement.symbol,
+                        const addressInfo = new DebugAddressInfo(
                             statement.value,
-                            true,
+                            statement.value,
+                            source,
+                            statement.line
+                        );
+
+                        addressInfo.globalRef = this._addresses.length;
+                        this._addresses.push(addressInfo);
+
+                        for (let addr = addressInfo.address; addr <= addressInfo.address_end; addr++) {
+                            this._addressMap[addr] = addressInfo;
+                        }
+
+                        if (null != currentSourceRef) {
+                            addressInfo.localRef = currentSourceRef.length;
+                            addressInfo.localRefTable = currentSourceRef;
+                            currentSourceRef.push(addressInfo);
+                        }
+
+                        if (statement.symbol) {
+                            const debugSymbol = new DebugSymbol(
+                                statement.symbol,
+                                statement.value,
+                                true,
+                                source,
+                                statement.line,
+                                statement.data_size
+                            );
+                            this.storeSymbol(debugSymbol);
+                            if (addressInfo) addressInfo.addDebugSymbol(debugSymbol);
+                        }
+
+                        for (let label of labelStatements) {
+                            label.address = statement.value;
+                            const debugLabel = new DebugLabel(
+                                label.name,
+                                label.address,
+                                source,
+                                label.line
+                            );
+                            this.storeLabel(debugLabel);
+                            if (addressInfo) addressInfo.addDebugLabel(debugLabel);
+                        }
+
+                        labelStatements = [];
+                        break;
+
+                    }
+                    case ReportStatementType.SYMBOL: {
+
+                        this.storeSymbol(new DebugSymbol(
+                            statement.name,
+                            statement.value,
+                            statement.isAddress,
                             source,
                             statement.line,
                             statement.data_size
-                        );
-                        this.storeSymbol(debugSymbol);
-                        if (addressInfo) addressInfo.addDebugSymbol(debugSymbol);
+                        ));
+
+                        break;
                     }
-
-                    for (let label of labelStatements) {
-                        label.address = statement.value;
-                        const debugLabel = new DebugLabel(
-                            label.name,
-                            label.address,
-                            source,
-                            label.line
-                        );
-                        this.storeLabel(debugLabel);
-                        if (addressInfo) addressInfo.addDebugLabel(debugLabel);
+                    default: {
+                        break;
                     }
-
-                    labelStatements = [];
-                    break;
-
-                }
-                case ReportStatementType.SYMBOL: {
-
-                    this.storeSymbol(new DebugSymbol(
-                        statement.name,
-                        statement.value,
-                        statement.isAddress,
-                        source,
-                        statement.line,
-                        statement.data_size
-                    ));
-
-                    break;
-                }
-                default: {
-                    break;
                 }
             }
         }
@@ -1385,7 +1419,6 @@ class DebugInfo {
 module.exports = {
     DebugInfo: DebugInfo,
     DebugAddressInfo: DebugAddressInfo,
-    ReportParser: ReportParser,
     ReportElementType: ReportElementType,
     DebugParser: DebugParser
 }

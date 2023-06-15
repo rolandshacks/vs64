@@ -845,6 +845,35 @@ class Project {
         return buildPath;
     }
 
+    getAsmSourceFiles() {
+
+        const srcs = this.sources;
+        if (!srcs || srcs.length < 1) return null;
+
+        const asmSources = [];
+
+        for (const srcItem of srcs) {
+            const src = srcItem.filename;
+            const ext = srcItem.extension;
+            if (!ext) continue;
+
+            if (Constants.AsmFileFilter.indexOf('|' + ext + '|') >= 0) {
+                asmSources.push(src);
+            } else if (Constants.ResourceFileFilter.indexOf('|' + ext + '|') >= 0) {
+                const asmFile = this.#getBuildPath(src, "asm");
+                if (asmSources.indexOf(asmFile) == -1) {
+                    asmSources.push(asmFile);
+                }
+            }
+
+        }
+
+        if (asmSources.length < 1) return null;
+
+        return asmSources;
+
+    }
+
     queryAllAsmFiles() {
 
         const project = this;
@@ -929,7 +958,6 @@ class Project {
         if (toolkit == "acme") {
 
             const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
 
             script.push(this.#keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
@@ -958,13 +986,22 @@ class Project {
             if (resSources && resSources.length > 0) {
                 for (let resSource of resSources) {
                     const asmFile = this.#getBuildPath(resSource, "asm");
-                    if (asmSources.indexOf(asmFile) == -1) {
-                        asmSources.push(asmFile);
-                    }
+                    //if (asmSources.indexOf(asmFile) == -1) {
+                    //    asmSources.push(asmFile);
+                    //}
                     script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
                 }
                 script.push("");
             }
+
+            //const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+
+            // Special function to maintain sequence order of files given in project file
+            // This is needed because we need the same order in the generated report file
+            // ACME is not adding source file information in the report for multiple modules
+            // Instead, it just generates a 0xff byte into the text file.
+            // This seems to be a BUG in ACME.
+            const asmSources = project.getAsmSourceFiles();
 
             const dependencies = [ ...asmSources ];
             for (const asmSource of asmSources) {
