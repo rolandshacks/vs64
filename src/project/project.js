@@ -40,7 +40,8 @@ const TokenValueType = {
 const TokenDescriptors = {
     "!src": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
     "!source": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
-    "#include": { tokenType: TokenType.Include,valueType: TokenValueType.Filename }
+    "#include": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
+    "#import": { tokenType: TokenType.Include,valueType: TokenValueType.Filename }
 };
 
 class Token {
@@ -221,6 +222,8 @@ class Project {
 
         if (toolkit == "acme") {
             this._outdebug = path.resolve(this._builddir, this._name + ".report");
+        } else if (toolkit == "kick") {
+            this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
         } else if (toolkit == "llvm") {
             this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
         } else if (toolkit == "cc65") {
@@ -250,7 +253,10 @@ class Project {
 
         if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme' or 'cc65')"); }
         this._toolkit = data.toolkit.toLowerCase();
-        if (this._toolkit != "acme" && this._toolkit != "cc65" && this._toolkit != "llvm") { throw("property 'toolkit' needs to be either 'acme', 'cc65' or 'llvm'"); }
+
+        if (["acme", "kick", "cc65", "llvm"].indexOf(this._toolkit) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', 'cc65' or 'llvm'");
+        }
 
         const settings = this._settings;
         const projectDir = this.basedir;
@@ -289,6 +295,15 @@ class Project {
         }
 
         this._sources = srcs;
+
+        if (this._toolkit == "kick") {
+
+            const asmSources = this.querySourceByExtension(Constants.AsmFileFilter);
+            if (asmSources && asmSources.length > 1) {
+                logger.warn("KickAssembler does not support more than one input file. Additional assembler sources from the project file will be ignored.");
+            }
+
+        }
 
         this._description = data.description||"";
 
@@ -639,7 +654,18 @@ class Project {
     }
 
     #escape(s) {
-        const esc = s.replaceAll(':', '$:');
+
+        if (!s) return s;
+
+        let esc = "";
+
+        for (const c of s) {
+            if (c == ':') esc += "$:"
+            else if (c == ' ') esc += "$ "
+            else if (c == '$') esc += "$$"
+            else esc += c;
+        }
+
         return esc;
     }
 
@@ -665,6 +691,7 @@ class Project {
         }
 
     }
+
     #writeCppProperties() {
 
         this.#createBuildDir();
@@ -951,18 +978,104 @@ class Project {
                 script.push(this.#keyValue("python_exe", settings.pythonExecutable));
             }
 
+            if (settings.javaExecutable) {
+                script.push(this.#keyValue("java_exe", settings.javaExecutable));
+            }
+
             const extensionPath = settings.extensionPath;
             script.push(this.#keyValue("rc_exe", settings.resourceCompiler));
         }
 
-        if (toolkit == "acme") {
+        if (toolkit == "kick") {
+
+            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
+
+            script.push(this.#keyValue("asm_exe", (project.assembler || settings.kickExecutable)));
+            script.push("");
+
+            let flags = "-debugdump";
+
+            flags += " -asminfo \"files|errors\" -asminfofile " + path.resolve(project.builddir, project.name + ".info");
+
+            if (!releaseBuild) {
+                defines.push("DEBUG");
+                flags += " -debug";
+            }
+
+            flags += " -odir " + project.builddir;
+
+            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
+            if (this._assemblerFlags) flags += " " + this._assemblerFlags;
+
+            script.push(this.#keyValue("flags", flags.trim()));
+
+            let includes = this.#join(project.includes, "-libdir ");
+            includes += (includes.length > 0 ? " " : "") + "-libdir " + project.builddir;
+
+            script.push(this.#keyValue("includes", includes));
+
+            let defs = "";
+            if (defines && defines.length > 0) {
+                defs += this.#join(defines, "-define ");
+            }
+
+            script.push(this.#keyValue("defs", defs));
+
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe --kick --config $config -o $out $in");
+            script.push("");
+
+            script.push("rule asm");
+            script.push("    depfile = $out.d");
+            script.push("    deps = gcc");
+            script.push("    command = $java_exe -jar $asm_exe $flags $includes -o $out $in");
+            script.push("");
+
+            const generatedAsmSources = [];
+
+            if (resSources && resSources.length > 0) {
+                for (let resSource of resSources) {
+                    const asmFile = this.#getBuildPath(resSource, "asm");
+                    if (generatedAsmSources.indexOf(asmFile) == -1) {
+                        generatedAsmSources.push(asmFile);
+                    }
+                    script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
+                }
+                script.push("");
+            }
+
+            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+
+            const dependencies = [ ...asmSources ];
+            for (const asmSource of asmSources) {
+                this.#getReferences(asmSource, dependencies);
+            }
+            this.#createDependencyFile(project.outfile + ".d", project.outfile, dependencies);
+
+            let asmBuild = "build $target | $dbg_out : asm " + this.#join(asmSources, null, null, true);
+            if (generatedAsmSources.length > 0) {
+                asmBuild += " | " + this.#join(generatedAsmSources, null, null, true);
+            }
+
+            script.push(asmBuild);
+
+        } else if (toolkit == "acme") {
 
             const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
 
             script.push(this.#keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
 
-            let flags = "--msvc --maxerrors 99 -DDEBUG=1 -r $dbg_out";
+            let flags = "--msvc --maxerrors 99 ";
+
+            if (!releaseBuild) {
+                flags += " -DDEBUG=1";
+            }
+
+            flags += " -r $dbg_out";
+
             if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
             if (this._assemblerFlags) flags += " " + this._assemblerFlags;
 
@@ -974,7 +1087,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --asm --config $config -o $out $in");
+            script.push("    command = $python_exe $rc_exe --acme --config $config -o $out $in");
             script.push("");
 
             script.push("rule asm");
@@ -986,9 +1099,6 @@ class Project {
             if (resSources && resSources.length > 0) {
                 for (let resSource of resSources) {
                     const asmFile = this.#getBuildPath(resSource, "asm");
-                    //if (asmSources.indexOf(asmFile) == -1) {
-                    //    asmSources.push(asmFile);
-                    //}
                     script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
                 }
                 script.push("");

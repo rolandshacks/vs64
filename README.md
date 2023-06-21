@@ -12,7 +12,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 
 ## Features
 
-* Support for ACME assembler, CC65 C-compiler and LLVM-MOS C/C++
+* Supports ACME assembler, KickAssembler, CC65 C-compiler and LLVM-MOS C/C++
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
@@ -54,6 +54,15 @@ VS64 supports the ACME Cross-Assembler.
 * Use a package management system, for example on Ubuntu/Debian: `sudo apt install acme`
 
 In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct ACME installation path.
+
+### Kick Assembler
+
+VS64 supports Kick Assembler.
+
+* Installation: Download and install from http://theweb.dk/KickAssembler
+* Also, make sure you have a working Java Runtime. Download and install from https://openjdk.org
+
+Please make sure you check the VS64 settings for the correct KickAssembler installation path.
 
 ### CC65 Compiler
 
@@ -111,7 +120,7 @@ VS64 provides a meta build system which is based on the Ninja build toolkit. Dep
 
 ### Syntax Highlighting
 
-Support for ACME assember syntax is provided. The recommended file extension is `.asm`.
+Support for ACME assember syntax is provided. Syntax highlighting for KickAssembler is partially implemented. The recommended file extension is `.asm`.
 
 ### Project Configuration
 
@@ -190,7 +199,7 @@ Defines all used source and resource files. The build system will keep track of 
 
 > toolkit
 
-Specifies which build toolkit is used. Currently supported are "acme", "cc65" and "llvm".
+Specifies which build toolkit is used. Currently supported are "acme", "kick", "cc65" and "llvm".
 
 > main
 
@@ -368,6 +377,10 @@ To setup the C64 development environment, go to *Preferences>Settings* to open t
 
 Path to Acme installation. Example: `C:\Tools\c64\acme`.
 
+> VS64: KickAssembler Install Dir
+
+Path to KickAssembler installation. Example: `C:\Tools\c64\kickassembler`.
+
 > VS64: Cc65 Install Dir
 
 Path to Cc65 installation. Example: `C:\Tools\c64\cc65`.
@@ -397,6 +410,11 @@ Leave blank to use the embedded Ninja executable that is distributed with the ex
 
 Path to custom Python installation. Example: `C:\Tools\python\python.exe`.
 Leave blank to use an installed Python environment or (on Windows) use the minimalistic Python environment distributed with the extension.
+
+> VS64: Java Executable
+
+Path to Java executable. Example: `C:\Tools\jdk\bin\java`.
+Leave blank to use an installed Java Runtime / JDK environment.
 
 > VS64: Resource Compiler
 
@@ -438,6 +456,7 @@ This package includes open source from other developers and I would like to than
 ## Links
 
 * The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass
+* The Kick Assembler: http://theweb.dk/KickAssembler
 * LLVM-MOS: https://github.com/llvm-mos/llvm-mos-sdk
 * CC65 C-Compiler: https://cc65.github.io
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net

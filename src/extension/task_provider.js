@@ -85,8 +85,9 @@ class TaskTerminal {
 
 class TaskProvider {
 
-    constructor(settings, builder) {
+    constructor(settings, project, builder) {
         this._settings = settings;
+        this._project = project;
         this._tasks = null;
         this._projectConfigName = this._settings.projectFile||Constants.ProjectConfigFile;
         this._builder = builder;
@@ -162,6 +163,14 @@ class TaskProvider {
             return null;
         }
 
+        let problemMatcher = "msvc";
+        const project = this._project;
+        if (project && project.toolkit) {
+            if (project.toolkit == "kick") {
+                problemMatcher = project.toolkit;
+            }
+        }
+
         const instance = this;
 
         const task = new vscode.Task(
@@ -174,7 +183,7 @@ class TaskProvider {
                     return new TaskTerminal(definition, instance._settings, instance._builder);
                 }
             ),
-            ["$builder"]
+            ["$" + problemMatcher]
         );
 
         task.group = vscode.TaskGroup.Build;

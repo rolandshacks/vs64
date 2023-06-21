@@ -86,6 +86,8 @@ class IntellisenseConfiguratrionProvider {
             compilerPath = settings.cc65Executable;
         } else if (toolkit == "acme") {
             compilerPath = settings.acmeExecutable;
+        } else if (toolkit == "kick") {
+            compilerPath = settings.kickExecutable;
         }
 
         return compilerPath;

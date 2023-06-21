@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.0 Major Update
+
+- Added support for KickAssembler
+- Minor clean-up, enhancements and bug-fixes
+
 ## 2.3.5 Minor Update
 
 - Fixed ACME debugger report handling

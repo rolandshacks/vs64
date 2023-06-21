@@ -1,0 +1,468 @@
+[libraries]
+Math;constant;PI
+Math;constant;E
+Math;function;abs;1
+Math;function;acos;1
+Math;function;asin;1
+Math;function;atan;1
+Math;function;atan2;2
+Math;function;cbrt;1
+Math;function;ceil;1
+Math;function;cos;1
+Math;function;cosh;1
+Math;function;exp;1
+Math;function;expm1;1
+Math;function;floor;1
+Math;function;hypot;2
+Math;function;IEEEremainder;2
+Math;function;log;1
+Math;function;log10;1
+Math;function;log1p;1
+Math;function;max;2
+Math;function;min;2
+Math;function;pow;2
+Math;function;random;0
+Math;function;round;1
+Math;function;signum;1
+Math;function;sin;1
+Math;function;sinh;1
+Math;function;sqrt;1
+Math;function;tan;1
+Math;function;tanh;1
+Math;function;toDegrees;1
+Math;function;toRadians;1
+Math;function;mod;2
+Math;function;setSeed;1
+Print;function;toIntString;1
+Print;function;toIntString;2
+Print;function;toHexString;1
+Print;function;toHexString;2
+Print;function;toBinaryString;1
+Print;function;toBinaryString;2
+Print;function;toOctalString;1
+Print;function;toOctalString;2
+Vector;function;Vector;0
+Vector;function;Vector;3
+Vector;function;Matrix;0
+Vector;function;RotationMatrix;3
+Vector;function;ScaleMatrix;3
+Vector;function;MoveMatrix;3
+Vector;function;PerspectiveMatrix;1
+Constructors;constant;AT_ABSOLUTE
+Constructors;constant;AT_ZEROPAGE
+Constructors;constant;AT_ABSOLUTEX
+Constructors;constant;AT_ABSOLUTEY
+Constructors;constant;AT_IMMEDIATE
+Constructors;constant;AT_INDIRECT
+Constructors;constant;AT_IZEROPAGEX
+Constructors;constant;AT_IZEROPAGEY
+Constructors;constant;AT_NONE
+Constructors;function;createFile;1
+Constructors;function;List;0
+Constructors;function;List;1
+Constructors;function;Hashtable;0
+Constructors;function;CmdArgument;2
+Misc;constant;BLACK
+Misc;constant;WHITE
+Misc;constant;RED
+Misc;constant;CYAN
+Misc;constant;PURPLE
+Misc;constant;GREEN
+Misc;constant;BLUE
+Misc;constant;YELLOW
+Misc;constant;ORANGE
+Misc;constant;BROWN
+Misc;constant;LIGHT_RED
+Misc;constant;DARK_GRAY
+Misc;constant;DARK_GREY
+Misc;constant;GRAY
+Misc;constant;GREY
+Misc;constant;LIGHT_GREEN
+Misc;constant;LIGHT_BLUE
+Misc;constant;LIGHT_GRAY
+Misc;constant;LIGHT_GREY
+Misc;constant;BF_C64FILE
+Misc;constant;BF_KOALA
+Misc;constant;BF_FLI
+Misc;constant;BF_BITMAP_SINGLECOLOR
+Misc;constant;BF_DOODLE
+Misc;function;getFilename;0
+Misc;function;getPath;0
+Misc;function;getNamespace;0
+Misc;function;LoadSid;1
+Misc;function;LoadPicture;
+Misc;function;LoadBinary;
+65xxMnemonics;constant;LDY_IMM
+65xxMnemonics;constant;LDY_ZP
+65xxMnemonics;constant;LDY_ZPX
+65xxMnemonics;constant;LDY_ABS
+65xxMnemonics;constant;LDY_ABSX
+65xxMnemonics;constant;LDX_IMM
+65xxMnemonics;constant;LDX_ZP
+65xxMnemonics;constant;LDX_ZPY
+65xxMnemonics;constant;LDX_ABS
+65xxMnemonics;constant;LDX_ABSY
+65xxMnemonics;constant;DEC_ZP
+65xxMnemonics;constant;DEC_ZPX
+65xxMnemonics;constant;DEC_ABS
+65xxMnemonics;constant;DEC_ABSX
+65xxMnemonics;constant;EOR_IMM
+65xxMnemonics;constant;EOR_ZP
+65xxMnemonics;constant;EOR_ZPX
+65xxMnemonics;constant;EOR_IZPX
+65xxMnemonics;constant;EOR_IZPY
+65xxMnemonics;constant;EOR_ABS
+65xxMnemonics;constant;EOR_ABSX
+65xxMnemonics;constant;EOR_ABSY
+65xxMnemonics;constant;SBC2_IMM
+65xxMnemonics;constant;JMP_ABS
+65xxMnemonics;constant;JMP_IND
+65xxMnemonics;constant;BIT_ZP
+65xxMnemonics;constant;BIT_ABS
+65xxMnemonics;constant;BVC_REL
+65xxMnemonics;constant;BEQ_REL
+65xxMnemonics;constant;DEX
+65xxMnemonics;constant;BNE_REL
+65xxMnemonics;constant;DEY
+65xxMnemonics;constant;XAA_IMM
+65xxMnemonics;constant;BRK
+65xxMnemonics;constant;CLD
+65xxMnemonics;constant;CLC
+65xxMnemonics;constant;AXS_IMM
+65xxMnemonics;constant;BVS_REL
+65xxMnemonics;constant;LAS_ABSY
+65xxMnemonics;constant;RRA_ZP
+65xxMnemonics;constant;RRA_ZPX
+65xxMnemonics;constant;RRA_IZPX
+65xxMnemonics;constant;RRA_IZPY
+65xxMnemonics;constant;RRA_ABS
+65xxMnemonics;constant;RRA_ABSX
+65xxMnemonics;constant;RRA_ABSY
+65xxMnemonics;constant;ADC_IMM
+65xxMnemonics;constant;ADC_ZP
+65xxMnemonics;constant;ADC_ZPX
+65xxMnemonics;constant;ADC_IZPX
+65xxMnemonics;constant;ADC_IZPY
+65xxMnemonics;constant;ADC_ABS
+65xxMnemonics;constant;ADC_ABSX
+65xxMnemonics;constant;ADC_ABSY
+65xxMnemonics;constant;STA_ZP
+65xxMnemonics;constant;STA_ZPX
+65xxMnemonics;constant;STA_IZPX
+65xxMnemonics;constant;STA_IZPY
+65xxMnemonics;constant;STA_ABS
+65xxMnemonics;constant;STA_ABSX
+65xxMnemonics;constant;STA_ABSY
+65xxMnemonics;constant;CLI
+65xxMnemonics;constant;LAX_IMM
+65xxMnemonics;constant;LAX_ZP
+65xxMnemonics;constant;LAX_ZPY
+65xxMnemonics;constant;LAX_IZPX
+65xxMnemonics;constant;LAX_IZPY
+65xxMnemonics;constant;LAX_ABS
+65xxMnemonics;constant;LAX_ABSY
+65xxMnemonics;constant;ALR_IMM
+65xxMnemonics;constant;TAS_ABSY
+65xxMnemonics;constant;CPX_IMM
+65xxMnemonics;constant;CPX_ZP
+65xxMnemonics;constant;CPX_ABS
+65xxMnemonics;constant;TAX
+65xxMnemonics;constant;CLV
+65xxMnemonics;constant;CPY_IMM
+65xxMnemonics;constant;CPY_ZP
+65xxMnemonics;constant;CPY_ABS
+65xxMnemonics;constant;TAY
+65xxMnemonics;constant;AHX_IZPY
+65xxMnemonics;constant;AHX_ABSY
+65xxMnemonics;constant;ANC2_IMM
+65xxMnemonics;constant;STX_ZP
+65xxMnemonics;constant;STX_ZPY
+65xxMnemonics;constant;STX_ABS
+65xxMnemonics;constant;SLO_ZP
+65xxMnemonics;constant;SLO_ZPX
+65xxMnemonics;constant;SLO_IZPX
+65xxMnemonics;constant;SLO_IZPY
+65xxMnemonics;constant;SLO_ABS
+65xxMnemonics;constant;SLO_ABSX
+65xxMnemonics;constant;SLO_ABSY
+65xxMnemonics;constant;STY_ZP
+65xxMnemonics;constant;STY_ZPX
+65xxMnemonics;constant;STY_ABS
+65xxMnemonics;constant;SHX_ABSY
+65xxMnemonics;constant;BCC_REL
+65xxMnemonics;constant;SHY_ABSX
+65xxMnemonics;constant;CMP_IMM
+65xxMnemonics;constant;CMP_ZP
+65xxMnemonics;constant;CMP_ZPX
+65xxMnemonics;constant;CMP_IZPX
+65xxMnemonics;constant;CMP_IZPY
+65xxMnemonics;constant;CMP_ABS
+65xxMnemonics;constant;CMP_ABSX
+65xxMnemonics;constant;CMP_ABSY
+65xxMnemonics;constant;JSR_ABS
+65xxMnemonics;constant;LSR
+65xxMnemonics;constant;LSR_ZP
+65xxMnemonics;constant;LSR_ZPX
+65xxMnemonics;constant;LSR_ABS
+65xxMnemonics;constant;LSR_ABSX
+65xxMnemonics;constant;ROL
+65xxMnemonics;constant;ROL_ZP
+65xxMnemonics;constant;ROL_ZPX
+65xxMnemonics;constant;ROL_ABS
+65xxMnemonics;constant;ROL_ABSX
+65xxMnemonics;constant;NOP
+65xxMnemonics;constant;NOP_IMM
+65xxMnemonics;constant;NOP_ZP
+65xxMnemonics;constant;NOP_ZPX
+65xxMnemonics;constant;NOP_ABS
+65xxMnemonics;constant;NOP_ABSX
+65xxMnemonics;constant;SEC
+65xxMnemonics;constant;DCP_ZP
+65xxMnemonics;constant;DCP_ZPX
+65xxMnemonics;constant;DCP_IZPX
+65xxMnemonics;constant;DCP_IZPY
+65xxMnemonics;constant;DCP_ABS
+65xxMnemonics;constant;DCP_ABSX
+65xxMnemonics;constant;DCP_ABSY
+65xxMnemonics;constant;BCS_REL
+65xxMnemonics;constant;SED
+65xxMnemonics;constant;ROR
+65xxMnemonics;constant;ROR_ZP
+65xxMnemonics;constant;ROR_ZPX
+65xxMnemonics;constant;ROR_ABS
+65xxMnemonics;constant;ROR_ABSX
+65xxMnemonics;constant;AND_IMM
+65xxMnemonics;constant;AND_ZP
+65xxMnemonics;constant;AND_ZPX
+65xxMnemonics;constant;AND_IZPX
+65xxMnemonics;constant;AND_IZPY
+65xxMnemonics;constant;AND_ABS
+65xxMnemonics;constant;AND_ABSX
+65xxMnemonics;constant;AND_ABSY
+65xxMnemonics;constant;SEI
+65xxMnemonics;constant;ANC_IMM
+65xxMnemonics;constant;TSX
+65xxMnemonics;constant;TXA
+65xxMnemonics;constant;ORA_IMM
+65xxMnemonics;constant;ORA_ZP
+65xxMnemonics;constant;ORA_ZPX
+65xxMnemonics;constant;ORA_IZPX
+65xxMnemonics;constant;ORA_IZPY
+65xxMnemonics;constant;ORA_ABS
+65xxMnemonics;constant;ORA_ABSX
+65xxMnemonics;constant;ORA_ABSY
+65xxMnemonics;constant;INC_ZP
+65xxMnemonics;constant;INC_ZPX
+65xxMnemonics;constant;INC_ABS
+65xxMnemonics;constant;INC_ABSX
+65xxMnemonics;constant;BPL_REL
+65xxMnemonics;constant;ARR_IMM
+65xxMnemonics;constant;PLA
+65xxMnemonics;constant;RTI
+65xxMnemonics;constant;RLA_ZP
+65xxMnemonics;constant;RLA_ZPX
+65xxMnemonics;constant;RLA_IZPX
+65xxMnemonics;constant;RLA_IZPY
+65xxMnemonics;constant;RLA_ABS
+65xxMnemonics;constant;RLA_ABSX
+65xxMnemonics;constant;RLA_ABSY
+65xxMnemonics;constant;SRE_ZP
+65xxMnemonics;constant;SRE_ZPX
+65xxMnemonics;constant;SRE_IZPX
+65xxMnemonics;constant;SRE_IZPY
+65xxMnemonics;constant;SRE_ABS
+65xxMnemonics;constant;SRE_ABSX
+65xxMnemonics;constant;SRE_ABSY
+65xxMnemonics;constant;LDA_IMM
+65xxMnemonics;constant;LDA_ZP
+65xxMnemonics;constant;LDA_ZPX
+65xxMnemonics;constant;LDA_IZPX
+65xxMnemonics;constant;LDA_IZPY
+65xxMnemonics;constant;LDA_ABS
+65xxMnemonics;constant;LDA_ABSX
+65xxMnemonics;constant;LDA_ABSY
+65xxMnemonics;constant;PHA
+65xxMnemonics;constant;SAX_ZP
+65xxMnemonics;constant;SAX_ZPY
+65xxMnemonics;constant;SAX_IZPX
+65xxMnemonics;constant;SAX_ABS
+65xxMnemonics;constant;TXS
+65xxMnemonics;constant;RTS
+65xxMnemonics;constant;INX
+65xxMnemonics;constant;SBC_IMM
+65xxMnemonics;constant;SBC_ZP
+65xxMnemonics;constant;SBC_ZPX
+65xxMnemonics;constant;SBC_IZPX
+65xxMnemonics;constant;SBC_IZPY
+65xxMnemonics;constant;SBC_ABS
+65xxMnemonics;constant;SBC_ABSX
+65xxMnemonics;constant;SBC_ABSY
+65xxMnemonics;constant;INY
+65xxMnemonics;constant;PLP
+65xxMnemonics;constant;ISC_ZP
+65xxMnemonics;constant;ISC_ZPX
+65xxMnemonics;constant;ISC_IZPX
+65xxMnemonics;constant;ISC_IZPY
+65xxMnemonics;constant;ISC_ABS
+65xxMnemonics;constant;ISC_ABSX
+65xxMnemonics;constant;ISC_ABSY
+65xxMnemonics;constant;PHP
+65xxMnemonics;constant;ASL
+65xxMnemonics;constant;ASL_ZP
+65xxMnemonics;constant;ASL_ZPX
+65xxMnemonics;constant;ASL_ABS
+65xxMnemonics;constant;ASL_ABSX
+65xxMnemonics;constant;TYA
+65xxMnemonics;constant;BMI_REL
+65xxMnemonics;function;asmCommandSize;1
+[directives]
+*;*=$1000;Sets the memory position to a given value.
+.align;.align $100;Aligns the memory position with the given value. Ex. '.align $100' at memory position $1234 will set the position to $1300.
+.assert;.assert "Test 1",2+2,4;Asserts that two expressions or codeblocks are equal.
+.asserterror;.asserterror "Test 2", List().get(27);Asserts that a given expression or codeblock generates an error.
+.break;.break;Puts a breakpoint on the next generated bytes.
+.by;.by $01,$02,$03;An alias for '.byte'.
+.byte;.byte $01,$02,$03;Outputs bytes.
+.const;.const DELAY=7;Defines a constant.
+.define;.define width, height {...};Executes a block of directives in 'functionmode' (faster) to define values.
+.disk;.disk [..disk pararamters..] {..fileparameters..};Creates a d64 image file.
+.dw;.dw $12341234;An alias for '.dword'.
+.dword;.dword $12341234;Outputs doublewords (4 byte values).
+.encoding;.encoding "screencode_upper";Sets the character encoding.
+.enum;.enum {on, off};Defines a series of constants.
+.error;.error "not good!";Creates an user raised error.
+.errorif;.errorif x>10 "not good!";Creates an user raised error if condition is evaluated to true.
+.eval;.eval x=x+y/2;Evaluates a script expression.
+.file;.file [name="myfile.prg" segments="Code, Data"];Creates a prg or bin file from the given segments.
+.filemodify;.filemodify Encrypt(33);Modify the output of the current source file with the given modifier.
+.filenamespace;.filenamespace myspace;Creates a namespace for all the following directives in the current source file.
+.fill;.fill 10, i*2;Fills a number of bytes with the value of a given expression.
+.fillword;.fillword 10, i*$102;Fills a number of words with the value of a given expression.
+.for;.for(var i;i<10;i++) {...};Creates a for loop.
+.function;.function area(h,w) {..};Defines a function.
+.if;.if(x>10) {...};Executes code if the given condition is true.
+.import binary;.import binary "Music.bin";Imports a binary file.
+.import c64;.import c64 "Music.c64";Imports a c64 files. Same as '.import binary', but ignores the two address bytes at the start of the file.
+.import source;.import source "MyLib.asm";Imports another source file. (Depricated, use #import instead)
+.import text;.import text "scroll.txt";Imports a text file.
+.importonce;.importonce;Make the assembler skip the current file if it has already been imported. (Depricated, use #importonce instead)
+.label;.label color=$d020;Assigns a given expression to a label.
+.lohifill;.lohifill $100, i*40;Fills two table with hi and lo byte of the given expression. Address of the tables can be read by connecting a label.
+.macro;.macro BasicUpstart() {...};Defines a macro.
+.memblock;.memblock "New block";Defines a new memoryblock at the current memoryposition.
+.modify;.modify Encrypt(27) {...};Modifies the output of a codeblock using the given modifier.
+.namespace;.namespace myspace {..};Creates a local namespace.
+.pc;.pc=$1000;Same as '*='
+.plugin;.plugin "plugins.macros.MyMacro";Tells the assembler to look for a plugin at the given java-package path.
+.print;.print "Hello";Prints a message to the console in the last pass.
+.printnow;.printnow "Hello now";Prints a message to the console immediately.
+.pseudocommand;.pseudocommand mov src:tar {...};Defines a pseudocommand.
+.pseudopc;.pseudopc $2000 {...};Sets the program counter to something else than the actual memory position.
+.return;.return 27;Used inside functions to return a value.
+.segment;.segment Data "My Data";Switches to another segment.
+.segmentdef;.segmentdef Data [start=$1000];Defines a segment.
+.segmentout;.segmentout [segments="DRIVE_CODE"];Output the bytes of an intermediate segment to the current memoryblock.
+.struct;.struct Point {x,y};Creates a user defined structure.
+.te;.te "hello";An alias for '.text'.
+.text;.text "hello";Dumps text bytes to memory.
+.var;.var x=27;Defines a variable.
+.while;.while(i<10) {...};Creates a while loop.
+.wo;.wo $1000,$1012;An alias for '.word'.
+.word;.word $1000,$1012;Outputs words (two bytes values),
+.zp;.zp { label: .byte 0 ... };Marks unresolved labels as being in the zeropage.
+[ppdirectives]
+#define;#define DEBUG;Defines a preprocessor symbol.
+#elif;#elif TEST;The combination of an #else and an #if preprocessor directive.
+#else;#else;Used after an #if to start an else block which is executed if the condition is false.
+#endif;#endif;Marks the end of an #if/#else block.
+#if;#if !DEBUG;Discards the sourcecode after the #if-directive if the condition is false.
+#import;#import "file2.asm";Imports another sourcefile.
+#importif;#importif !DEBUG "file2.asm";Imports another sourcefile if the given expression is evaluated to true.
+#importonce;#importonce;Make the assembler skip the current file if it has already been imported.
+#undef;#undef DEBUG;Removes the definition of a preprocessor symbol.
+[errors]
+Error;15,5,15,10,0;Invalid directive
+[syntax]
+comment;1,1,1,3,0
+comment;2,1,2,15,0
+comment;3,1,3,3,0
+directive;6,1,6,5,0
+symbolReference;7,5,7,8,0
+mnemonic;7,1,7,3,0
+directive;9,1,9,6,0
+directive;10,1,10,6,0
+comment;12,1,12,28,0
+ppDirective;14,1,14,7,0
+comment;1,1,1,3,1
+comment;2,1,2,15,1
+comment;3,1,3,3,1
+comment;7,5,7,18,1
+comment;12,5,12,16,1
+label;6,1,6,7,1
+mnemonic;8,5,8,7,1
+mnemonic;9,5,9,7,1
+symbolReference;10,10,10,13,1
+mnemonic;10,5,10,7,1
+mnemonic;11,5,11,7,1
+mnemonic;13,5,13,7,1
+label;16,1,16,7,0
+directive;17,5,17,9,0
+label;18,1,18,11,0
+directive;20,1,20,4,0
+symbolReference;20,20,20,29,0
+symbolReference;20,33,20,38,0
+operator;20,31,20,31,0
+label;22,1,22,5,0
+directive;23,5,23,9,0
+label;24,1,24,9,0
+label;26,1,26,5,0
+comment;29,5,29,18,0
+symbolReference;27,9,27,14,0
+mnemonic;27,5,27,7,0
+mnemonic;30,5,30,7,0
+mnemonic;31,5,31,7,0
+symbolReference;32,10,32,13,0
+mnemonic;32,5,32,7,0
+comment;34,5,34,16,0
+mnemonic;33,5,33,7,0
+mnemonic;35,5,35,7,0
+comment;1,1,24,2,2
+comment;26,1,26,34,2
+comment;27,1,27,10,2
+comment;28,1,28,34,2
+comment;30,1,36,62,2
+directive;37,1,37,6,2
+comment;38,20,38,35,2
+comment;39,16,39,27,2
+comment;40,16,40,22,2
+comment;44,14,44,58,2
+comment;47,1,53,62,2
+directive;38,2,38,6,2
+symbolReference;38,8,38,17,2
+directive;39,5,39,9,2
+directive;40,5,40,9,2
+directive;41,2,41,6,2
+symbolReference;41,20,41,26,2
+functionCall;41,8,41,18,2
+directive;42,2,42,6,2
+label;43,1,43,11,2
+directive;44,5,44,9,2
+directive;54,1,54,6,2
+comment;56,20,56,35,2
+comment;57,16,57,27,2
+comment;58,16,58,22,2
+comment;62,14,62,58,2
+directive;56,2,56,6,2
+symbolReference;56,8,56,17,2
+directive;57,5,57,9,2
+directive;58,5,58,9,2
+directive;59,2,59,6,2
+symbolReference;59,20,59,26,2
+functionCall;59,8,59,18,2
+directive;60,2,60,6,2
+label;61,1,61,11,2
+directive;62,5,62,9,2
+[files]
+0;D:\Work\c64\asmtest\src\kick.asm
+1;D:\Work\c64\asmtest\src\second.asm
+2;KickAss.jar:/include/autoinclude.asm

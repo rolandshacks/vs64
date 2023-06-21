@@ -185,14 +185,17 @@ class Extension {
 
         // register "create project" commands
         {
-            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAsm", function() {
-                thisInstance.onCommandCreateProject("asm", "acme");
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAcme", function() {
+                thisInstance.onCommandCreateProject("acme");
             }));
-            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectC", function() {
-                thisInstance.onCommandCreateProject("c", "cc65");
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectKick", function() {
+                thisInstance.onCommandCreateProject("kick");
             }));
-            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectCpp", function() {
-                thisInstance.onCommandCreateProject("cpp", "llvm");
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectCc65", function() {
+                thisInstance.onCommandCreateProject("cc65");
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectLlvm", function() {
+                thisInstance.onCommandCreateProject("llvm");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.buildProject", function() {
                 thisInstance.triggerBuild();
@@ -206,6 +209,7 @@ class Extension {
         {
             this._taskProvider = new TaskProvider(
                 this._settings,
+                this._project,
                 (action, folder, terminal) => {
                     return thisInstance.executeBuildTask(action, folder, terminal);
                 }
@@ -313,7 +317,9 @@ class Extension {
     onDidChangeActiveTextEditor(textEditor) {
     }
 
-    onCommandCreateProject(templateName, toolkitName) {
+    onCommandCreateProject(toolkitName, templateName) {
+
+        if (!templateName) templateName = toolkitName;
 
         this.cancelBuild();
 

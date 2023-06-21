@@ -1,7 +1,7 @@
 
 # Project and Build System []()
 
-VS64 allows you to create a new project within seconds. Just open the *Command Palette* and select one of the commands [Create ACME Assembler Project](command:vs64.createProjectAsm) or [Create CC65 C Project](command:vs64.createProjectC) or [Create LLVM-MOS C++ Project](command:vs64.createProjectCpp).
+VS64 allows you to create a new project within seconds. Just open the *Command Palette* and select one of the commands [Create ACME Assembler Project](command:vs64.createProjectAcme) or [Create Kick Assembler Project](command:vs64.createProjectKick) or [Create CC65 C Project](command:vs64.createProjectCc65) or [Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm).
 
 <p align="center">
   <img src="./project_create1.png" />

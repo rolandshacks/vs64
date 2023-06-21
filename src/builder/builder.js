@@ -19,6 +19,7 @@ BIND(module);
 
 const { Logger, LogLevel } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
+const { KickAssemblerInfo } = require('debugger/debug_info');
 
 const logger = new Logger("Builder");
 
@@ -104,6 +105,7 @@ class Build {
     buildOutput(txt) {
         if (!txt) return;
 
+        /*
         const pos = txt.indexOf('(');
         if (pos > 0) {
             const project = this._project;
@@ -112,12 +114,13 @@ class Build {
                 txt = filename + txt.substring(pos);
             }
         }
+        */
 
         if (this._onBuildOutputFn) {
             this._onBuildOutputFn(txt);
         } else {
             logger.info(txt);
-        }        
+        }
 
     }
 
@@ -190,20 +193,48 @@ class Build {
                 args,
                 {
                     sync: true,
-                    onstdout: (data) => { instance.buildOutput(data); },
-                    onstderr: (data) => { instance.buildOutput(data); }
+                    onstdout: (data) => {
+                        instance.buildOutput(data);
+                    },
+                    onstderr: (data) => {
+                        instance.buildOutput(data);
+                    }
                 }
             );
         } catch (procInfo) {
-            const msg = procInfo.errorInfo ? 
+
+            instance.#generateAdditionalErrorInfo();
+
+            const msg = procInfo.errorInfo ?
                 "failed to run build process \"" + executable + "\" (" + procInfo.errorInfo.code + ")" :
                 "failed with exit code " + procInfo.exitCode;
             throw(msg);
-        }            
+        }
 
         if (proc && proc.exitCode != 0) {
             throw("failed with exit code " + proc.exitCode);
         }
+    }
+
+    #generateAdditionalErrorInfo() {
+        const project = this._project;
+        const toolkit = project.toolkit;
+
+        if (toolkit != "kick") return;
+
+        const asmInfoFile = path.resolve(project.builddir, project.name + ".info");
+        const asmInfo = KickAssemblerInfo.read(asmInfoFile);
+
+        if (!asmInfo) return;
+
+        const errors = asmInfo.getErrors();
+        if (!errors) return;
+
+        for (const error of errors) {
+            const msg = error.filename + "(" + error.range.startLine + "," + error.range.startPosition + ") : " + error.level + " : XXXXX" + error.message;
+            this.buildOutput(msg);
+        }
+
     }
 }
 

@@ -26,6 +26,18 @@
 					"begin": ";",
 					"end": "$",
 					"comment": "Single line comment"
+				},
+				{
+					"name": "comment.line.double-slash",
+					"begin": "//",
+					"end": "$",
+					"comment": "Single line comment"
+				},
+				{
+					"name": "comment.block",
+					"begin": "/\\*",
+					"end": "\\*/",
+					"comment": "Block comment"
 				}
 			]
 		},
@@ -59,6 +71,9 @@
 				},
 				{
 					"include": "#meta-macro-call"
+				},
+				{
+					"include": "#meta-label"
 				}
             ]
 		},
@@ -83,6 +98,14 @@
 				{
 					"name": "entity.name.function.macro",
 					"match": "\\+(\\w+)\\b"
+				}
+			]
+		},
+		"meta-label": {
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "\\b(\\w+)\\:"
 				}
 			]
 		},

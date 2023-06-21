@@ -21,7 +21,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
-const { DebugInfo,  } = require('debugger/debug_info');
+const { DebugInfo, KickAssemblerInfo } = require('debugger/debug_info');
 
 const logger = new Logger("DebugRun");
 
@@ -83,10 +83,37 @@ function processReportFile() {
 
 }
 
+function processKickDebugInfo() {
+
+    const project = {
+        toolkit: "kick"
+    };
+
+    const debugInfoPath = "data/kickdebug.dbg";
+    const debugInfo = new DebugInfo(debugInfoPath, project);
+
+    const PC = 0x8da; // 2266
+
+    const addressInfo = debugInfo.getAddressInfo(PC);
+
+    return;
+
+}
+
+function processKickAsmInfo() {
+
+    const debugInfoPath = "data/kickdebug.info";
+    const debugInfo = KickAssemblerInfo.read(debugInfoPath);
+
+    return;
+
+}
+
 async function main() {
     Logger.setGlobalLevel(LogLevel.Trace);
 
-    processReportFile();
+    processKickAsmInfo();
+    //processKickDebugInfo();
 }
 
 main();

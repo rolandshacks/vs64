@@ -3,6 +3,7 @@
 //
 
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
@@ -97,6 +98,7 @@ class Settings {
         this.emulatorExecutable = null;
         this.emulatorPort = Constants.BinaryMonitorPort;
         this.pythonExecutable = null;
+        this.javaExecutable = null;
         this.ninjaExecutable = null;
         this.emulatorArgs = null;
         this.autoBuild = false;
@@ -131,9 +133,11 @@ class Settings {
         if (null == settings.autoBuild) settings.autoBuild = true;
 
         this.setupPython(workspaceConfig);
+        this.setupJava(workspaceConfig);
         this.setupResourceCompiler(workspaceConfig);
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
+        this.setupKickAssembler(workspaceConfig);
         this.setupCC65(workspaceConfig);
         this.setupLLVM(workspaceConfig);
         this.setupVice(workspaceConfig);
@@ -142,7 +146,7 @@ class Settings {
     }
 
     setupResourceCompiler(workspaceConfig) {
-        let resourceCompiler = workspaceConfig.get("vs64.resourceCompiler");
+        let resourceCompiler = this.#getAbsDir(workspaceConfig.get("vs64.resourceCompiler"));
         if (resourceCompiler) {
             this.resourceCompiler = resourceCompiler;
         } else {
@@ -151,7 +155,7 @@ class Settings {
     }
 
     setupNinja(workspaceConfig) {
-        let executablePath = workspaceConfig.get("vs64.ninjaExecutable");
+        let executablePath = this.#getAbsDir(workspaceConfig.get("vs64.ninjaExecutable"));
         if (executablePath) {
             this.ninjaExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
@@ -177,7 +181,7 @@ class Settings {
     }
 
     setupAcme(workspaceConfig) {
-        const installDir = workspaceConfig.get("vs64.acmeInstallDir");
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.acmeInstallDir"));
         if (installDir) {
             this.acmeExecutable = path.resolve(installDir, Utils.normalizeExecutableName("acme"));
         } else {
@@ -185,8 +189,17 @@ class Settings {
         }
     }
 
+    setupKickAssembler(workspaceConfig) {
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.kickInstallDir"));
+        if (installDir) {
+            this.kickExecutable = path.resolve(installDir, "KickAss.jar");
+        } else {
+            this.kickExecutable = "KickAss.jar";
+        }
+    }
+
     setupCC65(workspaceConfig) {
-        const installDir = workspaceConfig.get("vs64.cc65InstallDir");
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.cc65InstallDir"));
         if (installDir) {
             this.cc65Includes = [ path.resolve(installDir, "include") ];
             this.cc65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cc65"));
@@ -204,7 +217,7 @@ class Settings {
     }
 
     setupLLVM(workspaceConfig) {
-        const installDir = workspaceConfig.get("vs64.llvmInstallDir");
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.llvmInstallDir"));
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
             this.llvmIncludes = [
@@ -228,7 +241,7 @@ class Settings {
     }
 
     setupVice(workspaceConfig) {
-        const executablePath = workspaceConfig.get("vs64.emulatorExecutable");
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.emulatorExecutable"));
         if (executablePath) {
             this.emulatorExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
@@ -239,7 +252,7 @@ class Settings {
     }
 
     setupPython(workspaceConfig) {
-        const executablePath = workspaceConfig.get("vs64.pythonExecutable");
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.pythonExecutable"));
         if (executablePath) {
             this.pythonExecutable = Utils.normalizeExecutableName(executablePath)
         } else {
@@ -260,18 +273,39 @@ class Settings {
         }
     }
 
+    setupJava(workspaceConfig) {
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.javaExecutable"));
+        if (executablePath) {
+            this.javaExecutable = Utils.normalizeExecutableName(executablePath)
+        } else {
+            this.javaExecutable = "java";
+        }
+    }
+
+    #getAbsDir(dir) {
+        if (!dir || dir.length < 2) return dir;
+
+        if (dir.startsWith('~/')) {
+            return path.join(os.homedir(), dir.substring(1));
+        }
+
+        return dir;
+    }
+
     show() {
         const settings = this;
 
         logger.debug("extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
         logger.debug("auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
         logger.debug("acme executable: " + settings.acmeExecutable);
+        logger.debug("kickass executable: " + settings.kickExecutable);
         logger.debug("cc65 executable: " + settings.cc65Executable);
         logger.debug("ca65 executable: " + settings.ca65Executable);
         logger.debug("ld65 executable: " + settings.ld65Executable);
         logger.debug("vice executable: " + settings.emulatorExecutable);
         logger.debug("ninja executable: " + settings.ninjaExecutable);
         logger.debug("python executable: " + settings.pythonExecutable);
+        logger.debug("java executable: " + settings.javaExecutable);
     }
 
 }

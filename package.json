@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.3.5",
+	"version": "2.4.0",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -29,6 +29,7 @@
 	"dependencies": {
 		"@vscode/debugadapter": "1.51.0",
 		"await-notify": "^1.0.1",
+		"fast-xml-parser": "^4.2.4",
 		"vscode-cpptools": "^6.1.0"
 	},
 	"devDependencies": {
@@ -47,9 +48,10 @@
 		"onLanguage:asm",
 		"onDebug",
 		"onCommand:vs64.showWelcome",
-		"onCommand:vs64.createProjectAsm",
-		"onCommand:vs64.createProjectC",
-		"onCommand:vs64.createProjectCpp",
+		"onCommand:vs64.createProjectAcme",
+		"onCommand:vs64.createProjectKick",
+		"onCommand:vs64.createProjectCc65",
+		"onCommand:vs64.createProjectLlvm",
 		"onCommand:vs64.buildProject",
 		"onCommand:vs64.cleanProject",
 		"onCommand:workbench.action.tasks.runTask"
@@ -80,17 +82,22 @@
 				"category": "VS64"
 			},
 			{
-				"command": "vs64.createProjectAsm",
+				"command": "vs64.createProjectAcme",
 				"title": "Create ACME Assembler Project",
 				"category": "VS64"
 			},
 			{
-				"command": "vs64.createProjectC",
+				"command": "vs64.createProjectKick",
+				"title": "Create KickAssembler Project",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.createProjectCc65",
 				"title": "Create CC65 C Project",
 				"category": "VS64"
 			},
 			{
-				"command": "vs64.createProjectCpp",
+				"command": "vs64.createProjectLlvm",
 				"title": "Create LLVM-MOS C++ Project",
 				"category": "VS64"
 			},
@@ -129,6 +136,18 @@
 						},
 						"completionEvents": [
 							"onSettingChanged:vs64.acmeInstallDir"
+						]
+					},
+					{
+						"id": "setup_kick",
+						"title": "Setup Kick Assembler",
+						"description": "In order to use Kick Assembler, please download, install and add the Kick Assembler install directory to the VS64 preferences.\n\n[Visit Kick Assembler Home Page](http://theweb.dk/KickAssembler)\n\n[Customize Kick Assembler Setup](command:vs64.showSettings?%22kick%22)\n\n[Setup Java Runtime](command:vs64.showSettings?%22java%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/kick.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.kickInstallDir",
+                            "onSettingChanged:vs64.javaExecutable"
 						]
 					},
 					{
@@ -176,7 +195,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAsm)\n\n[Create CC65 C Project](command:vs64.createProjectC)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectCpp)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -198,7 +217,7 @@
 		],
 		"problemMatchers": [
 			{
-				"name": "builder",
+				"name": "msvc",
 				"owner": "vs64",
 				"fileLocation": [
 					"autoDetect",
@@ -211,6 +230,37 @@
 					"location": 2,
 					"message": 4
 				}
+			},
+			{
+				"name": "kick",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^(\\S+)\\(\\s*(\\d+),(\\d+)\\s*\\)\\s*:\\s*(\\w+).*:\\s*(.+)$",
+					"severity": 4,
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"message": 5
+				}
+			},
+			{
+				"name": "kick_unused",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^\\s*\\(([^\\r\\n\\t\\f\\v\\) ]*)\\s*(\\d*):(\\d*)\\)\\s*(.*)$",
+					"file": 1,
+					"location": 2,
+					"column": 3,
+					"message": 4
+				}
 			}
 		],
 		"languages": [
@@ -218,12 +268,10 @@
 				"id": "asm",
 				"aliases": [
 					"6502",
-					"asm",
-					"acme"
+					"asm"
 				],
 				"extensions": [
 					".asm",
-					".acme",
 					".s"
 				],
 				"configuration": "./language/asm.language.json"
@@ -282,6 +330,11 @@
 						"default": "",
 						"description": "Path to ACME assembler installation"
 					},
+					"vs64.kickInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to KickAssembler installation"
+					},
 					"vs64.cc65InstallDir": {
 						"type": "string",
 						"default": "",
@@ -316,6 +369,11 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to python executable. Leave empty to use the default python installation."
+					},
+					"vs64.javaExecutable": {
+						"type": "string",
+						"default": "",
+						"description": "Path to java executable. Leave empty to use the default java installation."
 					},
 					"vs64.resourceCompiler": {
 						"type": "string",

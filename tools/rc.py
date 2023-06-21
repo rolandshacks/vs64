@@ -39,6 +39,13 @@ class OutputFormat(Enum):
     C = 2
     ASM = 3
 
+class OutputFormatVariant(Enum):
+    """Output format variant identifiers."""
+
+    NONE = 0
+    ACME = 1
+    KICK = 2
+
 def clamp(value, min_value, max_value):
     """Clamp value"""
     return max(min_value, min(value, max_value))
@@ -51,8 +58,9 @@ def clamp(value, min_value, max_value):
 class BaseFormatter:
     """Base formatter."""
 
-    def __init__(self):
+    def __init__(self, format_variant):
         self.format = OutputFormat.NONE
+        self.format_variant = format_variant
         self.comment_begin: str = ''
         self.comment_end: str = ''
         self.commentline_char: str = '*'
@@ -200,8 +208,8 @@ class BaseFormatter:
 class CppFormatter(BaseFormatter):
     """C++ formatter."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, format_variant):
+        super().__init__(format_variant)
         self.format = OutputFormat.CPP
         self.comment_begin = '//'
         self.commentline_char = '/'
@@ -212,8 +220,8 @@ class CppFormatter(BaseFormatter):
 class CFormatter(BaseFormatter):
     """C formatter."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, format_variant):
+        super().__init__(format_variant)
         self.format = OutputFormat.C
         self.comment_begin = '//'
         self.commentline_char = '/'
@@ -224,17 +232,25 @@ class CFormatter(BaseFormatter):
 class AsmFormatter(BaseFormatter):
     """Assembler formatter."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, format_variant):
+        super().__init__(format_variant)
         self.format = OutputFormat.ASM
-        self.comment_begin = ';'
         self.byte_prefix = "$"
         self.binary_prefix = '%'
-        self.bytearray_begin = '{0}\n'
-        self.bytearray_linebegin = '    !byte '
         self.bytearray_singlelinemode = True
-        self.bytearray_end = '{0}_end\n'
         self.bytearray_size = ''
+
+        if self.format_variant is OutputFormatVariant.ACME:
+            self.comment_begin = ';'
+            self.bytearray_begin = '{0}\n'
+            self.bytearray_linebegin = '    !byte '
+            self.bytearray_end = '{0}_end\n'
+        else:
+            self.comment_begin = '//'
+            self.commentline_char = '/'
+            self.bytearray_begin = '{0}:\n'
+            self.bytearray_linebegin = '    .byte '
+            self.bytearray_end = '{0}_end:\n'
 
 class CompileError:
     """Compile errors."""
@@ -1560,7 +1576,7 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "o:", ["cpp", "cc", "asm", "config=", "help", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "o:", ["cpp", "cc", "acme", "kick", "config=", "help", "output="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -1568,6 +1584,7 @@ def main():
     output: Optional[str] = None
 
     output_format = OutputFormat.CPP
+    output_format_variant = OutputFormatVariant.NONE
     config_file = None
 
     for option, arg in opts:
@@ -1575,8 +1592,12 @@ def main():
             output_format = OutputFormat.CPP
         if option in ("--cc"):
             output_format = OutputFormat.C
-        if option in ("--asm"):
+        if option in ("--acme"):
             output_format = OutputFormat.ASM
+            output_format_variant = OutputFormatVariant.ACME
+        if option in ("--kick"):
+            output_format = OutputFormat.ASM
+            output_format_variant = OutputFormatVariant.KICK
         if option in ("--config"):
             config_file = arg
         if option in ("-h", "--help"):
@@ -1587,11 +1608,11 @@ def main():
 
     formatter = None
     if output_format == OutputFormat.CPP:
-        formatter = CppFormatter()
+        formatter = CppFormatter(output_format_variant)
     elif output_format == OutputFormat.C:
-        formatter = CFormatter()
+        formatter = CFormatter(output_format_variant)
     elif output_format == OutputFormat.ASM:
-        formatter = AsmFormatter()
+        formatter = AsmFormatter(output_format_variant)
     else:
         formatter = BaseFormatter()
 
