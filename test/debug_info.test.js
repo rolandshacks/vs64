@@ -44,12 +44,16 @@ test("test debug info", async () => {
     Logger.setSink(loggerSink);
 
     const project = {
+        getAsmSourceFiles: function() {
+            return [ "/work/testproject/main.asm" ];
+        },
+
         resolveFile: function(filename) {
             return filename;
         }
     };
 
-    const debugInfo = new DebugInfo("data/example.report", project);
+    const debugInfo = new DebugInfo("data/test.report", project);
 
     const addessInfo = debugInfo.getAddressInfo(2070);
 

@@ -138,6 +138,7 @@ class Project {
     get command() { return this._command; }
     get startAddress() { return this._startAddress; }
     get buildType() { return this._buildType; }
+    get resourceCompilerArgs() { return this._resourceCompilerArgs; }
     get buildfile() { return this._buildfile; }
     get modificationTime() { return this._modificationTime; }
     get outputs() { return this._outputs; }
@@ -311,6 +312,7 @@ class Project {
         this._assembler = data.assembler;
         this._linker = data.linker;
         this._buildType = data.build;
+        this._resourceCompilerArgs = data.rcFlags;
 
         { // definitions
             const definitions = [];
@@ -984,6 +986,19 @@ class Project {
 
             const extensionPath = settings.extensionPath;
             script.push(this.#keyValue("rc_exe", settings.resourceCompiler));
+
+            let rcFlags = project.resourceCompilerArgs || "";
+
+            if (rcFlags.length > 0) rcFlags += " ";
+            rcFlags += "--config $config";
+
+            if (rcFlags.indexOf("--format ") == -1) {
+                let rcFormat = toolkit;
+                if (toolkit == "cc65") rcFormat = "cc";
+                else if (toolkit == "llvm") rcFormat = "cpp";
+                rcFlags += " --format " + rcFormat;
+            }
+            script.push(this.#keyValue("rc_flags", rcFlags));
         }
 
         if (toolkit == "kick") {
@@ -1024,7 +1039,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --kick --config $config -o $out $in");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
             script.push("");
 
             script.push("rule asm");
@@ -1087,7 +1102,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --acme --config $config -o $out $in");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
             script.push("");
 
             script.push("rule asm");
@@ -1173,7 +1188,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --cc --config $config -o $out $in");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
             script.push("");
 
             script.push("rule cc");
@@ -1280,7 +1295,7 @@ class Project {
             script.push("");
 
             script.push("rule res");
-            script.push("    command = $python_exe $rc_exe --cpp --config $config -o $out $in");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
             script.push("");
 
             script.push("rule cc");

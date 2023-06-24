@@ -23,7 +23,7 @@ const { Logger } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { Constants, Opcodes } = require('settings/settings');
 const { TokenType } = require('language/language_base');
-const { AcmeParser, AcmeGrammar } = require('language/language_asm');
+const { AsmParser, AsmGrammar } = require('language/language_asm');
 
 const logger = new Logger("Language");
 
@@ -39,24 +39,24 @@ class Parser {
     static fromType(typeName) {
         let impl = null;
         if (typeName == "asm") {
-            impl = new AcmeParser();
+            impl = new AsmParser();
         }
         if (!impl) return null;
         const instance = new Parser(impl);
         return instance;
     }
 
-    static parseFile(filename) {
+    static parseFile(filename, options) {
         const parser = Parser.fromType("asm");
         if (!parser) return null;
-        parser._impl.parseFile(filename);
+        parser._impl.parseFile(filename, options);
         return parser._impl.ast;
     }
 
-    static parse(source, filename) {
+    static parse(source, filename, options) {
         const parser = Parser.fromType("asm");
         if (!parser) return null;
-        parser._impl.parse(source, filename);
+        parser._impl.parse(source, filename, options);
         return parser._impl.ast;
     }
 
@@ -83,7 +83,7 @@ class LanguageFeatureProvider {
         const identifier = Parser.getTokenAtDocumentPos(document, position, true, true);
         if (!identifier) return null;
 
-        const completedItems = AcmeGrammar.fuzzySearch(identifier);
+        const completedItems = AsmGrammar.fuzzySearch(identifier);
         if (!completedItems || completedItems.length < 1) return null;
 
         const startPosition = new vscode.Position(position.line, position.character - identifier.length);
@@ -118,11 +118,15 @@ class LanguageFeatureProvider {
         const sources = project.queryAllAsmFiles();
         const locations = [];
 
+        const options = {
+            toolkit: project.toolkit
+        };
+
         for (const filename of sources) {
 
             if (cancellationToken && cancellationToken.isCancellationRequested) return null;
 
-            const ast = Parser.parseFile(filename);
+            const ast = Parser.parseFile(filename, options);
             if (!ast) continue;
 
             const definition = ast.findDefinition(identifier);
@@ -165,9 +169,13 @@ class LanguageFeatureProvider {
         const sources = project.queryAllAsmFiles();
         const locations = [];
 
+        const options = {
+            toolkit: project.toolkit
+        };
+
         for (const filename of sources) {
 
-            const ast = Parser.parseFile(filename);
+            const ast = Parser.parseFile(filename, options);
             if (!ast) continue;
 
             const tokens = ast.tokens;

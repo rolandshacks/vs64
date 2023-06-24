@@ -30,6 +30,7 @@ class Constants:
     RESOURCE_CONFIG_ROOT = "resources"
     DEFAULT_SAMPLE_FREQUENCY = 4000
     DEFAULT_SAMPLE_BITS = 4
+    MAX_SAMPLE_OUTPUT_SIZE = 65535
 
 class OutputFormat(Enum):
     """Output format identifiers."""
@@ -602,7 +603,7 @@ class WaveResource(Resource):
 
         # setup conversion parameters
 
-        target_max_output_size = int((32767 * 8) / target_bits_per_sample)
+        target_max_output_size = int((Constants.MAX_SAMPLE_OUTPUT_SIZE * 8) / target_bits_per_sample)
 
         sample_rate = format_sample_rate if not target_sample_rate else min(format_sample_rate, target_sample_rate)
         sample_step = int(format_sample_rate / sample_rate) * format_bytes_per_sample_block
@@ -656,7 +657,7 @@ class WaveResource(Resource):
         if len(logical_data) > 0: loudness_rms /= len(logical_data)
         if loudness_rms > 0.0: loudness_rms = math.sqrt(loudness_rms)
 
-        normalization_factor = (1.0 / max(0.01, loudness_rms))
+        normalization_factor = (1.0 / max(0.33, loudness_rms))
 
         # normalize, quantize and compress to byte array
 
@@ -678,7 +679,7 @@ class WaveResource(Resource):
         else:
             # 8-bit output
             idx = 0
-            while idx < len(logical_data) - 1:
+            while idx < len(logical_data):
                 s = clamp(normalization_factor * logical_data[idx], -1.0, 1.0)
                 b = self.float_to_byte(s)
                 data.append(b)
@@ -1563,11 +1564,13 @@ class ResourceCompiler:
 def usage():
     """Print tool usage information."""
 
-    print("Usage: rc [--cpp|--cc|--asm] [--config config] -o output input...")
+    print("Usage: rc [--format cpp|cc|acme|kick|raw] [--config config] -o output input...")
     print("")
-    print("--cpp             : Generate C++ data")
-    print("--cc              : Generate plain C data")
-    print("--asm             : Generate assembler data")
+    print("--format          : Specify output data format")
+    print("                    cpp  - Generate C++ data")
+    print("                    cc   - Generate C data")
+    print("                    acme - Generate ACME assembler data")
+    print("                    kick - Generate KickAssembler data")
     print("--config          : path to JSON configuration file")
     print("-o                : Name of file to be generated")
     print("input             : Resource files")
@@ -1576,45 +1579,40 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "o:", ["cpp", "cc", "acme", "kick", "config=", "help", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "o:", ["format=", "config=", "help", "output="])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
 
+    format_str: Optional[str] = None
+    config_file: Optional[str] = None
     output: Optional[str] = None
 
-    output_format = OutputFormat.CPP
-    output_format_variant = OutputFormatVariant.NONE
-    config_file = None
-
     for option, arg in opts:
-        if option in ("--cpp"):
-            output_format = OutputFormat.CPP
-        if option in ("--cc"):
-            output_format = OutputFormat.C
-        if option in ("--acme"):
-            output_format = OutputFormat.ASM
-            output_format_variant = OutputFormatVariant.ACME
-        if option in ("--kick"):
-            output_format = OutputFormat.ASM
-            output_format_variant = OutputFormatVariant.KICK
-        if option in ("--config"):
-            config_file = arg
         if option in ("-h", "--help"):
             usage()
             sys.exit()
-        if option in ("-o", "--output"):
+        elif option in ("--format"):
+            format_str = arg
+        elif option in ("--config"):
+            config_file = arg
+        elif option in ("-o", "--output"):
             output = arg
 
     formatter = None
-    if output_format == OutputFormat.CPP:
-        formatter = CppFormatter(output_format_variant)
-    elif output_format == OutputFormat.C:
-        formatter = CFormatter(output_format_variant)
-    elif output_format == OutputFormat.ASM:
-        formatter = AsmFormatter(output_format_variant)
+    if format_str == "cpp":
+        formatter = CppFormatter(OutputFormatVariant.NONE)
+    elif format_str == "cc":
+        formatter = CFormatter(OutputFormatVariant.NONE)
+    elif format_str == "acme":
+        formatter = AsmFormatter(OutputFormatVariant.ACME)
+    elif format_str == "kick":
+        formatter = AsmFormatter(OutputFormatVariant.KICK)
+    elif not format_str:
+        formatter = BaseFormatter(OutputFormat.NONE)
     else:
-        formatter = BaseFormatter()
+        print("unsupported output format type: " + format_str)
+        sys.exit(2)
 
     resource_compiler = ResourceCompiler()
 

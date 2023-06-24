@@ -114,10 +114,6 @@ class DebugContext {
             return;
         }
 
-        //vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerType6502, this);
-        //vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this);
-        //this._context.subscriptions.push(this);
-
         this._6502DebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerType6502, this);
         vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerType6502, this._6502DebugConfigProvider);
         this._context.subscriptions.push(this._6502DebugConfigProvider);
@@ -125,8 +121,6 @@ class DebugContext {
         this._ViceDebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerTypeVice, this);
         vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this._ViceDebugConfigProvider);
         this._context.subscriptions.push(this._ViceDebugConfigProvider);
-
-
     }
 
     // stop debugger

@@ -25,12 +25,8 @@ class DiagnosticProvider {
         this._extension = extension;
         this._context = extension._extensionContext;
         this._diagnostics = null;
-
-        {
-            this._collection = vscode.languages.createDiagnosticCollection(Constants.AssemblerLanguageId);
-            this._context.subscriptions.push(this._collection);
-        }
-
+        this._collection = vscode.languages.createDiagnosticCollection("assembler");
+        this._context.subscriptions.push(this._collection);
     }
 
     clear() {

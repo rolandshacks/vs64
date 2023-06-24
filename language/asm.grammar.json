@@ -3,23 +3,42 @@
 	"name": "6502 Assembler Language Grammar",
 	"patterns": [
 		{
-			"include": "#comments"
+			"include": "#generic"
 		},
 		{
-			"include": "#strings"
+			"include": "#acme"
 		},
 		{
-			"include": "#meta"
-		},
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#constants-numeric"
+			"include": "#kick"
 		}
 	],
+
 	"repository": {
-		"comments": {
+
+		"generic": {
+			"patterns": [
+				{
+					"include": "#generic-comments"
+				},
+				{
+					"include": "#generic-strings"
+				},
+				{
+					"include": "#generic-numbers"
+				},
+				{
+					"include": "#generic-labels"
+				},
+				{
+					"include": "#generic-opcodes"
+				},
+				{
+					"include": "#generic-directives"
+				}
+			]
+		},
+
+		"generic-comments": {
 			"patterns": [
 				{
 					"name": "comment.line.semicolon",
@@ -41,7 +60,8 @@
 				}
 			]
 		},
-		"strings": {
+
+		"generic-strings": {
 			"name": "string.quoted.double.asm",
 			"begin": "\"",
 			"end": "\"",
@@ -52,56 +72,29 @@
 				}
 			]
 		},
-		"meta": {
+
+		"generic-numbers": {
 			"patterns": [
 				{
-					"include": "#meta-preprocessor-keywords"
+					"match": "#?\\$[0-9a-fA-F]+\\b",
+					"name": "constant.numeric.hex"
 				},
 				{
-					"include": "#meta-preprocessor-flow-control"
+					"match": "#?\\%[0-1]+\\b",
+					"name": "constant.numeric.bin"
 				},
 				{
-					"include": "#meta-preprocessor-io"
+					"match": "#?[0-9]+\\b",
+					"name": "constant.numeric.dec"
 				},
 				{
-					"include": "#meta-declaration"
-				},
-				{
-					"include": "#meta-macro-declaration"
-				},
-				{
-					"include": "#meta-macro-call"
-				},
-				{
-					"include": "#meta-label"
-				}
-            ]
-		},
-		"meta-declaration": {
-			"patterns": [
-				{
-					"name": "meta.preprocessor",
-					"match": "\\!(addr|set|zone)\\b"
+					"match": "#?\\&[0-7]+\\b",
+					"name": "constant.numeric.oct"
 				}
 			]
 		},
-		"meta-macro-declaration": {
-			"patterns": [
-				{
-					"name": "entity.name.function.macro",
-					"match": "\\!(macro)\\b"
-				}
-			]
-		},
-		"meta-macro-call": {
-			"patterns": [
-				{
-					"name": "entity.name.function.macro",
-					"match": "\\+(\\w+)\\b"
-				}
-			]
-		},
-		"meta-label": {
+
+		"generic-labels": {
 			"patterns": [
 				{
 					"name": "entity.name.function",
@@ -109,7 +102,90 @@
 				}
 			]
 		},
-		"meta-preprocessor-keywords": {
+
+		"generic-opcodes": {
+			"patterns": [
+				{
+					"include": "#generic-opcodes-instructions"
+				},
+				{
+					"include": "#generic-opcodes-control"
+				},
+				{
+					"include": "#generic-opcodes-illegal"
+				}
+			]
+		},
+		"generic-opcodes-instructions": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)[\\s]*\\b(adc|and|asl|bit|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|sbc|sec|sed|sei|sta|stx|sty|tax|txa|tay|tya|tsx|txs)\\b"
+				}
+			]
+		},
+		"generic-opcodes-control": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "(?i)[\\s]*\\b(bcc|bcs|beq|bmi|bne|bpl|brk|bvc|bvs|jmp|jsr|rti|rts)\\b"
+				}
+			]
+		},
+		"generic-opcodes-illegal": {
+			"patterns": [
+				{
+					"name": "keyword.illegal",
+					"match": "(?i)[\\s]*\\b(slo|rla|sre|rra|sax|lax|dcp|isc|anc|asr|arr|sbx|dop|top|jam)\\b"
+				}
+			]
+		},
+
+		"generic-directives": {
+			"patterns": [
+				{
+					"include": "#generic-directives-pc"
+				}
+            ]
+		},
+		"generic-directives-pc": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "keyword.instructions"
+						}
+					},
+					"match": "(\\*=)"
+				}
+			]
+		},
+
+		"acme": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor"
+				},
+				{
+					"include": "#acme-directives"
+				}
+			]
+		},
+
+		"acme-preprocessor": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor-keywords"
+				},
+				{
+					"include": "#acme-preprocessor-flow-control"
+				},
+				{
+					"include": "#acme-preprocessor-io"
+				}
+            ]
+		},
+		"acme-preprocessor-keywords": {
 			"patterns": [
 				{
 					"name": "meta.preprocessor",
@@ -117,7 +193,7 @@
 				}
 			]
 		},
-		"meta-preprocessor-flow-control": {
+		"acme-preprocessor-flow-control": {
 			"patterns": [
 				{
 					"name": "meta.diff.header",
@@ -125,11 +201,11 @@
 				}
 			]
 		},
-		"meta-preprocessor-io": {
+		"acme-preprocessor-io": {
 			"patterns": [
 				{
-					"match": "\\!(binary|bin)\\b",
-					"name": "meta.preprocessor.io"
+					"name": "meta.preprocessor.io",
+					"match": "\\!(binary|bin)\\b"
 				},
 				{
 					"captures": {
@@ -158,49 +234,51 @@
 				}
 			]
 		},
-		"keywords": {
+
+		"acme-directives": {
 			"patterns": [
 				{
-					"include": "#keywords-instructions"
+					"include": "#acme-directives-macro-declaration"
 				},
 				{
-					"include": "#keywords-instructions-program-counter"
+					"include": "#acme-directives-macro-call"
 				},
 				{
-					"include": "#keywords-assignment-values"
+					"include": "#acme-directives-scope-declaration"
 				},
 				{
-					"include": "#keywords-assignment-text"
+					"include": "#acme-directives-data"
 				},
 				{
-					"include": "#keywords-control"
-				},
+					"include": "#acme-directives-text"
+				}
+            ]
+		},
+		"acme-directives-macro-declaration": {
+			"patterns": [
 				{
-					"include": "#keywords-illegal"
+					"name": "entity.name.function.macro",
+					"match": "\\!(macro)\\b"
 				}
 			]
 		},
-		"keywords-instructions": {
+		"acme-directives-macro-call": {
 			"patterns": [
 				{
-					"name": "keyword.instructions",
-					"match": "(?i)[\\s]*\\b(adc|and|asl|bit|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|sbc|sec|sed|sei|sta|stx|sty|tax|txa|tay|tya|tsx|txs)\\b"
+					"name": "entity.name.function.macro",
+					"match": "\\+(\\w+)\\b"
 				}
 			]
 		},
-		"keywords-instructions-program-counter": {
+		"acme-directives-scope-declaration": {
 			"patterns": [
 				{
-					"captures": {
-						"1": {
-							"name": "keyword.instructions"
-						}
-					},
-					"match": "(\\*=)"
+					"name": "meta.preprocessor",
+					"match": "\\!(addr|set|zone)\\b"
 				}
 			]
 		},
-		"keywords-assignment-values": {
+		"acme-directives-data": {
 			"patterns": [
 				{
 					"name": "keyword.instructions",
@@ -208,7 +286,7 @@
 				}
 			]
 		},
-		"keywords-assignment-text": {
+		"acme-directives-text": {
 			"patterns": [
 				{
 					"name": "keyword.instructions",
@@ -216,42 +294,76 @@
 				}
 			]
 		},
-		"keywords-control": {
+
+		"kick": {
 			"patterns": [
 				{
-					"name": "keyword.control",
-					"match": "(?i)[\\s]*\\b(bcc|bcs|beq|bmi|bne|bpl|brk|bvc|bvs|jmp|jsr|rti|rts)\\b"
+					"include": "#kick-preprocessor"
+				},
+				{
+					"include": "#kick-directives"
 				}
 			]
 		},
-		"keywords-illegal": {
+
+		"kick-preprocessor": {
 			"patterns": [
 				{
-					"name": "keyword.illegal",
-					"match": "(?i)[\\s]*\\b(slo|rla|sre|rra|sax|lax|dcp|isc|anc|asr|arr|sbx|dop|top|jam)\\b"
+					"name": "meta.preprocessor",
+					"match": "#(define|elif|else|endif|if|import|importif|importonce|undef)\\b"
 				}
 			]
 		},
-		"constants-numeric": {
+
+		"kick-directives": {
 			"patterns": [
 				{
-					"match": "#?\\$[0-9a-fA-F]+\\b",
-					"name": "constant.numeric.hex"
+					"include": "#kick-directives-flow-control"
 				},
 				{
-					"match": "#?\\%[0-1]+\\b",
-					"name": "constant.numeric.bin"
+					"include": "#kick-directives-asm-control"
 				},
 				{
-					"match": "#?[0-9]+\\b",
-					"name": "constant.numeric.dec"
+					"include": "#kick-directives-data"
 				},
 				{
-					"match": "#?\\&[0-7]+\\b",
-					"name": "constant.numeric.oct"
+					"include": "#kick-directives-text"
+				}
+            ]
+		},
+		"kick-directives-flow-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(for|if|while|return)\\b"
+				}
+			]
+		},
+		"kick-directives-asm-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(align|assert|asserterror|break|cpu|define|disk|encoding|error|errorif|eval|file|filemodify|filenamespace|function|import|importonce|label|lohifill|macro|memblock|modify|namespace|pc|plugin|print|printnow|pseudocommand|pseudopc|segment|segmentdef|segmentout|zp)\\b"
+				}
+			]
+		},
+		"kick-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(by|byte|const|dw|dword|enum|fill|fillword|struct|var|wo|word)\\b"
+				}
+			]
+		},
+		"kick-directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(te|text|)\\b"
 				}
 			]
 		}
+
 	},
 	"scopeName": "source.asm"
 }

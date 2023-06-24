@@ -162,7 +162,7 @@ A more extensive project file for CC65 using source and resource files could lik
 }
 ```
 
-A more extensive project file for CC65 could like like this:
+A project file for CC65 could like like this:
 
 ```
 {
@@ -182,6 +182,21 @@ A more extensive project file for CC65 could like like this:
     "linkerFlags": "",
     "compiler": "",
     "resources: {}
+}
+```
+
+To specify resource compiler flags and options, add a section "resources" to
+the project file using the following syntax:
+
+```
+{
+    "name": "example",
+    ...
+    "resources": {
+        "sampleFrequency": 8000,
+        "sampleBits": 8
+    },
+    ...
 }
 ```
 
@@ -241,8 +256,29 @@ Overrides the path to the compiler executable. The default path is specified in 
 > resources
 
 Optional parameters for the resource compiler. Currently, the following list of parameters is supported:
-- sampleFrequency: resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
-- sampleBits: target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
+- **sampleFrequency**: resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
+- **sampleBits**: target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
+
+Example:
+
+```
+"resources": {
+    "sampleFrequency": 8000,
+    "sampleBits": 8
+}
+```
+
+>rcFlags
+
+Optional arguments to be added to the resource compiler command. Use this to force the resource compiler to produce
+a specific output format, where format can be 'cpp', 'cc', 'acme' or 'kick'.
+
+```
+{
+    ...
+    "rcFlags": "--format cpp"
+}
+```
 
 ### IntelliSense Support
 
@@ -333,9 +369,13 @@ Use "attach" to attach to a running VICE process. VICE needs to have the binary 
 
 Any name you want to use is fine.
 
-> `program`: Path to a compiled C64 program file (.prg)
+> `hostname`: Host name
 
-Name of the executable program to be launched. If not specified, this is the output file of the build project.
+Optional name of host running a VICE emulator with enabled binary monitor. If not specified, 'localhost' will be used.
+
+> `port`: Port number
+
+Optional port number of running a VICE emulator with enabled binary monitor. If not specified, the binary monitor default port '6502' will be used.
 
 > `pc`: (6502 only) Optional parameter to overwrite the start address of the C64 program. Default is taken from the first two bytes of the program file.
 

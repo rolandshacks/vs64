@@ -231,7 +231,7 @@ class Build {
         if (!errors) return;
 
         for (const error of errors) {
-            const msg = error.filename + "(" + error.range.startLine + "," + error.range.startPosition + ") : " + error.level + " : XXXXX" + error.message;
+            const msg = error.filename + "(" + error.range.startLine + "," + error.range.startPosition + ") : " + error.level + " : " + error.message;
             this.buildOutput(msg);
         }
 

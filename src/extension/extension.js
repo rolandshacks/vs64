@@ -133,12 +133,11 @@ class Extension {
 
         { // register language feature providers
 
-            const languageFeatureSelector = "asm";
             const languageFeatureProvider = new LanguageFeatureProvider(this._project);
 
-            subscriptions.push(vscode.languages.registerDefinitionProvider(languageFeatureSelector, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerReferenceProvider(languageFeatureSelector, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerCompletionItemProvider(languageFeatureSelector, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerReferenceProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
 
             this._languageFeatureProvider = languageFeatureProvider;
         }

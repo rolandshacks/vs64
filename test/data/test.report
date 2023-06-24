@@ -1,0 +1,27 @@
+
+; ******** Source: d:\Work\c64\asmtest\src\main.asm
+     1                          ;
+     2                          ; Example
+     3                          ;
+     4                          
+     5                          *=$0801
+     6  0801 0c08b5079e203230...!byte $0c,$08,$b5,$07,$9e,$20,$32,$30,$36,$32,$00,$00,$00
+     7  080e 4c1f08             jmp main
+     8                          
+     9                          .hellotext
+    10  0811 08050c0c0f2c2017...    !scr "hello, world!",0
+    11                              !set ofs = 14
+    12                          
+    13                          main
+    14  081f a000                   ldy #0
+    15                          
+    16                          hello
+    17  0821 b91108                 lda .hellotext,y
+    18  0824 f00c                   beq +
+    19  0826 990e04                 sta $400+ofs,y
+    20  0829 a901                   lda #1
+    21  082b 990ed8                 sta $d800+ofs,y
+    22  082e c8                     iny
+    23  082f 4c2108                 jmp hello
+    24                          +
+    25  0832 60                     rts

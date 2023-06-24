@@ -19,11 +19,10 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--cpp",
+                "--format", "cpp",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "-o",
-                "${workspaceFolder}/build/waveout.cpp",
-                "${workspaceFolder}/test/data/voice.wav"
+                "--output", "${workspaceFolder}/build/waveout.cpp",
+                "${workspaceFolder}/test/data/wave_hello.wav"
             ]
         },
         {
@@ -104,7 +103,7 @@
                 "--config",
                 "${workspaceFolder}/test/jest.config.js",
                 "-t",
-                "language"
+                "debug_info"
                 //"basic"
             ]
         }
