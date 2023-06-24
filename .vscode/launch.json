@@ -104,7 +104,7 @@
                 "--config",
                 "${workspaceFolder}/test/jest.config.js",
                 "-t",
-                "language"
+                "debug_info"
                 //"basic"
             ]
         }

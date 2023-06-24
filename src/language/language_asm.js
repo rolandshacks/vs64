@@ -1,5 +1,5 @@
 //
-// ASM/ACME Language
+// Assembler Language
 //
 
 const path = require('path');
@@ -25,13 +25,26 @@ const logger = new Logger("AsmLanguage");
 // ACME Grammar
 //-----------------------------------------------------------------------------------------------//
 
-const AcmeGrammar = {
-    pseudoOpcodes: [
+const AsmGrammar = {
+    acmePseudoOpcodes: [
         "fill", "fi", "align", "convtab", "ct", "text", "tx", "pet", "raw", "scr", "scrxor", "to",
         "source", "src","binary", "bin", "zone", "zn", "sl", "svl", "sal", "pdb", "if", "ifdef",
         "for", "do", "endoffile", "warn", "error", "serious", "macro", "set", "initmem", "pseudopc",
         "cpu", "al", "as", "rl", "rs", "cbm", "subzone", "sz", "realpc", "previouscontext", "byte",
         "by", "word", "wo"
+    ],
+
+    kickAssemblerDirectives: [
+        "align", "assert", "asserterror", "break", "by", "byte", "const", "cpu", "define", "disk",
+        "dw", "dword", "encoding", "enum", "error", "errorif", "eval", "file", "filemodify",
+        "filenamespace", "fill", "fillword", "for", "function", "if", "import", "importonce",
+        "label", "lohifill", "macro", "memblock", "modify", "namespace", "pc", "plugin", "print",
+        "printnow", "pseudocommand", "pseudopc", "return", "segment", "segmentdef", "segmentout",
+        "struct", "te", "text", "var", "while", "wo", "word", "zp"
+    ],
+
+    kickPreprocessorDirectives: [
+        "define", "elif", "else", "endif", "if", "import", "importif", "importonce", "undef"
     ],
 
     fuzzySearch: function(query) {
@@ -41,8 +54,22 @@ const AcmeGrammar = {
         const items = [];
 
         if (query.charCodeAt(0) == CharCode.Exclamation) {
-            for (let item of AcmeGrammar.pseudoOpcodes) {
+            for (let item of AsmGrammar.acmePseudoOpcodes) {
                 const token = "!" + item;
+                if (token.startsWith(query)) {
+                    items.push(token);
+                }
+            }
+        } else if  (query.charCodeAt(0) == CharCode.Period) {
+            for (let item of AsmGrammar.kickAssemblerDirectives) {
+                const token = "." + item;
+                if (token.startsWith(query)) {
+                    items.push(token);
+                }
+            }
+        } else if  (query.charCodeAt(0) == CharCode.NumberSign) {
+            for (let item of AsmGrammar.kickPreprocessorDirectives) {
+                const token = "#" + item;
                 if (token.startsWith(query)) {
                     items.push(token);
                 }
@@ -93,22 +120,32 @@ class ParserIterator {
 
 
 //-----------------------------------------------------------------------------------------------//
-// ACME Parser
+// Assembler Parser
 //-----------------------------------------------------------------------------------------------//
 
-class AcmeParser extends ParserBase {
+class AsmParser extends ParserBase {
     constructor() {
         super();
     }
 
-    parse(src, filename) {
-        super.parse(src, filename);
+    parse(src, filename, options) {
+        super.parse(src, filename, options);
 
         const ast = this._ast;
 
         const len = src.length;
 
         const it = new ParserIterator(src);
+
+        let toolkit = "";
+        let isKickAss = false;
+        let isAcme = false;
+
+        if (options && options.toolkit) {
+            toolkit = options.toolkit;
+            isKickAss = (toolkit == "kick");
+            isAcme = (toolkit == "acme");
+        }
 
         let tokensPerLineOfs = -1;
         let tokensPerLineCount = 0;
@@ -120,7 +157,7 @@ class AcmeParser extends ParserBase {
 
             let tokens = [];
 
-            if (c == CharCode.CarriageReturn || c == CharCode.LineFeed) {
+            if (c == CharCode.CarriageReturn || c == CharCode.LineFeed) { // line break
 
                 const range = new Range(it.ofs, it.row, it.col);
 
@@ -132,7 +169,7 @@ class AcmeParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.LineBreak, src, range));
 
-            } else if (c == CharCode.Semicolon) {
+            } else if (c == CharCode.Asterisk && c2 == CharCode.Equals) { // *=PC
 
                 const range = new Range(it.ofs, it.row, it.col);
 
@@ -142,14 +179,43 @@ class AcmeParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.Comment, src, range));
 
-            } else if (c == CharCode.Plus && c2 == CharCode.Plus) {
+            } else if (c == CharCode.Semicolon || (c == CharCode.Slash && c2 == CharCode.Slash)) { // line comment
+
+                const range = new Range(it.ofs, it.row, it.col);
+
+                while (it.ofs < len && src.charCodeAt(it.ofs) != CharCode.CarriageReturn && src.charCodeAt(it.ofs) != CharCode.LineFeed) {
+                    range.inc(); it.next();
+                }
+
+                tokens.push(new Token(TokenType.Comment, src, range));
+
+            } else if (c == CharCode.NumberSign && (c2 == CharCode.LessThan || c2 == CharCode.GreaterThan)) { // #< or #>
+                it.next(); // skip #< or #>
+                it.next();
+            } else if (c == CharCode.NumberSign && isKickAss) { // preprocessor
+
+                const range = new Range(it.ofs, it.row, it.col);
+
+                while (it.ofs < len && src.charCodeAt(it.ofs) != CharCode.CarriageReturn && src.charCodeAt(it.ofs) != CharCode.LineFeed) {
+                    range.inc(); it.next();
+                }
+
+                tokens.push(new Token(TokenType.Preprocessor, src, range));
+
+            } else if (c == CharCode.Plus && c2 == CharCode.Plus) { // ++ label
                 it.next(); // skip ++
                 it.next();
-            } else if (c == CharCode.Period || c == CharCode.Underscore || ParserHelper.isAlpha(c) || (c == CharCode.Plus && ParserHelper.isSymbolChar(c2))) {
+            } else if (
+                (c == CharCode.Period && isAcme) ||
+                (c == CharCode.Exclamation && isKickAss) ||
+                c == CharCode.Underscore ||
+                ParserHelper.isAlpha(c) ||
+                (c == CharCode.Plus && ParserHelper.isSymbolChar(c2))) { // identifier
 
                 let range = null;
 
                 let isReference = false;
+                let isKickReference = false;
 
                 if (c == CharCode.Plus && ParserHelper.isSymbolChar(c2)) {
                     if (tokensPerLineCount == 0) {
@@ -162,10 +228,19 @@ class AcmeParser extends ParserBase {
                         // just a '+' operator in front of identifier
                         it.next();
                     }
+                } else if (isKickAss && c == CharCode.Exclamation && ParserHelper.isSymbolChar(c2)) {
+                    if (tokensPerLineCount > 0) {
+                        // !label reference
+                        isReference = true;
+                        isKickReference = true;
+                        const prefixRange = new Range(it.ofs, it.row, it.col);
+                        prefixRange.inc();
+                        tokens.push(new Token(TokenType.Reference, src, prefixRange));
+                    }
                 }
 
                 range = new Range(it.ofs, it.row, it.col);
-                if (!isReference) {
+                if (!isReference || isKickReference) {
                     range.inc(); it.next();
                 }
 
@@ -175,7 +250,9 @@ class AcmeParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.Identifier, src, range));
 
-            } else if (c == CharCode.Exclamation) {
+            } else if (
+                (c == CharCode.Exclamation && isAcme) ||
+                (c == CharCode.Period && isKickAss)) { // directive or macro
 
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
@@ -186,7 +263,7 @@ class AcmeParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.Macro, src, range));
 
-            } else if (c == CharCode.SingleQuote || c == CharCode.DoubleQuote) {
+            } else if (c == CharCode.SingleQuote || c == CharCode.DoubleQuote) { // string
                 const quoteChar = c;
 
                 it.next(); // skip opening quote char
@@ -297,10 +374,12 @@ class AcmeParser extends ParserBase {
             if (greedyParsing) {
                 if (ParserHelper.isWhitespace(c)) break;
             } else {
-                if (c != CharCode.Period && !ParserHelper.isSymbolChar(c)) break;
+                if (c != CharCode.Period && c != CharCode.Exclamation && !ParserHelper.isSymbolChar(c)) break;
             }
             startPos--;
-            if (c == '.') break; // just accept single '.' as prefix to label
+            if (c == CharCode.Period || c == CharCode.Exclamation) {
+                break; // just accept single '.' or '!' as prefix to label
+            }
         }
 
         let endPos = offset + 1;
@@ -326,6 +405,6 @@ class AcmeParser extends ParserBase {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    AcmeParser: AcmeParser,
-    AcmeGrammar: AcmeGrammar
+    AsmParser: AsmParser,
+    AsmGrammar: AsmGrammar
 }

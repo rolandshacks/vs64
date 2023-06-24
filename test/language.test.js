@@ -10,7 +10,9 @@ const path = require('path');
 //-----------------------------------------------------------------------------------------------//
 
 global._sourcebase = path.resolve(__dirname, "../src");
-global.BIND = function(_module) {
+global._mockup = path.resolve(__dirname, "../test/mockup");
+global.BIND = function (_module) {
+    _module.paths.push(global._mockup);
     _module.paths.push(global._sourcebase);
 };
 
@@ -20,7 +22,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { AcmeParser } = require('parser/parser');
+const { AsmParser } = require('language/language');
 const { Logger, LogLevel } = require('utilities/logger');
 
 const logger = new Logger("TestParser");

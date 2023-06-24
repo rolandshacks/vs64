@@ -133,12 +133,15 @@ class Extension {
 
         { // register language feature providers
 
-            const languageFeatureSelector = "asm";
             const languageFeatureProvider = new LanguageFeatureProvider(this._project);
 
-            subscriptions.push(vscode.languages.registerDefinitionProvider(languageFeatureSelector, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerReferenceProvider(languageFeatureSelector, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerCompletionItemProvider(languageFeatureSelector, languageFeatureProvider));
+            const languageFeatureSelectors = [ "asm", "kick", "acme" ];
+
+            for (const languageFeatureSelector of languageFeatureSelectors) {
+                subscriptions.push(vscode.languages.registerDefinitionProvider(languageFeatureSelector, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerReferenceProvider(languageFeatureSelector, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerCompletionItemProvider(languageFeatureSelector, languageFeatureProvider));
+            }
 
             this._languageFeatureProvider = languageFeatureProvider;
         }
@@ -148,6 +151,10 @@ class Extension {
             this._statusBarItem = new StatusBarItem("vs64.showStatus");
             subscriptions.push(this._statusBarItem.obj);
         }
+
+        vscode.workspace.onDidOpenTextDocument((document) => {
+            thisInstance.updateDocumentLanguageId(document);
+        });
 
         // listen do document save
         vscode.workspace.onDidSaveTextDocument((document) => {
@@ -270,7 +277,40 @@ class Extension {
             });
         */
 
+        this.updateLanguageIds();
+
         this.showWelcome();
+
+    }
+
+    updateLanguageIds() {
+        if (!this.hasWorkspace()) return;
+
+        const textDocuments = vscode.workspace.textDocuments;
+        if (!textDocuments || textDocuments.length < 1) return;
+
+        for (const textDocument of textDocuments) {
+            this.updateDocumentLanguageId(textDocument);
+        }
+    }
+
+    updateDocumentLanguageId(textDocument) {
+        if (!textDocument) return;
+
+        const languageId = textDocument.languageId;
+
+        const project = this._project;
+        if (!project.isValid() || ["asm", "kick", "acme"].indexOf(languageId) == -1) {
+            return;
+        }
+
+        let id = "asm";
+
+        if (project.toolkit == "acme" || project.toolkit == "kick") id = project.toolkit;
+        if (languageId == id) return;
+
+        vscode.languages.setTextDocumentLanguage(textDocument, id);
+        logger.debug("changed document language to " + id);
 
     }
 
@@ -483,6 +523,8 @@ class Extension {
                 if (this._intellisenseConfiguratrionProvider) {
                     this._intellisenseConfiguratrionProvider.notifyConfigChange();
                 }
+
+                this.updateLanguageIds();
             }
 
 

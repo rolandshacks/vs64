@@ -33,7 +33,8 @@ const TokenType = {
     Number: 5,
     LineBreak: 6,
     Macro: 7,
-    Reference: 8
+    Reference: 8,
+    Preprocessor: 9
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -86,6 +87,7 @@ class Token {
         if (type == TokenType.Number) return "number";
         if (type == TokenType.Macro) return "macro";
         if (type == TokenType.Reference) return "reference";
+        if (type == TokenType.Preprocessor) return "preprocessor";
 
         return "unknown";
     }
@@ -270,7 +272,7 @@ class ParserBase {
 
     get ast() { return this._ast; }
 
-    parseFile(filename) {
+    parseFile(filename, options) {
         let src = null;
         try {
             src = fs.readFileSync(filename, "utf8");
@@ -278,10 +280,10 @@ class ParserBase {
             return null;
         }
 
-        return this.parse(src, filename);
+        return this.parse(src, filename, options);
     }
 
-    parse(src, filename) {
+    parse(src, filename, options) {
         if (!src || src.length < 1) return;
         this._ast = new AbstractSyntaxTree(filename);
     }

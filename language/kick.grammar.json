@@ -1,0 +1,209 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "KickAssembler Language Grammar",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#preprocessor"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#opcodes"
+		},
+		{
+			"include": "#constants-numeric"
+		},
+		{
+			"include": "#label"
+		}
+
+	],
+	"repository": {
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.double-slash",
+					"begin": "//",
+					"end": "$",
+					"comment": "Single line comment"
+				},
+				{
+					"name": "comment.block",
+					"begin": "/\\*",
+					"end": "\\*/",
+					"comment": "Block comment"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.asm",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.asm",
+					"match": "\\\\."
+				}
+			]
+		},
+
+		"preprocessor": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "#(define|elif|else|endif|if|import|importif|importonce|undef)\\b"
+				}
+			]
+		},
+
+		"directives": {
+			"patterns": [
+				{
+					"include": "#directives-data"
+				},
+				{
+					"include": "#directives-flow-control"
+				},
+				{
+					"include": "#directives-asm-control"
+				},
+				{
+					"include": "#directives-text"
+				},
+				{
+					"include": "#directives-pc"
+				}
+            ]
+		},
+		"directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(by|byte|const|dw|dword|enum|fill|fillword|struct|var|wo|word)\\b"
+				}
+			]
+		},
+		"directives-flow-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(for|if|while|return)\\b"
+				}
+			]
+		},
+		"directives-asm-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(align|assert|asserterror|break|cpu|define|disk|encoding|error|errorif|eval|file|filemodify|filenamespace|function|import|importonce|label|lohifill|macro|memblock|modify|namespace|pc|plugin|print|printnow|pseudocommand|pseudopc|segment|segmentdef|segmentout|zp)\\b"
+				}
+			]
+		},
+		"directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(te|text|)\\b"
+				}
+			]
+		},
+		"keywords-pc": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "keyword.instructions"
+						}
+					},
+					"match": "(\\*=)"
+				}
+			]
+		},
+
+		"opcodes": {
+			"patterns": [
+				{
+					"include": "#keywords-instructions"
+				},
+				{
+					"include": "#keywords-instructions-program-counter"
+				},
+				{
+					"include": "#keywords-assignment-values"
+				},
+				{
+					"include": "#keywords-assignment-text"
+				},
+				{
+					"include": "#keywords-control"
+				},
+				{
+					"include": "#keywords-illegal"
+				}
+			]
+		},
+		"opcodes-instructions": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)[\\s]*\\b(adc|and|asl|bit|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|sbc|sec|sed|sei|sta|stx|sty|tax|txa|tay|tya|tsx|txs)\\b"
+				}
+			]
+		},
+		"opcodes-control": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "(?i)[\\s]*\\b(bcc|bcs|beq|bmi|bne|bpl|brk|bvc|bvs|jmp|jsr|rti|rts)\\b"
+				}
+			]
+		},
+		"opcodes-illegal": {
+			"patterns": [
+				{
+					"name": "keyword.illegal",
+					"match": "(?i)[\\s]*\\b(slo|rla|sre|rra|sax|lax|dcp|isc|anc|asr|arr|sbx|dop|top|jam)\\b"
+				}
+			]
+		},
+
+		"constants-numeric": {
+			"patterns": [
+				{
+					"match": "#?\\$[0-9a-fA-F]+\\b",
+					"name": "constant.numeric.hex"
+				},
+				{
+					"match": "#?\\%[0-1]+\\b",
+					"name": "constant.numeric.bin"
+				},
+				{
+					"match": "#?[0-9]+\\b",
+					"name": "constant.numeric.dec"
+				},
+				{
+					"match": "#?\\&[0-7]+\\b",
+					"name": "constant.numeric.oct"
+				}
+			]
+		},
+
+		"label": {
+			"patterns": [
+				{
+					"name": "entity.name.function",
+					"match": "\\b(\\w+)\\:"
+				}
+			]
+		}
+
+	},
+	"scopeName": "source.kick"
+}

@@ -17,6 +17,7 @@
 		{
 			"include": "#constants-numeric"
 		}
+
 	],
 	"repository": {
 		"comments": {
@@ -55,41 +56,8 @@
 		"meta": {
 			"patterns": [
 				{
-					"include": "#meta-preprocessor-keywords"
-				},
-				{
-					"include": "#meta-preprocessor-flow-control"
-				},
-				{
-					"include": "#meta-preprocessor-io"
-				},
-				{
-					"include": "#meta-declaration"
-				},
-				{
-					"include": "#meta-macro-declaration"
-				},
-				{
-					"include": "#meta-macro-call"
-				},
-				{
-					"include": "#meta-label"
-				}
-            ]
-		},
-		"meta-declaration": {
-			"patterns": [
-				{
-					"name": "meta.preprocessor",
-					"match": "\\!(addr|set|zone)\\b"
-				}
-			]
-		},
-		"meta-macro-declaration": {
-			"patterns": [
-				{
-					"name": "entity.name.function.macro",
-					"match": "\\!(macro)\\b"
+					"name": "entity.name.function",
+					"match": "\\b(\\w+)\\:"
 				}
 			]
 		},
@@ -101,63 +69,6 @@
 				}
 			]
 		},
-		"meta-label": {
-			"patterns": [
-				{
-					"name": "entity.name.function",
-					"match": "\\b(\\w+)\\:"
-				}
-			]
-		},
-		"meta-preprocessor-keywords": {
-			"patterns": [
-				{
-					"name": "meta.preprocessor",
-					"match": "\\!(cpu|al|as|rl|rs)\\b"
-				}
-			]
-		},
-		"meta-preprocessor-flow-control": {
-			"patterns": [
-				{
-					"name": "meta.diff.header",
-					"match": "\\!(if|ifdef|for|do|warn|error|serious|endoffile|pseudopc)\\b"
-				}
-			]
-		},
-		"meta-preprocessor-io": {
-			"patterns": [
-				{
-					"match": "\\!(binary|bin)\\b",
-					"name": "meta.preprocessor.io"
-				},
-				{
-					"captures": {
-						"1": {
-							"name": "meta.preprocessor.io.output"
-						},
-						"2": {
-							"name": "string.quoted.double.untitled"
-						},
-						"3": {
-							"name": "meta.preprocessor.io.format"
-						}
-					},
-					"match": "(\\!to)\\s*(\\\"[^\"]+\\\")\\s*,\\s*([a-zA-Z]+)"
-				},
-				{
-					"captures": {
-						"1": {
-							"name": "meta.preprocessor.io.input"
-						},
-						"2": {
-							"name": "string.quoted.double.library.name"
-						}
-					},
-					"match": "(\\!source|\\!src)\\s*([\\\"<][^\\\">]+[\\\">])"
-				}
-			]
-		},
 		"keywords": {
 			"patterns": [
 				{
@@ -165,12 +76,6 @@
 				},
 				{
 					"include": "#keywords-instructions-program-counter"
-				},
-				{
-					"include": "#keywords-assignment-values"
-				},
-				{
-					"include": "#keywords-assignment-text"
 				},
 				{
 					"include": "#keywords-control"
@@ -197,22 +102,6 @@
 						}
 					},
 					"match": "(\\*=)"
-				}
-			]
-		},
-		"keywords-assignment-values": {
-			"patterns": [
-				{
-					"name": "keyword.instructions",
-					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|24|32|wo|word|align|fill|fi|hex|h|skip)\\b"
-				}
-			]
-		},
-		"keywords-assignment-text": {
-			"patterns": [
-				{
-					"name": "keyword.instructions",
-					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text|Text)\\b"
 				}
 			]
 		},

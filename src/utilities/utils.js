@@ -890,7 +890,13 @@ const CharCode = {
     Exclamation: '!'.charCodeAt(0),
     Space: ' '.charCodeAt(0),
     Plus: '+'.charCodeAt(0),
-    Minus: '-'.charCodeAt(0)
+    Minus: '-'.charCodeAt(0),
+    Slash: '/'.charCodeAt(0),
+    Backslash: '\\'.charCodeAt(0),
+    Asterisk: '*'.charCodeAt(0),
+    Equals: '='.charCodeAt(0),
+    LessThan: '<'.charCodeAt(0),
+    GreaterThan: '>'.charCodeAt(0)
 };
 
 //-----------------------------------------------------------------------------------------------//

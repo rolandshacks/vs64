@@ -58,8 +58,11 @@ test("test builder", async () => {
     expect(project.sources).not.toHaveLength(0);
     expect(project.basedir).not.toHaveLength(0);
     expect(project.builddir).not.toHaveLength(0);
+    expect(project.buildfile).not.toHaveLength(0);
+    expect(project.compilecommandsfile).not.toHaveLength(0);
+    expect(project.cpppropertiesfile).not.toHaveLength(0);
+    expect(project.configfile).not.toHaveLength(0);
     expect(project.outfile).not.toHaveLength(0);
-    expect(project.buildfiles).toHaveLength(1);
 
     const build = new Build(project);
     build.clean();
