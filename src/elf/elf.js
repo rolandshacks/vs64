@@ -3,7 +3,6 @@
 //
 
 const fs = require('fs');
-const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -15,7 +14,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
 const { ElfConstants, ElfSectionTypes } = require('elf/types');
 const { ElfDeserializer } = require('elf/deserializer');
 const { ElfSection, ElfSectionHeader } = require('elf/section');
@@ -26,8 +24,6 @@ const { ElfAbbreviationTableSection } = require('elf/abbreviation_table');
 const { ElfAddressTableSection } = require('elf/address_table');
 const { ElfStringOffsetTableSection } = require('elf/string_offset_table');
 const { ElfDebugInfoSection } = require('elf/debug_info');
-
-const logger = new Logger("Elf");
 
 //-----------------------------------------------------------------------------------------------//
 // Elf

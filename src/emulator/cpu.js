@@ -11,7 +11,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { CpuRegisters, CpuFlags, CpuInfo, CpuState } = require('debugger/debug');
+const { CpuState } = require('debugger/debug');
 const CPU6502op = require('./opcodes');
 
 const CallStackSize = 128;

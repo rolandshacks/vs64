@@ -1,0 +1,12 @@
+{
+    "name": "example",
+    "description": "Example project",
+    "toolkit": "kick",
+    "sources": [
+        "src/main.asm",
+        "src/data.raw"
+    ],
+    "build": "debug",
+    "definitions": [],
+    "includes": []
+}

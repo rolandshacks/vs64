@@ -93,8 +93,6 @@ let Utils = {
     formatMemory: function(mem, num, elementSize, prefix, separator) {
         if (null == mem) return;
 
-        let count = 0;
-
         let s = "";
 
         if (!elementSize) elementSize = 1;
@@ -238,6 +236,15 @@ let Utils = {
         }
 
         return filename.substr(0, pos) + extension||"";
+    },
+
+    getExtension: function(filename) {
+        let pos = filename.lastIndexOf('.');
+        if (pos < 0) {
+            return "";
+        }
+
+        return filename.substr(pos + 1);
     },
 
     findFile: function(baseDir, filename) {
@@ -605,7 +612,7 @@ let Utils = {
             || c === '\u205f'
             || c === '\u3000'
             || c === '\ufeff';
-    }
+    },
 
 };
 
@@ -729,7 +736,6 @@ class SortedArray {
 
         const elements = this._elements;
         const len = elements.length;
-        let i=0;
 
         if (null == element) return -1;
 
@@ -774,7 +780,6 @@ class SortedArray {
 
         const elements = this._elements;
         const len = elements.length;
-        let i=0;
 
         // perform binary search
 

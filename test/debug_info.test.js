@@ -2,10 +2,7 @@
 // Test debug info
 //
 
-const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
-const { fstat } = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -25,16 +22,11 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { DebugInfo } = require('debugger/debug_info');
 
-const logger = new Logger("TestDebugInfo");
-
 //-----------------------------------------------------------------------------------------------//
 // Tests
 //-----------------------------------------------------------------------------------------------//
 
-let lastLoggerOutputLine = null;
-
-function loggerSink(txt) {
-    lastLoggerOutputLine = txt;
+function loggerSink(_txt_) {
 }
 
 describe('debug_info', () => {
@@ -53,9 +45,10 @@ test("test debug info", async () => {
         }
     };
 
-    const debugInfo = new DebugInfo("data/test.report", project);
+    // eslint-disable-next-line no-undef
+    const debugInfo = new DebugInfo(context.resolve("/data/test.report"), project);
 
-    const addessInfo = debugInfo.getAddressInfo(2070);
+    const _addessInfo_ = debugInfo.getAddressInfo(2070);
 
 });
 

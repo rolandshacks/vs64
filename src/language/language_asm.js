@@ -2,9 +2,6 @@
 // Assembler Language
 //
 
-const path = require('path');
-const fs = require('fs');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -14,12 +11,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger } = require('utilities/logger');
-const { Utils, ParserHelper, CharCode } = require('utilities/utils');
-const { Constants, Opcodes } = require('settings/settings');
-const { Definition, Location, Range, ParserBase, DefinitionProvider, AbstractSyntaxTree, TokenType, Token, StatementType, Statement } = require('language/language_base');
-
-const logger = new Logger("AsmLanguage");
+const { ParserHelper, CharCode } = require('utilities/utils');
+const { Range, ParserBase, TokenType, Token, StatementType, Statement } = require('language/language_base');
 
 //-----------------------------------------------------------------------------------------------//
 // ACME Grammar
@@ -137,14 +130,12 @@ class AsmParser extends ParserBase {
 
         const it = new ParserIterator(src);
 
-        let toolkit = "";
         let isKickAss = false;
         let isAcme = false;
 
         if (options && options.toolkit) {
-            toolkit = options.toolkit;
-            isKickAss = (toolkit == "kick");
-            isAcme = (toolkit == "acme");
+            isKickAss = options.toolkit.isKick;
+            isAcme = options.toolkit.isAcme;
         }
 
         let tokensPerLineOfs = -1;
@@ -325,8 +316,6 @@ class AsmParser extends ParserBase {
 
         const token = tokens[ofs];
         const tokenType = token.type;
-
-        const _tokenText = token.text;
 
         if (tokenType == TokenType.Identifier) {
             if (!token.isOpcode()) {

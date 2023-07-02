@@ -2,7 +2,6 @@
 // Debug Line Info
 //
 
-const fs = require('fs');
 const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
@@ -15,7 +14,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { ElfSection } = require('elf/section');
 const { ElfLineInfoAttributes } = require('elf/types');

@@ -12,7 +12,14 @@
             ]
         },
         {
-            "name": "Resource Compiler",
+            "name": "Run Modules",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/test/runners/elf.run.js",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Run Resource Compiler",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/rc.py",
@@ -22,89 +29,31 @@
                 "--format", "cpp",
                 "--config", "${workspaceFolder}/test/project-config.json",
                 "--output", "${workspaceFolder}/build/waveout.cpp",
-                "${workspaceFolder}/test/data/wave_hello.wav"
+                "${workspaceFolder}/test/data/sample2.wav"
             ]
         },
         {
-            "name": "Extension Tests",
+            "name": "Run Unit Tests",
+            "type": "node",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--runInBand",
+                "--config",
+                "${workspaceFolder}/test/jest.config.js",
+                "-t", "project"
+            ]
+        },
+        {
+            "name": "Run Extension Tests",
             "type": "extensionHost",
             "request": "launch",
             //"runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/test"
-            ]
-        },
-        {
-            "name": "Run Vice Debug",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/vice_debug.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Emu Debug",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/emu_debug.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Builder",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/builder.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Expression Resolver",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/expr.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run DebugInfo",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/debug_info.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Language",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/language.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Elf",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/elf.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Run Python Env",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/test/python.run.js",
-            "cwd": "${workspaceFolder}/test"
-        },
-        {
-            "name": "Unit Tests",
-            "type": "node",
-            "request": "launch",
-            "console": "integratedTerminal",
-            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
-            "cwd": "${workspaceFolder}/test",
-            "args": [
-                "--runInBand",
-                "--config",
-                "${workspaceFolder}/test/jest.config.js",
-                "-t",
-                "debug_info"
-                //"basic"
             ]
         }
     ]

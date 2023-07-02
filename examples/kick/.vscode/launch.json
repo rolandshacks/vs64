@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "6502",
+            "request": "launch",
+            "name": "Launch 6502",
+            //"pc": "$0801",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "type": "vice",
+            "request": "launch",
+            "name": "Launch Vice",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "type": "vice",
+            "request": "attach",
+            "name": "Attach Vice",
+            "preLaunchTask": "${defaultBuildTask}"
+        }
+    ]
+}

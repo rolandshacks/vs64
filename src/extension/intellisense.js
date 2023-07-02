@@ -2,12 +2,6 @@
 // Intellisense Configuration Provider
 //
 
-const fs = require('fs');
-const path = require("path");
-
-const vscode = require('vscode');
-//const {CppToolsApi, Version, CustomConfigurationProvider, getCppToolsApi} = require('vscode-cpptools');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -23,7 +17,7 @@ const { Constants } = require('settings/settings');
 // Intellisense Configuration Provider
 //-----------------------------------------------------------------------------------------------//
 
-class IntellisenseConfiguratrionProvider {
+class IntellisenseConfigurationProvider {
 
     constructor(extension, api) {
         this._extension = extension;
@@ -53,7 +47,7 @@ class IntellisenseConfiguratrionProvider {
         api.didChangeCustomConfiguration(this);
     }
 
-    canProvideConfiguration(uri) {
+    canProvideConfiguration(_uri_) {
         return true;
     }
 
@@ -63,9 +57,9 @@ class IntellisenseConfiguratrionProvider {
         const toolkit = project.toolkit;
 
         let compilerIncludes = null;
-        if (toolkit == "llvm") {
+        if (toolkit.isLLVM) {
             compilerIncludes = settings.llvmIncludes;
-        } else if (toolkit == "cc65") {
+        } else if (toolkit.isCC65) {
             compilerIncludes = settings.cc65Includes;
         }
 
@@ -80,13 +74,13 @@ class IntellisenseConfiguratrionProvider {
 
         let compilerPath = null;
 
-        if (toolkit == "llvm") {
+        if (toolkit.isLLVM) {
             compilerPath = settings.clangExecutable;
-        } else if (toolkit == "cc65") {
+        } else if (toolkit.isCC65) {
             compilerPath = settings.cc65Executable;
-        } else if (toolkit == "acme") {
+        } else if (toolkit.isAcme) {
             compilerPath = settings.acmeExecutable;
-        } else if (toolkit == "kick") {
+        } else if (toolkit.isKick) {
             compilerPath = settings.kickExecutable;
         }
 
@@ -184,5 +178,5 @@ class IntellisenseConfiguratrionProvider {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    IntellisenseConfiguratrionProvider: IntellisenseConfiguratrionProvider
+    IntellisenseConfigurationProvider: IntellisenseConfigurationProvider
 }

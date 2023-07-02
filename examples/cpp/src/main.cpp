@@ -4,10 +4,12 @@
 
 #include <stdio.h>
 
+#include "src/include.h"
+
 extern "C" void testfunc(void);
 extern const unsigned char data[];
 
-extern 
+extern
 
 int main(void) {
     testfunc();

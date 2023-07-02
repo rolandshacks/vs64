@@ -5,7 +5,6 @@
 const path = require('path');
 const fs = require('fs');
 const { XMLParser } = require('fast-xml-parser');
-const { values } = require('../emulator/roms/kernal');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -106,8 +105,6 @@ class KickAssemblerInfo {
     #parseInfo(src) {
 
         this._sections = new Map();
-
-        const sections = this._sections;
 
         let lines = src.split("\n");
         for (let line of lines) {
@@ -373,7 +370,7 @@ class KickDebugParser {
 // CC65 Debug Info Parser
 //-----------------------------------------------------------------------------------------------//
 
-const DebugTypes = {
+const _DebugTypes_ = {
     VOID :          0,
     BYTE :          1,
     WORD :          2,
@@ -393,19 +390,19 @@ const DebugLineTypes = {
     MACRO:          2
 };
 
-const DebugCSymbolTypes = {
+const _DebugCSymbolTypes_ = {
     FUNC:           0,
     VAR:            1
 };
 
-const DebugCSymbolStorageTypes = {
+const _DebugCSymbolStorageTypes_ = {
     AUTO:           0,      // "auto" = STACK
     REGISTER:       1,
     STATIC:         2,
     EXTERN:         3
 };
 
-const DebugScopeTypes = {
+const _DebugScopeTypes_ = {
     GLOBAL:         0,
     MODULE:         1,
     SCOPE:          2,
@@ -413,7 +410,7 @@ const DebugScopeTypes = {
     ENUM:           4
 };
 
-const DebugSymbolTypes = {
+const _DebugSymbolTypes_ = {
     EQUATE:         0,
     LABEL:          1,
     IMPORT:         2
@@ -526,8 +523,6 @@ class Cc65DebugParser {
     }
 
     static addLineToSpan(span, lineInfo) {
-
-        const lineType = lineInfo.type || DebugLineTypes.ASM;
 
         if (!span.lineInfos) {
             span.lineInfos = new SortedArray({ key: (a) => { return a.line; } });
@@ -1181,7 +1176,7 @@ class DebugLabel {
     }
 }
 
-class DebugFileInfo {
+class _DebugFileInfo_ {
     constructor(name, size, type) {
         this.name = name;
         this.size = size;
@@ -1305,7 +1300,7 @@ class DebugInfo {
         } else if (debugInfoType == ".elf") {
             this.#loadElf(filename, project);
         } else if (debugInfoType == ".dbg") {
-            if (toolkit == "kick") {
+            if (toolkit.isKick) {
                 this.#loadKickDbg(filename, project);
             } else {
                 this.#loadCc65Dbg(filename, project);
@@ -1331,7 +1326,7 @@ class DebugInfo {
         return list;
     }
 
-    #loadElf(filename, project) {
+    #loadElf(filename, _project_) {
 
         let elf = null;
 
@@ -1555,7 +1550,6 @@ class DebugInfo {
         let source = null;
         let currentSourceRef = null;
         let insideMacro = false;
-        let lastLabel = null;
 
         const parser = new ReportParser(project);
 
@@ -1586,7 +1580,6 @@ class DebugInfo {
 
                     case ReportStatementType.SOURCE: {
 
-                        lastLabel = null;
                         source = statement.path;
 
                         if (project && !path.isAbsolute(source)) {
@@ -1733,9 +1726,6 @@ class DebugInfo {
         const spans = this._spans;
         let spanIdx = spans.indexOf(span);
         if (spanIdx < 0) return null;
-
-        const memStart = span.address;
-        const memEnd = memStart + span.size;
 
         while (spanIdx >= 0) {
             const s = spans.get(spanIdx);

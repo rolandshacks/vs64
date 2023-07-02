@@ -2,7 +2,6 @@
 // Test disassembler
 //
 
-const assert = require('assert');
 const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
@@ -21,9 +20,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Disassembler } = require('disassembler/disassembler');
-const { Logger, LogLevel } = require('utilities/logger');
-
-const logger = new Logger("TestDisassembler");
 
 //-----------------------------------------------------------------------------------------------//
 // Tests
@@ -32,14 +28,10 @@ const logger = new Logger("TestDisassembler");
 describe('disassembler', () => {
 
 test("disassembler", () => {
-
     const disassembler = new Disassembler();
 
-    const result = disassembler.disassembleFile("data/test.prg");
-
-    logger.info("DONE");
-
+    // eslint-disable-next-line no-undef
+    const _result_ = disassembler.disassembleFile(context.resolve("data/test.prg"));
 });
-
 
 });

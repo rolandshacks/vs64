@@ -2,7 +2,6 @@
 // Parser tests
 //
 
-const assert = require('assert');
 const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
@@ -22,10 +21,6 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { AsmParser } = require('language/language');
-const { Logger, LogLevel } = require('utilities/logger');
-
-const logger = new Logger("TestParser");
 
 describe('language', () => {
 test("language_basics", () => {

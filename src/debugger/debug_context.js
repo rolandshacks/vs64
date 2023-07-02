@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 const vscode = require('vscode');
 
 //-----------------------------------------------------------------------------------------------//
@@ -32,7 +31,7 @@ class DebugConfigurationProvider {
         this._debugContext = debugContext;
     }
 
-    provideDebugConfigurations(folder, token) {
+    provideDebugConfigurations(_folder_, _token_) {
         const debugConfig = {
             type: this._debugType,
             request: "launch",
@@ -43,7 +42,7 @@ class DebugConfigurationProvider {
         return debugConfig;
     }
 
-    resolveDebugConfiguration(folder, debugConfig, token) {
+    resolveDebugConfiguration(folder, debugConfig, _token_) {
 
         const session = this._debugContext._session;
         const project = this._debugContext._project;

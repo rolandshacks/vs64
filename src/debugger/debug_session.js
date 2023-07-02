@@ -22,14 +22,12 @@ const { Constants } = require('settings/settings');
 const { Utils, Formatter } = require('utilities/utils');
 const { Expression } = require('utilities/expression');
 const { Logger } = require('utilities/logger');
-const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState, MemoryType } = require('debugger/debug');
+const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, ChipState } = require('debugger/debug');
 const { DebugInfo } = require('debugger/debug_info');
 const { Emulator } = require('emulator/emu');
 const { ViceConnector, ViceProcess } = require('connector/connector');
-const { indexOf } = require('../emulator/roms/kernal');
 
 const logger = new Logger("DebugSession");
-const KILL_VICE_PROCESS_AT_STOP = false;
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
@@ -180,7 +178,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return super.sendEvent(event);
     }
 
-    initializeRequest(response, args) {
+    initializeRequest(response, _args_) {
 
         response.body = response.body || {};
 		response.body.supportsConfigurationDoneRequest = true;
@@ -454,7 +452,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._breakpointsDirty = false;
     }
 
-    async restartRequest(response, args) {
+    async restartRequest(response, _args_) {
 
         let emu = this._emulator;
 
@@ -534,7 +532,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._configurationDone.notify();
 	}
 
-    threadsRequest(response, args) {
+    threadsRequest(response, _args_) {
         response.body = {
             threads: [
                 new DebugAdapter.Thread(DebugConstants.THREAD_ID, "MOS6502 Main")
@@ -703,8 +701,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const cpuState = emu.getCpuState();
 
         let variables = null;
-
-        const variableType = args.variablesReference & 0xffff0000;
 
         if (null == args.filter || args.filter == "named") {
 
@@ -1178,7 +1174,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     }
 
-    async pauseRequest(response, args) {
+    async pauseRequest(response, _args_) {
         this.sendResponse(response);
 
         let emu = this._emulator;
@@ -1187,22 +1183,22 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         //this.onDebugStopped(DebugInterruptReason.PAUSE);
 	}
 
-    async continueRequest(response, args) {
+    async continueRequest(response, _args_) {
         this.sendResponse(response);
         let emu = this._emulator;
         await emu.resume();
         this.sendEvent(new DebugAdapter.ContinuedEvent(1, true));
     }
 
-    async stepInRequest(response, args) {
+    async stepInRequest(response, _args_) {
         await this.doDebugStep(response, DebugStepType.STEP_IN);
     }
 
-    async stepOutRequest(response, args) {
+    async stepOutRequest(response, _args_) {
         await this.doDebugStep(response, DebugStepType.STEP_OUT);
     }
 
-    async nextRequest(response, args) {
+    async nextRequest(response, _args_) {
         await this.doDebugStep(response, DebugStepType.STEP_OVER);
 	}
 
@@ -1226,8 +1222,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     async readMemoryRequest(response, args) {
         //logger.trace("readMemoryRequest");
-
-        const emu = this._emulator;
 
         const addr = parseInt(args.memoryReference, 10)||0;
         let offset = args.offset;
@@ -1280,12 +1274,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 .then(textEditor => {
                     textEditor.revealRange(documentLine.range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
                 })
-                .catch((err) => {
+                .catch((_err_) => {
                     logger.error("failed to show text document " + filename + ", line " + line);
                 });
             }
         })
-        .catch((err) => {
+        .catch((_err_) => {
             logger.error("failed to open text document " + filename + ", line " + line);
         });
     }

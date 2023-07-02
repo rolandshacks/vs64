@@ -17,7 +17,15 @@
 		"no-this-before-super": "warn",
 		"no-undef": "warn",
 		"no-unreachable": "warn",
-		"no-unused-vars": "off",
+		"no-unused-vars": [
+			"warn", {
+				"vars": "all",
+				"varsIgnorePattern": "^_.*_$",
+				"args": "after-used",
+				"argsIgnorePattern": "^_",
+				"ignoreRestSiblings": false
+			}
+		],
 		"constructor-super": "warn",
 		"valid-typeof": "warn"
 	}

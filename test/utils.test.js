@@ -1,8 +1,7 @@
 //
-// Test basics
+// Utils test
 //
 
-const assert = require('assert');
 const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
@@ -21,12 +20,9 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Utils, SortedArray } = require('utilities/utils');
-const { Logger, LogLevel } = require('utilities/logger');
-
-const logger = new Logger("TestBasics");
 
 //-----------------------------------------------------------------------------------------------//
-// Tests
+// Helpers
 //-----------------------------------------------------------------------------------------------//
 
 function toUint8Array(str) {
@@ -49,8 +45,19 @@ function toBase64(mem) {
     return Utils.toBase64(mem);
 }
 
-describe('basics', () => {
-test("test base64", () => {
+function createArrayItem(value) {
+    return {
+        value: value
+    };
+}
+
+//-----------------------------------------------------------------------------------------------//
+// Tests
+//-----------------------------------------------------------------------------------------------//
+
+describe('utils', () => {
+
+test("base64", () => {
 
     const mem = new Uint8Array(16);
     for (let i=0; i<mem.length; i++) {
@@ -69,49 +76,7 @@ test("test base64", () => {
 
 });
 
-let lastLoggerOutputLine = null;
-
-function loggerSink(txt) {
-    lastLoggerOutputLine = txt;
-}
-
-function checkLastOutput(txt) {
-    return lastLoggerOutputLine.indexOf(txt) >= 0;
-}
-
-test("basic logging output", () => {
-
-    Logger.setGlobalLevel(LogLevel.Trace);
-    Logger.setSink(loggerSink);
-    Logger.enableColors(false);
-
-    logger.trace("Trace output");
-    expect(checkLastOutput("Trace output")).toBe(true);
-
-    logger.debug("Debug output");
-    expect(checkLastOutput("Debug output")).toBe(true);
-
-    logger.info("Info output");
-    expect(checkLastOutput("Info output")).toBe(true);
-
-    logger.warn("Warning output");
-    expect(checkLastOutput("Warning output")).toBe(true);
-
-    logger.error("Error output");
-    expect(checkLastOutput("Error output")).toBe(true);
-
-}); // test
-
-}); // describe
-
-function createArrayItem(value) {
-    return {
-        value: value
-    };
-}
-
-describe('sorted_array', () => {
-test("sorted_array_basics", () => {
+test("sorted_array", () => {
 
     const a = new SortedArray({
         less: (a, b) => {
@@ -177,38 +142,36 @@ test("sorted_array_basics", () => {
 
 }); // test
 
-});  // describe
+test("formatter", () => {
 
-describe('formatter', () => {
-    test("formatter_basics", () => {
+    const data = [ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+    const buffer = Buffer.from(data);
 
-        const data = [ 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
-        const buffer = Buffer.from(data);
+    {
+        const s = Utils.formatMemory(buffer, 4, null, " ");
+        expect(s).toBe("11 22 33 44");
+    }
 
-        {
-            const s = Utils.formatMemory(buffer, 4, null, " ");
-            expect(s).toBe("11 22 33 44");
-        }
+    {
+        const s = Utils.formatMemory(buffer, 4, 1, " ");
+        expect(s).toBe("11 22 33 44");
+    }
 
-        {
-            const s = Utils.formatMemory(buffer, 4, 1, " ");
-            expect(s).toBe("11 22 33 44");
-        }
+    {
+        const s = Utils.formatMemory(buffer, 6, 2, " ");
+        expect(s).toBe("1122 3344 5566");
+    }
 
-        {
-            const s = Utils.formatMemory(buffer, 6, 2, " ");
-            expect(s).toBe("1122 3344 5566");
-        }
+    {
+        const s = Utils.formatMemory(buffer, 8, 3, " ");
+        expect(s).toBe("112233 445566");
+    }
 
-        {
-            const s = Utils.formatMemory(buffer, 8, 3, " ");
-            expect(s).toBe("112233 445566");
-        }
+    {
+        const s = Utils.formatMemory(buffer, 8, 4, " ");
+        expect(s).toBe("11223344 55667788");
+    }
 
-        {
-            const s = Utils.formatMemory(buffer, 8, 4, " ");
-            expect(s).toBe("11223344 55667788");
-        }
+}); // test
 
-    }); // test
 });  // describe

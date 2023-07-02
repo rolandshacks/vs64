@@ -547,13 +547,29 @@ class WaveResource(Resource):
 
         return 0
 
+    def db_to_linear(self, db):
+        """Convert dB to linear value."""
+        return math.pow(10.0, db / 20.0)
+
+    def linear_to_db(self, lin):
+         """Convert linear value to dB."""
+         if lin <= 0.0: return -99999.99999
+         return 20.0 * math.log10(lin)
+
     def parse(self) -> Optional[CompileError]:
         """Parset resource data."""
         err = super().parse()
         if err: return err
 
+        default_target_loudness_db = -9.5 # dB
+
         target_sample_rate = self.get_config('sampleFrequency', Constants.DEFAULT_SAMPLE_FREQUENCY)
         target_bits_per_sample = self.get_config('sampleBits', Constants.DEFAULT_SAMPLE_BITS)
+
+        target_loudness_db = self.get_config('sampleLoudness', default_target_loudness_db)
+        target_loudness = self.db_to_linear(target_loudness_db)
+
+        target_normalization_max_factor = self.get_config('sampleNormalizationMax', 15.0)
 
         wave = self.input
         wave_size = self.input_size
@@ -616,6 +632,9 @@ class WaveResource(Resource):
 
         logical_data = []
         loudness_rms = 0.0 # root-mean-square
+        loudness_rms_count = 0
+        loudness_rms_slice = sample_rate * 0.15 # 150ms slices
+        loudness_rms_list = []
 
         while True:
             idx = int(sample_ofs)
@@ -646,7 +665,14 @@ class WaveResource(Resource):
                 s1 /= format_num_channels
 
             s = ((s0 * (1.0-ratio)) + (s1 * ratio) / 2.0)
+
             loudness_rms += (s * s)
+            loudness_rms_count += 1
+            if loudness_rms_slice > 0 and loudness_rms_count >= loudness_rms_slice:
+                loudness_rms_list.append(loudness_rms / loudness_rms_count)
+                loudness_rms = 0.0
+                loudness_rms_count = 0
+
             logical_data.append(s)
 
             if len(logical_data) >= target_max_output_size:
@@ -654,10 +680,34 @@ class WaveResource(Resource):
 
             sample_ofs += sample_step
 
-        if len(logical_data) > 0: loudness_rms /= len(logical_data)
+
+        if loudness_rms_count > 64:
+            # store remainders
+            loudness_rms_list.append(loudness_rms / loudness_rms_count)
+
+        loudness_rms_list.sort(reverse=True)
+
+        loudness_rms = 0.0
+        loudness_rms_part = 0.25
+        loudness_rms_part_percent = int(loudness_rms_part * 100.0)
+        loudness_rms_relevant = min(len(loudness_rms_list), max(1, int(len(loudness_rms_list) * loudness_rms_part)))
+        for idx in range(0, loudness_rms_relevant):
+            loudness_rms += loudness_rms_list[idx]
+
+        if loudness_rms_relevant > 0: loudness_rms /= loudness_rms_relevant
         if loudness_rms > 0.0: loudness_rms = math.sqrt(loudness_rms)
 
-        normalization_factor = (1.0 / max(0.33, loudness_rms))
+        if target_normalization_max_factor:
+            normalization_factor = min(target_normalization_max_factor, target_loudness / max(0.005, loudness_rms))
+        else:
+            normalization_factor = target_loudness / max(0.005, loudness_rms)
+
+        loudness_rms_db = self.linear_to_db(loudness_rms)
+
+        target_loudness_db = self.linear_to_db(target_loudness)
+
+        print(f"{loudness_rms_part_percent}% peak RMS loudness of source PCM data: {loudness_rms:0.2f} / {loudness_rms_db:0.4f}dB")
+        print(f"normalization factor: {normalization_factor:0.2f}, target RMS loudness: {target_loudness_db:0.4f}dB")
 
         # normalize, quantize and compress to byte array
 

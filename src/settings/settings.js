@@ -37,6 +37,8 @@ const Constants = {
     AutoBuildDelayMs: 1250,
     ResourceFileFilter: "|res|raw|spm|spd|ctm|sid|wav|",
     CppFileFilter: "|c|cpp|cc|",
+    CppOnlyFileFilter: "|cpp|cc|",
+    COnlyFileFilter: "|c|",
     AsmFileFilter: "|s|asm|",
     ObjFileFilter: "|o|obj|"
 };
@@ -228,6 +230,7 @@ class Settings {
             ];
 
             this.clangExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("mos-clang++"));
+            this.clangcExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("mos-clang"));
 
             const clangTidyExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("clang-tidy"));
             if (Utils.fileExists(clangTidyExecutable)) {
@@ -237,6 +240,7 @@ class Settings {
         } else {
             this.llvmIncludes = null;
             this.clangExecutable = "mos-clang++";
+            this.clangcExecutable = "mos-clang";
         }
     }
 

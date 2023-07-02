@@ -13,10 +13,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
 const { ElfConstants, ElfFormCodes } = require('elf/types');
-
-const logger = new Logger("ElfDeserializer");
 
 //-----------------------------------------------------------------------------------------------//
 // ElfDeserializer
@@ -128,8 +125,8 @@ class ElfDeserializer {
     read64() {
         this.assertAvailable(8);
 
-        const data = this._data;
-        const ofs = this._ofs;
+        const _data_ = this._data;
+        const _ofs_ = this._ofs;
 
         const a = this.read32();
         const b = this.read32();
@@ -237,8 +234,6 @@ class ElfDeserializer {
 
     readCString() {
 
-        const data = this._data;
-
         let s = "";
 
         for (;;) {
@@ -265,8 +260,6 @@ class ElfDeserializer {
 
         this.assertAvailable();
 
-        const data = this._data;
-
         let result = 0;
         let shift = 0;
         let byte = 0;
@@ -288,8 +281,6 @@ class ElfDeserializer {
     readULEB128() {
 
         this.assertAvailable();
-
-        const data = this._data;
 
         let result = 0;
         let shift = 0;

@@ -20,17 +20,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger } = require('utilities/logger');
 const { Emulator } = require('emulator/emu');
-
-const logger = new Logger("InternalEmu");
-
-const Utils = {
-
-    getAbsoluteFilename: function(filename) {
-        return filename;
-    },
-}
 
 //-----------------------------------------------------------------------------------------------//
 // Application

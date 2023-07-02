@@ -2,6 +2,8 @@
 // Hello, world!
 //
 
+#include "src/include.h"
+
 extern unsigned char data[];
 char* screen = (char*) (0x40e);
 unsigned char* color = (unsigned char*) (0xd80e);

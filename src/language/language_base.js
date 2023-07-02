@@ -2,7 +2,6 @@
 // Language types
 //
 
-const path = require('path');
 const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
@@ -14,11 +13,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger } = require('utilities/logger');
-const { Utils } = require('utilities/utils');
-const { Constants, Opcodes } = require('settings/settings');
-
-const logger = new Logger("Parser");
+const { Opcodes } = require('settings/settings');
 
 //-----------------------------------------------------------------------------------------------//
 // Token Type
@@ -283,7 +278,7 @@ class ParserBase {
         return this.parse(src, filename, options);
     }
 
-    parse(src, filename, options) {
+    parse(src, filename, _options_) {
         if (!src || src.length < 1) return;
         this._ast = new AbstractSyntaxTree(filename);
     }

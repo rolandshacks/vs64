@@ -2,9 +2,6 @@
 // String Offset Table
 //
 
-const fs = require('fs');
-const path = require('path');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -15,19 +12,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
-const { Utils } = require('utilities/utils');
-
 const { ElfSection } = require('elf/section');
-
-const {
-    ElfConstants,
-    ElfLineInfoAttributes,
-    ElfTagNames,
-    ElfAttributeNames,
-    ElfFormCodes,
-    ElfSectionTypes
-} = require('elf/types');
 
 //-----------------------------------------------------------------------------------------------//
 // Elf String Offset Table Section
@@ -58,7 +43,7 @@ class ElfStringOffsetTableSection extends ElfSection {
         const unit = {};
         unit.header = unitHeader;
 
-        const padding = deserializer.read16();
+        const _padding_ = deserializer.read16();
 
         const offsets = [];
 

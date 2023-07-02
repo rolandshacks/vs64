@@ -258,13 +258,17 @@ Overrides the path to the compiler executable. The default path is specified in 
 Optional parameters for the resource compiler. Currently, the following list of parameters is supported:
 - **sampleFrequency**: resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
 - **sampleBits**: target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
+- **sampleLoudness**: target RMS loudness in dB for sample output (e.g. -9.0)
+- **sampleNormalizationMax**: maximum normalization factor for sample output (e.g. 5.0)
 
 Example:
 
 ```
 "resources": {
     "sampleFrequency": 8000,
-    "sampleBits": 8
+    "sampleBits": 8,
+    "sampleLoudness": -9.0,
+    "sampleNormalizationMax": 5.0
 }
 ```
 

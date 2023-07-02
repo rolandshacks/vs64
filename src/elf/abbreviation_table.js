@@ -2,9 +2,6 @@
 // Abbreviation Table
 //
 
-const fs = require('fs');
-const path = require('path');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -15,18 +12,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
-const { Utils } = require('utilities/utils');
 const { ElfSection } = require('elf/section');
-
-const {
-    ElfConstants,
-    ElfLineInfoAttributes,
-    ElfTagNames,
-    ElfAttributeNames,
-    ElfFormCodes,
-    ElfSectionTypes
-} = require('elf/types');
 
 //-----------------------------------------------------------------------------------------------//
 // Elf Abbreviation Table Section

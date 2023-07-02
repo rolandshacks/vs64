@@ -4,8 +4,6 @@
 
 const fs = require('fs');
 const path = require("path");
-const  process = require("process");
-const { spawn } = require('child_process');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -81,6 +79,8 @@ class Build {
                 }
             } catch (e) {;}
         }
+
+        this.deleteDependencyFiles();        
     }
 
     #doInitialize() {
@@ -144,12 +144,17 @@ class Build {
         }
 
         project.createBuildFile();
+        this.createDependencyFiles();
 
         try {
             await this.#doNinjaBuild();
         } catch (err) {
             logger.error("build.run: failed: " + err);
             return { error: BuildResult.Error, description: err };
+        } finally {
+            logger.notWhen(LogLevel.Trace, () => {
+                this.deleteDependencyFiles();
+            });            
         }
 
         return { error: BuildResult.Success };
@@ -216,11 +221,71 @@ class Build {
         }
     }
 
+    createDependencyFiles() {
+
+        const project = this._project;
+
+        //const toolkit = project.toolkit;        
+        //if (toolkit.isLLVM) return; // llvm or gcc will do
+
+        const buildTree = project.buildTree;
+        if (!buildTree) return;
+
+        buildTree.deps.forEach((to, from) => {
+            this.#createDependencyFile(to + ".d", to, from);
+        });
+
+    }
+
+    deleteDependencyFiles() {
+
+        const project = this._project;
+        const buildTree = project.buildTree;
+        if (!buildTree) return;
+
+        buildTree.deps.forEach((to, _from_) => {
+            const filename = to + ".d";
+            if (fs.existsSync(filename)) {
+                fs.unlinkSync(filename);
+            }            
+        });
+    }
+
+    #createDependencyFile(filename, target, dependencies) {
+
+        let s = "";
+
+        s += target + ":";
+
+        if (dependencies) {
+            if (typeof dependencies === 'string') {
+                s += " \\\n";
+                s += "  " + dependencies;
+            } else {
+                for (let i=0; i<dependencies.length; i++) {
+                    s += " \\\n";
+                    s += "  " + dependencies[i];
+                }
+            }
+        }
+
+        s += '\n';
+
+        try {
+            const parentDir = path.dirname(filename);
+            Utils.createFolder(parentDir);
+            fs.writeFileSync(filename, s, "utf8");
+        } catch (err) {
+            console.log("failed to write dependency file: " + err);
+        }
+
+    }
+
     #generateAdditionalErrorInfo() {
         const project = this._project;
         const toolkit = project.toolkit;
 
-        if (toolkit != "kick") return;
+        if (!toolkit.isKick) return;
 
         const asmInfoFile = path.resolve(project.builddir, project.name + ".info");
         const asmInfo = KickAssemblerInfo.read(asmInfoFile);

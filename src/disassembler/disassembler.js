@@ -24,7 +24,7 @@ const LABEL_SUFFIX = (PROFILE == PROFILE_GNU) ? ":" : "";
 
 let OpcodeMap = null;
 
-const FileType = {
+const _FileType_ = {
     Unknown: -1,
     Del: 0,
     Seq: 1,
@@ -54,7 +54,7 @@ function format16(value, upperCase) {
     return str;
 }
 
-function formatStr(str, len) {
+function _formatStr_(str, len) {
     if (!str) return SPACES.substring(0, len);
     if (str.length >= len) {
         return str.substring(0, len);
@@ -67,7 +67,7 @@ function petscii_to_ascii(c) {
     return c;
 }
 
-class Options {
+class _Options_ {
     constructor() {
         this.show_binary = true;
         this.show_comments = true;
@@ -289,7 +289,7 @@ function get(data, pos) {
 }
 
 
-function comment(txt) {
+function _comment_(txt) {
     return {
         type: "comment",
         text: txt
@@ -327,7 +327,7 @@ function process(binary, write) {
 
     statements.push(Statement.createMeta(out_s, "load address (" + load_address + ")"));
 
-    const basic_line_ptr = int16FromBytes(binary[ofs], binary[ofs + 1]);
+    const _basic_line_ptr_ = int16FromBytes(binary[ofs], binary[ofs + 1]);
     ofs += 2;
 
     const basic_line_num = int16FromBytes(binary[ofs], binary[ofs + 1]);
@@ -513,8 +513,6 @@ function process(binary, write) {
 
     let last_blank = false;
 
-    const outputs = [];
-
     for (const statement of statements) {
 
         if (statement.has_refs()) {
@@ -566,7 +564,6 @@ class Html {
 
     static fixed(txt, len) {
 
-        const s = (txt||"").trim();
         if (txt.length == len) return txt;
         if (txt.length > len) txt.substring(0, len);
 
@@ -575,7 +572,6 @@ class Html {
     }
 
     static fixedRight(txt, len) {
-        const s = (txt||"").trim();
         if (txt.length == len) return txt;
         if (txt.length > len) txt.substring(0, len);
 
@@ -623,10 +619,6 @@ class Html {
         }
 
         if (len < minLength) line += Html.spaces(minLength - len);
-
-        const addr = _addr;
-        const hex = _hex;
-        const comment = _comment;
 
         let semicolon = false;
 
@@ -680,12 +672,8 @@ class Disassembler {
 
     disassembleFile(filename, options) {
 
-        let fileType = FileType.Unknown;
-
         const ext = path.extname(filename).toLowerCase();
-        if (ext == ".prg") {
-            fileType = FileType.Prg;
-        } else {
+        if (ext != ".prg") {
             throw("unsupported file format: " + ext);
         }
 

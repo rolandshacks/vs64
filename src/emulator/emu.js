@@ -2,7 +2,6 @@
 // Emulator MOS 6502
 //
 
-const path = require('path');
 const fs = require('fs');
 const process = require('process');
 
@@ -144,7 +143,6 @@ class Emulator extends DebugRunner {
         let skipNextBreakpoint = (continueExecution ? true : false);
 
         let lastPC = 0;
-        let lastOpcode = 0;
 
         // execution is interrupted after a defined amount of time
         // to let JS proceed with other tasks from the queue
@@ -158,7 +156,6 @@ class Emulator extends DebugRunner {
         while (true == this._running) {
 
             let pc = cpu.PC;
-            let opcode = cpu._opcode;
 
             if (!skipNextBreakpoint) {
                 if (!breakpoints.empty()) {
@@ -189,7 +186,6 @@ class Emulator extends DebugRunner {
             }
 
             lastPC = pc;
-            lastOpcode = opcode;
 
             cpu.step();
 
@@ -302,8 +298,9 @@ class Emulator extends DebugRunner {
         }
     }
 
+    async setBreakpoints(_breakpoints_) {
 
-    async setBreakpoints(breakpoints) {}
+    }
 
     reset(startAddress) {
 

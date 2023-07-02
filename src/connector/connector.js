@@ -13,17 +13,15 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Utils, Formatter } = require('utilities/utils');
+const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { DebugRunner, CpuRegisters, CpuFlags, CpuInfo, CpuState, VicState, Breakpoint, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
+const { DebugRunner, CpuState, Breakpoint, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 
 const logger = new Logger("ViceConnector");
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
 //-----------------------------------------------------------------------------------------------//
-
-const VICE_CONNECT_TIMEOUT = 5000000; // microseconds
 
 const RequestType = {
 
@@ -77,39 +75,6 @@ function getRequestTypeName(id) {
 
 const RECEIVE_BUFFER_SIZE = 256 * 1024;
 const RECEIVE_QUEUE_SIZE = 64;
-
-const ErrorCode = {
-    ERR_OK: 0x0,
-    ERR_INVALID_OBJECT: 0x1,
-    ERR_INVALID_MEM_SPACE: 0x2,
-    ERR_INVALID_COMMAND_LEN: 0x80,
-    ERR_INVALID_PARAMETER: 0x81,
-    ERR_INVALID_API_VERSION: 0x82,
-    ERR_INVALID_COMMAND_TYPE: 0x83,
-    ERR_GENERAL_FAILURE: 0x8f
-};
-
-const ERR_OK = 0x0;
-const ERR_INVALID_OBJECT = 0x1;
-const ERR_INVALID_MEM_SPACE = 0x2;
-const ERR_INVALID_COMMAND_LEN = 0x80;
-const ERR_INVALID_PARAMETER = 0x81;
-const ERR_INVALID_API_VERSION = 0x82;
-const ERR_INVALID_COMMAND_TYPE = 0x83;
-const ERR_GENERAL_FAILURE = 0x8f;
-
-class Register {
-    constructor(id, name, bits) {
-        this.id = id;
-        this.name = name;
-        this.bits = bits;
-        this.value = 0;
-    }
-
-    setValue(value) {
-        this.value = value;
-    }
-}
 
 class Color {
     constructor(r, g, b) {
@@ -173,7 +138,7 @@ class ScreenInfo {
     }
 }
 
-class Screen {
+class _Screen_ {
     constructor() {
         this.screenInfo = new ScreenInfo();
         this.frameBuffer = null;
@@ -349,7 +314,6 @@ class ViceMonitorClient {
         const checkpointList = await this.cmdCheckpointList();
         if (checkpointList && checkpointList.checkpoints) {
             for (const checkpoint of checkpointList.checkpoints) {
-                const id = checkpoint.checkpointNumber;
                 await this.cmdCheckpointDelete(checkpoint.checkpointNumber);
             }
         }
@@ -403,7 +367,6 @@ class ViceMonitorClient {
             let valid = true;
 
             let ofs = this._messageBufferOffset;
-            let end = ofs + this._messageBufferUsage;
 
             if (buf[ofs++] != 0x2) valid = false; // 0x2 STC
             if (buf[ofs++] != 0x2) valid = false; // version
@@ -445,14 +408,15 @@ class ViceMonitorClient {
 
         const responseHeaderLength = 12;
         if (buffer.length < responseHeaderLength)  {
-            logger.warn("invalid response");
             return;
         }
 
-        let valid = true;
-
-        if (buffer[0] != 0x2) valid = false; // 0x2 STC
-        if (buffer[1] != 0x2) valid = false; // version
+        if (buffer.length < responseHeaderLength ||     // min length
+            buffer[0] != 0x2 ||                         // STC
+            buffer[1] != 0x2) {                         // version
+            logger.warn("invalid response");
+            return;
+        }
 
         const bodyLength =
             (buffer[2]<<0) +
@@ -514,7 +478,6 @@ class ViceMonitorClient {
         )
 
         let keepToken = false;
-        let noEvent = false;
 
         const bodyLen = body ? body.length : 0;
 
@@ -692,7 +655,7 @@ class ViceMonitorClient {
                 let pos = ofs;
                 const sz = body[ofs++];
                 const id = body[ofs++];
-                const bits = body[ofs++];
+                const _bits_ = body[ofs++];
                 const nameLen = body[ofs++];
                 let name = "";
                 for (let i=0; i<nameLen; i++) {
@@ -940,7 +903,7 @@ class ViceMonitorClient {
         return result;
     }
 
-    async cmdPing(memspace) {
+    async cmdPing(_memspace_) {
         await this.sendCommand(RequestType.CMD_PINT, null);
     }
 
@@ -1198,7 +1161,7 @@ class ViceConnector extends DebugRunner {
         }
     }
 
-    onError(err) {
+    onError(/* err */) {
         this.fireEvent('stopped', DebugInterruptReason.FAILED);
     }
 
@@ -1325,7 +1288,7 @@ class ViceConnector extends DebugRunner {
         return this._memoryCache;
     }
 
-    async readMemory(startAddress, endAddress, memoryType) {
+    async readMemory(startAddress, endAddress, _memoryType_) {
         const memCache = await this.#getMemoryCache();
         if (!memCache) return null;
         const mem = memCache.subarray(startAddress, endAddress+1);
@@ -1348,7 +1311,7 @@ class ViceConnector extends DebugRunner {
         return val;
     }
 
-    async write(addr, value) {
+    async write(_addr_, _value_) {
         logger.warn("memory write not implemented for VICE debugger");
 
         const vice = this._vice;
@@ -1374,7 +1337,7 @@ class ViceConnector extends DebugRunner {
                     .then(() => {
                         logger.info("deleted checkpoint: " + checkpoint.checkpointNumber)
                     })
-                    .catch((err) => {
+                    .catch((_err_) => {
                         logger.warn("failed to delete checkpoint: " + checkpoint.checkpointNumber)
                     });
                 } else {
@@ -1520,7 +1483,7 @@ class ViceConnector extends DebugRunner {
 
     }
 
-    async loadProgram(filename, autoOffsetCorrection, forcedStartAddress) {
+    async loadProgram(filename, _autoOffsetCorrection_, _forcedStartAddress_) {
         logger.trace("ViceConnector.loadProgram()");
 
         this.#invalidateMemoryCache();

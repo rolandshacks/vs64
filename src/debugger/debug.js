@@ -548,7 +548,7 @@ class DebugRunner {
         return eventFunction(arg1, arg2, arg3);
     }
 
-    setBreakpoints(breakpoints) {}
+    setBreakpoints(_breakpoints_) {}
 
     onStopped() {
         this._running = false;
@@ -577,15 +577,15 @@ class DebugRunner {
         await this.do_step(debugStepType);
     }
 
-    async do_step(debugStepType) {}
+    async do_step(_debugStepType_) {}
 
-    async read(addr, size) {
+    async read(_addr_, _size_) {
         return 0x0;
     }
 
-    async write(addr, value) {}
+    async write(_addr_, _value_) {}
 
-    async loadProgram(filename, autoOffsetCorrection, forcedStartAddress) {
+    async loadProgram(_filename_, _autoOffsetCorrection_, _forcedStartAddress_) {
         this.init();
     }
 
@@ -593,7 +593,7 @@ class DebugRunner {
         return null;
     }
 
-    async readMemory(startAddress, endAddress, memoryType) {
+    async readMemory(_startAddress_, _endAddress_, _memoryType) {
         return null;
     }
 

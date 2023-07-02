@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -22,10 +21,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
 const { Project } = require('project/project');
-const { Build, BuildType } = require('builder/builder');
+const { Build } = require('builder/builder');
 const { DebugInfo } = require('debugger/debug_info');
-
-const logger = new Logger("BuilderRun");
 
 const settings = {
     acmeExecutable: "C:/tools/c64/acme/acme",
@@ -48,7 +45,7 @@ async function build() {
         console.log(txt);
     });
     build.clean();
-    const result = await build.build();
+    const _result_ = await build.build();
 }
 
 async function debug() {

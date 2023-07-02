@@ -3,8 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
-const process = require('process');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -24,17 +22,12 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 
-const logger = new Logger("PythonRun");
-
 function findPython() {
 
     //const pythonExecutable = await Utils.getDefaultPythonExecutablePath();
     //console.log("python: " + pythonExecutable);
 
-    const pythonExecutable = Utils.getDefaultPythonExecutablePath();
-
-
-
+    const _pythonExecutable_ = Utils.getDefaultPythonExecutablePath();
     console.log("XXX");
 
 }

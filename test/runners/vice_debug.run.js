@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -20,7 +19,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Utils, Formatter } = require('utilities/utils');
+const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
 const { ViceConnector, ViceProcess } = require('connector/connector');
 const { Breakpoint, Breakpoints, DebugInterruptReason } = require('debugger/debug');
@@ -28,7 +27,7 @@ const { Breakpoint, Breakpoints, DebugInterruptReason } = require('debugger/debu
 const logger = new Logger("ViceDebug");
 const attachToRunningEmulator = true;
 
-function dumpCpuState(cpuState) {
+function _dumpCpuState_(cpuState) {
 
     const r = cpuState.cpuRegisters;
     const f = cpuState.cpuFlags;
@@ -88,7 +87,7 @@ class Application {
             settings.emulatorExecutable,
             settings.emulatorPort,
             settings.emulatorArgs,
-            { onexit: (proc) => {
+            { onexit: (_proc_) => {
                 // exit function
                 instance._emulatorProcess = null;
                 logger.info("Vice executable terminated");
@@ -216,7 +215,7 @@ class Application {
         );
     }
 
-    onDebugLogpoint(breakpoint) {
+    onDebugLogpoint(_breakpoint_) {
 
     }
 

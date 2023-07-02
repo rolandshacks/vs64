@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -25,8 +24,6 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { StopWatch } = require('utilities/utils');
 const { Parser } = require('language/language');
-
-const logger = new Logger("LanguageRun");
 
 //-----------------------------------------------------------------------------------------------//
 // Tests
@@ -78,8 +75,8 @@ function runLanguage() {
 
     console.log("elapsed: " + Math.floor(stopWatch.elapsedMillis) + " ms");
 
-    const definition1 = ast.findDefinition("global_label3");
-    const definition2 = ast.findDefinition(".local_label3");
+    const _definition1_ = ast.findDefinition("global_label3");
+    const _definition2_ = ast.findDefinition(".local_label3");
 
     console.log("****");
 }

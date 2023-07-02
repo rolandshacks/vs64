@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -21,15 +20,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
-const { Elf, ElfSymbol } = require('elf/elf');
-
-const logger = new Logger("ElfRun");
-
-class Section {
-    constructor() {
-
-    }
-}
+const { Elf } = require('elf/elf');
 
 function runElf() {
     const filename = "data/test.prg.elf";

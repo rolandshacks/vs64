@@ -1,8 +1,20 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.2 Minor Update
+
+- Improved resource compiler argument handling
+- Improved peak RMS loudness normalization for PCM waves
+- Improved support for folder with spaces
+- Added status bar buttons for build and clean
+- Added kickassembler example
+- Improved and refactored tests
+- Removed eslint warnings
+- Bug-fixes and minor improvements
+
 ## 2.4.1 Minor Update
 
+- Improved language support for KickAssembler
 - Bug-fixes and minor improvements
 
 ## 2.4.0 Major Update

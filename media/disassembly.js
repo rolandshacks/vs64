@@ -33,10 +33,10 @@ class DisassemblyView {
 
 }
 
-let view = null;
+let _view_ = null;
 
 function __init() {
-    view = new DisassemblyView();
+    _view_ = new DisassemblyView();
 }
 
 if (window) {                      // eslint-disable-line no-undef

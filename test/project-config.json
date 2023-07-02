@@ -7,8 +7,8 @@
       "data/cmodule.c"
     ],
     "resources": {
-        "sampleFrequency": 4000,
-        "sampleBits": 4
+        "sampleFrequency": 6000,
+        "sampleBits": 8
     },
     "definitions": [],
     "includes": ["data"],

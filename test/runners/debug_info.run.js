@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -22,8 +21,6 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
 const { DebugInfo, KickAssemblerInfo } = require('debugger/debug_info');
-
-const logger = new Logger("DebugRun");
 
 /*
 
@@ -57,33 +54,33 @@ seg	id=3,name="DATA",start=0x001474,size=0x0B76,addrsize=absolute,type=rw,oname=
 
 */
 
-function processDebugFile() {
+function _processDebugFile_() {
 
     const debugInfoPath = "data/test.dbg";
     const debugInfo = new DebugInfo(debugInfoPath);
 
     const PC = 0x8da; // 2266
 
-    const addressInfo = debugInfo.getAddressInfo(PC);
+    const _addressInfo_ = debugInfo.getAddressInfo(PC);
 
     return;
 
 }
 
-function processReportFile() {
+function _processReportFile_() {
 
     const debugInfoPath = "data/test.report";
     const debugInfo = new DebugInfo(debugInfoPath);
 
     const PC = 0x8da; // 2266
 
-    const addressInfo = debugInfo.getAddressInfo(PC);
+    const _addressInfo_ = debugInfo.getAddressInfo(PC);
 
     return;
 
 }
 
-function processKickDebugInfo() {
+function _processKickDebugInfo_() {
 
     const project = {
         toolkit: "kick"
@@ -94,7 +91,7 @@ function processKickDebugInfo() {
 
     const PC = 0x8da; // 2266
 
-    const addressInfo = debugInfo.getAddressInfo(PC);
+    const _addressInfo_ = debugInfo.getAddressInfo(PC);
 
     return;
 
@@ -103,7 +100,7 @@ function processKickDebugInfo() {
 function processKickAsmInfo() {
 
     const debugInfoPath = "data/kickdebug.info";
-    const debugInfo = KickAssemblerInfo.read(debugInfoPath);
+    const _debugInfo_ = KickAssemblerInfo.read(debugInfoPath);
 
     return;
 

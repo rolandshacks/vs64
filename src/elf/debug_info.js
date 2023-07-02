@@ -2,9 +2,6 @@
 // Debug Info
 //
 
-const fs = require('fs');
-const path = require('path');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -15,7 +12,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { ElfSection } = require('elf/section');
 const { ElfTagNames, ElfAttributeNames } = require('elf/types');

@@ -5,7 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const vscode = require('vscode');
-const {CppToolsApi, Version, CustomConfigurationProvider, getCppToolsApi} = require('vscode-cpptools');
+//const {CppToolsApi, Version, CustomConfigurationProvider, getCppToolsApi} = require('vscode-cpptools');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -24,14 +24,13 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel, LogLevelChars } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
-const { Constants, AnsiColors, Settings, Opcodes } = require('settings/settings');
+const { Constants, AnsiColors, Settings } = require('settings/settings');
 const { Project } = require('project/project');
 const { DebugContext } = require('debugger/debug_context');
 const { Build, BuildResult } = require('builder/builder');
 const { DiagnosticProvider } = require('extension/diagnostic_provider');
-const { IntellisenseConfiguratrionProvider } = require('extension/intellisense');
 const { TaskProvider } = require('extension/task_provider');
-const { StatusBarItem } = require('extension/statusbar');
+const { StatusBar, StatusBarNotifier, StatusBarButton } = require('extension/statusbar');
 const { DisassemblerView } = require('extension/disassembler_view');
 const { LanguageFeatureProvider } = require('language/language');
 
@@ -57,9 +56,9 @@ class Extension {
         this._builder = null;
         this._taskProvider = null;
         this._buildTimer = null;
-        this._statusBarItem = null;
-        this._intellisenseConfiguratrionProvider = null;
+        this._intellisenseConfigurationProvider = null;
         this._languageFeatureProvider = null;
+        this._statusBar = null;
     }
 
     isActivated() {
@@ -113,7 +112,7 @@ class Extension {
         { // load settings
             this.updateSettings();
 
-            let disposable = vscode.workspace.onDidChangeConfiguration(function(e) {
+            let disposable = vscode.workspace.onDidChangeConfiguration(function(_e_) {
                 thisInstance.updateSettings();
                 if (!thisInstance._builder && !thisInstance._buildTimer) {
                     thisInstance.triggerAutoBuild(true);
@@ -142,10 +141,27 @@ class Extension {
             this._languageFeatureProvider = languageFeatureProvider;
         }
 
-        { // create status bar item
+        { // create status bar items
 
-            this._statusBarItem = new StatusBarItem("vs64.showStatus");
-            subscriptions.push(this._statusBarItem.obj);
+            const statusBar = new StatusBar(extensionContext);
+
+            statusBar.notifier = new StatusBarNotifier("vs64.showStatus");
+
+            statusBar.buildButton = new StatusBarButton("vs64.buildProject", {
+                text: "Build",
+                tooltip: "Build the project",
+                icon: "zap"
+            });
+
+            statusBar.cleanButton = new StatusBarButton("vs64.cleanProject", {
+                text: "Clean",
+                tooltip: "Clean the project",
+                icon: "x"
+            });
+
+            statusBar.subscribe();
+
+            this._statusBar = statusBar;
         }
 
         // listen do document save
@@ -199,6 +215,9 @@ class Extension {
             subscriptions.push(vscode.commands.registerCommand("vs64.buildProject", function() {
                 thisInstance.triggerBuild();
             }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.rebuildProject", function() {
+                thisInstance.triggerRebuild();
+            }));
             subscriptions.push(vscode.commands.registerCommand("vs64.cleanProject", function() {
                 thisInstance.triggerClean();
             }));
@@ -248,15 +267,15 @@ class Extension {
                 this._debugContext.start();
             }
 
-            vscode.debug.onDidStartDebugSession((debugSession) => {
+            vscode.debug.onDidStartDebugSession((_debugSession_) => {
                 thisInstance.showStatus("Debugging started");
             });
 
-            vscode.debug.onDidTerminateDebugSession((debugSession) => {
+            vscode.debug.onDidTerminateDebugSession((_debugSession_) => {
                 thisInstance.showStatus("Debugging terminated");
             });
 
-            vscode.debug.onDidChangeBreakpoints((breakpointChange) => {
+            vscode.debug.onDidChangeBreakpoints((_breakpointChange_) => {
                 thisInstance.showStatus("Changed breakpoints");
             });
 
@@ -265,7 +284,7 @@ class Extension {
         /*
             // Custom configuration provider is disabled, not sure why it leads to crashes (e.g. in the git extension)
             getCppToolsApi(Version.v2).then((api) => {
-                this._intellisenseConfiguratrionProvider = new IntellisenseConfiguratrionProvider(this, api);
+                this._intellisenseConfiguratrionProvider = new IntellisenseConfigurationProvider(this, api);
             });
         */
 
@@ -293,7 +312,7 @@ class Extension {
         );
     }
 
-    showSettings(filter, forced) {
+    showSettings(filter, _forced_) {
         const settings = this._settings;
         if (!settings) return;
         let openToSide = (vscode.window.tabGroups.activeTabGroup.activeTab != null);
@@ -313,7 +332,7 @@ class Extension {
         settings.update(workspaceConfig);
     }
 
-    onDidChangeActiveTextEditor(textEditor) {
+    onDidChangeActiveTextEditor(_textEditor_) {
     }
 
     onCommandCreateProject(toolkitName, templateName) {
@@ -334,7 +353,7 @@ class Extension {
 
         const destFolder = workspaceRoot;
 
-        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.raw;.res;";
+        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.res;.raw;.spm;.spd;.ctm;.sid;.wav;";
         const includeExtensions = ";.hpp;.hh;.h;.inc;";
 
         let sourceFilesExist = false;
@@ -440,17 +459,9 @@ class Extension {
 
     syncProject() {
 
-        if (!this.hasWorkspace()) {
-            return;
-        }
-
         const settings = this._settings;
         const projectFile = this.getWorkspaceAbsoluteFilename(settings.projectFile||Constants.ProjectConfigFile);
-        if (!projectFile) {
-            return;
-        }
-
-        if (!Utils.fileExists(projectFile)) {
+        if (!projectFile || !Utils.fileExists(projectFile)) {
             return;
         }
 
@@ -479,11 +490,10 @@ class Extension {
                 }
 
                 // project has been reloaded, notify configuration change
-                if (this._intellisenseConfiguratrionProvider) {
-                    this._intellisenseConfiguratrionProvider.notifyConfigChange();
+                if (this._intellisenseConfigurationProvider) {
+                    this._intellisenseConfigurationProvider.notifyConfigChange();
                 }
             }
-
 
         } catch (err) {
             const txt = projectFile + " : Error : " + err;
@@ -531,20 +541,24 @@ class Extension {
     update() {
     }
 
-    showStatus(txt) {
-        const statusBarItem = this._statusBarItem;
-        if (!statusBarItem) return;
+    showStatus(txt, action) {
 
         logger.trace("status: " + txt);
-        statusBarItem.set(txt);
-    }
 
+        const statusBar = this._statusBar;
+        if (!statusBar) return;
+
+        if (statusBar.notifier) statusBar.notifier.setText(txt);
+
+        if (statusBar.buildButton) statusBar.buildButton.setSpinning(action == "build" || action == "rebuild");
+        if (statusBar.cleanButton) statusBar.cleanButton.setSpinning(action == "clean");
+    }
 
     onSaveProject() {
         this.triggerAutoBuild(true);
     }
 
-    onSave(document) {
+    onSave(_document_) {
         this.triggerAutoBuild();
     }
 
@@ -593,7 +607,9 @@ class Extension {
         }
 
         const build = new Build(this._project);
+        this.showStatus("$(gear) Cleaning build...", "clean");
         build.clean(true);
+        this.showStatus("$(pass) Clean succeeded");
     }
 
     triggerAutoBuild(fullRebuild) {
@@ -601,6 +617,10 @@ class Extension {
         if (this._settings.autoBuild) {
             this.triggerBuild(fullRebuild);
         }
+    }
+
+    triggerRebuild() {
+        this.triggerBuild(true);
     }
 
     triggerBuild(fullRebuild) {
@@ -648,7 +668,6 @@ class Extension {
             return;
         }
 
-        const settings = this._settings;
         const project = this._project;
 
         if (!project.isValid()) {
@@ -686,7 +705,7 @@ class Extension {
 
             if (action == "clean" || action == "rebuild") {
                 try {
-                    this.showStatus("$(gear) Cleaning build...");
+                    this.showStatus("$(gear) Cleaning build...", action);
                     build.clean(true);
                 } catch(err) {
                     this.showStatus("$(error) Clean failed");
@@ -712,7 +731,7 @@ class Extension {
                 this._builder = build;
                 let hasError = false;
 
-                this.showStatus("$(gear) Building...");
+                this.showStatus("$(gear) Building...", action);
 
                 try {
 
@@ -755,7 +774,7 @@ class Extension {
                         }
 
                     })
-                    .catch((result) => {
+                    .catch((_result_) => {
                         this._builder = null;
                         terminal.done();
                         this.showStatus("$(error) Build failed");

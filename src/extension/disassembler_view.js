@@ -2,7 +2,6 @@
 // Disassembler Content Provider
 //
 
-const path = require('path');
 const fs = require('fs');
 const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
@@ -52,7 +51,7 @@ class DisassemblyDocument {
         const instance = this;
 
 		try {
-            const watcher = fs.watchFile(path, (curr, prev) => {
+            const watcher = fs.watchFile(path, (_curr_, _prev_) => {
                 instance.handleChange();
             });
             this._watcher = watcher;
@@ -117,19 +116,19 @@ class DisassemblerView {
 		this._webviewPanel = null;
     }
 
-    async openCustomDocument(uri, openContext, cancellationToken) {
+    async openCustomDocument(uri, _openContext_, _cancellationToken_) {
 		logger.trace("open custom document");
 		const document = await DisassemblyDocument.create(uri);
         await document.load();
 		return document;
     }
 
-	async resolveCustomDocument(document, cancellationToken) {
+	async resolveCustomDocument(document, _cancellationToken_) {
 		logger.trace("resolve custom document");
 		return document;
 	}
 
-    async resolveCustomEditor(document, webviewPanel, cancellationToken) {
+    async resolveCustomEditor(document, webviewPanel, _cancellationToken_) {
 		logger.trace("resolve custom editor");
 
 		const instance = this;
@@ -157,7 +156,7 @@ class DisassemblerView {
 						untitled: true
 					});
 				} else {
-					const editable = vscode.workspace.fs.isWritableFileSystem(document.uri.scheme);
+					//const editable = vscode.workspace.fs.isWritableFileSystem(document.uri.scheme);
 					view.postMessage({
 						type: 'init',
 						html: document.html

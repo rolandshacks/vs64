@@ -8,7 +8,6 @@
 // eslint-disable-next-line
 BIND(module);
 
-const { info } = require('console');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
@@ -102,7 +101,7 @@ class Logger {
     constructor(name) {
         Time.millis;
         this._name = name;
-        this._defaultLevel = LogLevel.Info;
+        this._defaultLevel = Logger._globalDefaultLevel;
         this._level = null;
     }
 
@@ -114,8 +113,22 @@ class Logger {
         return this._level;
     }
 
+    static pushGlobalLevel(level) {
+        Logger._globalLevelStack.push(Logger._globalLevel);
+        Logger.setGlobalLevel(level);
+    }
+
+    static popGlobalLevel() {
+        Logger._globalLevel = Logger._globalLevelStack.pop() || Logger._globalDefaultLevel;
+    }
+
     static setGlobalLevel(level) {
-        Logger._globalLevel = getLogLevelFromString(level);
+        if (level == null) return;
+        if (typeof level === "string") {
+            Logger._globalLevel = getLogLevelFromString(level);
+        } else {
+            Logger._globalLevel = level;
+        }
     }
 
     static getGlobalLevel() {
@@ -151,7 +164,7 @@ class Logger {
         if (this._level != null && level < this._level) return false;
         return true;
     }
-    
+
     when(level, fn) {
         if (!this._checkLevel(level)) return;
         fn();
@@ -193,7 +206,7 @@ class Logger {
         console.log(txt);
     }
 
-    _out(level, txt, fn) {
+    _out(level, txt, _fn_) {
         if (!this._checkLevel(level)) return;
 
         const time = Time.millis;
@@ -300,7 +313,9 @@ class Logger {
 
 }
 
-Logger._globalLevel = LogLevel.Debug;
+Logger._globalDefaultLevel = LogLevel.Info;
+Logger._globalLevel = Logger._globalDefaultLevel;
+Logger._globalLevelStack = [];
 Logger._sink = null;
 Logger._globalListener = null;
 Logger._enableColors = true;

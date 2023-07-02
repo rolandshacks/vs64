@@ -2,9 +2,6 @@
 // Elf Section
 //
 
-const fs = require('fs');
-const path = require('path');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -15,21 +12,8 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
-const { Utils } = require('utilities/utils');
-
-const {
-    ElfConstants,
-    ElfLineInfoAttributes,
-    ElfTagNames,
-    ElfAttributeNames,
-    ElfFormCodes,
-    ElfSectionTypes
-} = require('elf/types');
-
+const { ElfSectionTypes } = require('elf/types');
 const { ElfDeserializer } = require('elf/deserializer');
-
-const logger = new Logger("ElfSection");
 
 //-----------------------------------------------------------------------------------------------//
 // Elf Section Header

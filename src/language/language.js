@@ -2,9 +2,6 @@
 // Language Features
 //
 
-const path = require('path');
-const fs = require('fs');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -19,13 +16,8 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger } = require('utilities/logger');
-const { Utils } = require('utilities/utils');
-const { Constants, Opcodes } = require('settings/settings');
 const { TokenType } = require('language/language_base');
 const { AsmParser, AsmGrammar } = require('language/language_asm');
-
-const logger = new Logger("Language");
 
 //-----------------------------------------------------------------------------------------------//
 // Parser
@@ -79,7 +71,7 @@ class LanguageFeatureProvider {
 
     // CompletionProvider
 
-    async provideCompletionItems(document, position, cancellationToken) {
+    async provideCompletionItems(document, position, _cancellationToken_) {
         const identifier = Parser.getTokenAtDocumentPos(document, position, true, true);
         if (!identifier) return null;
 
@@ -115,7 +107,9 @@ class LanguageFeatureProvider {
         const project = this._project;
         if (!project.isValid()) return null;
 
-        const sources = project.queryAllAsmFiles();
+        const sources = project.getAsmSourceFiles();
+        if (!sources) return null;
+
         const locations = [];
 
         const options = {
@@ -166,7 +160,9 @@ class LanguageFeatureProvider {
         const project = this._project;
         if (!project.isValid()) return null;
 
-        const sources = project.queryAllAsmFiles();
+        const sources = project.getAsmSourceFiles();
+        if (!sources) return null;
+
         const locations = [];
 
         const options = {

@@ -15,9 +15,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Constants } = require('settings/settings');
-const { Logger } = require('utilities/logger');
-
-const logger = new Logger("Tasks");
 
 //-----------------------------------------------------------------------------------------------//
 // Task Provider
@@ -25,7 +22,7 @@ const logger = new Logger("Tasks");
 
 const TASK_PROVIDER_TYPE = "vs64";
 
-function addStyle(txt, ...styles) {
+function _addStyle_(txt, ..._styles_) {
     const args = arguments.slice(1);
     if (args.length < 1) return;
     let str = "";
@@ -33,6 +30,7 @@ function addStyle(txt, ...styles) {
         str += "\x1b[" + arg + "m";
     }
     str += txt + "\x1b[0m";
+    return str;
 }
 
 class TaskTerminal {
@@ -166,8 +164,8 @@ class TaskProvider {
         let problemMatcher = "msvc";
         const project = this._project;
         if (project && project.toolkit) {
-            if (project.toolkit == "kick") {
-                problemMatcher = project.toolkit;
+            if (project.toolkit.isKick) {
+                problemMatcher = project.toolkit.name;
             }
         }
 

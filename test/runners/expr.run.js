@@ -3,7 +3,6 @@
 //
 
 const path = require('path');
-const fs = require('fs');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -22,8 +21,6 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
 const { Expression } = require('utilities/expression');
-
-const logger = new Logger("ExpressionRun");
 
 function run() {
 

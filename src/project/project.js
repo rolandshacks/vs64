@@ -1,5 +1,5 @@
 //
-// Builder
+// Project
 //
 
 const fs = require('fs');
@@ -16,92 +16,15 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 const { Utils } = require('utilities/utils');
+const { Arguments, ArgumentList } = require('utilities/args');
 const { Logger } = require('utilities/logger');
 const { Constants } = require('settings/settings');
+const { Scanner } = require('project/scanner');
+const { Toolkit } = require('project/toolkit');
+const { Ninja, NinjaArgs } = require('project/ninja');
+const { ProjectItem, TranslationList } = require('project/project_types');
 
 const logger = new Logger("Project");
-
-const WHITESPACE_CHARS = " \t\r\n\v";
-
-function isWhitespace(c) {
-    return (WHITESPACE_CHARS.indexOf(c) >= 0);
-}
-
-const TokenType = {
-    None: 0,
-    Include: 1
-};
-
-const TokenValueType = {
-    None: 0,
-    Filename: 1
-};
-
-const TokenDescriptors = {
-    "!src": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
-    "!source": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
-    "#include": { tokenType: TokenType.Include,valueType: TokenValueType.Filename },
-    "#import": { tokenType: TokenType.Include,valueType: TokenValueType.Filename }
-};
-
-class Token {
-    constructor(descriptor, value, lineNumber) {
-        this._descriptor = descriptor;
-        this._type = descriptor.tokenType;
-        this._valueType = descriptor.valueType;
-        this._value = this.parseValue(value);
-        this._lineNumber = lineNumber;
-    }
-
-    parseValue(value) {
-        return value;
-    }
-
-    get descriptor() { return this._descriptor; }
-    get type() { return this._type; }
-    get value() { return this._value; }
-    get line() { return this._lineNumber; }
-}
-
-class ProjectItem {
-    constructor(filename, attributes) {
-        this._filename = filename;
-        let ext = path.extname(filename) || ""
-        if (ext && ext[0] == '.') ext = ext.substring(1);
-        this._extension = ext.toLowerCase();
-        this._args = null;
-        this.setArgs(attributes);
-    }
-
-    get filename() { return this._filename; }
-    get extension() { return this._extension; }
-
-    setArgs(attributes) {
-        if (!attributes) return;
-
-        let args = "";
-
-        for (const key of Object.keys(attributes)) {
-            if (key == "path") continue;
-            const value = attributes[key];
-            const s = "--" + key + "=" + value;
-            if (args.length > 0) args += " ";
-            args += s;
-        }
-
-        if (args.length < 1) return;
-
-        this._args = args;
-    }
-
-    hasArgs() {
-        return (this._args != null);
-    }
-
-    getArgs() {
-        return this._args;
-    }
-}
 
 class Project {
     constructor(settings) {
@@ -109,10 +32,11 @@ class Project {
         this._settings = settings;
         this._modificationTime = null;
         this._outputs = null;
+        this._toolkit = null;
+        this._buildTree = null;
     }
 
     get error() { return this._error; }
-
     get name() { return this._name; }
     get toolkit() { return this._toolkit; }
     get sources() { return this._sources; }
@@ -138,10 +62,10 @@ class Project {
     get command() { return this._command; }
     get startAddress() { return this._startAddress; }
     get buildType() { return this._buildType; }
-    get resourceCompilerArgs() { return this._resourceCompilerArgs; }
     get buildfile() { return this._buildfile; }
     get modificationTime() { return this._modificationTime; }
     get outputs() { return this._outputs; }
+    get buildTree() { return this._buildTree; }
     get releaseBuild() {
         if (this.buildType && this.buildType.toLowerCase() == "release") return true;
         return false;
@@ -208,7 +132,7 @@ class Project {
 
         this._data = data;
 
-        this._basedir = path.dirname(this._configfile);
+        this._basedir = (this._configfile != null) ? path.dirname(this._configfile) : "./";
         this._builddir = path.resolve(this._basedir, "build");
         this._buildfile = path.resolve(this._builddir, "build.ninja");
         this._compilecommandsfile = path.resolve(this._builddir, "compile_commands.json");
@@ -219,15 +143,15 @@ class Project {
         this._outname = this._name + ".prg";
         this._outfile = path.resolve(this._builddir, this._outname);
 
-        const toolkit = this._toolkit;
+        const toolkit = this.toolkit;
 
-        if (toolkit == "acme") {
+        if (toolkit.isAcme) {
             this._outdebug = path.resolve(this._builddir, this._name + ".report");
-        } else if (toolkit == "kick") {
+        } else if (toolkit.isKick) {
             this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
-        } else if (toolkit == "llvm") {
+        } else if (toolkit.isLLVM) {
             this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
-        } else if (toolkit == "cc65") {
+        } else if (toolkit.isCC65) {
             this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
         }
 
@@ -239,7 +163,7 @@ class Project {
             this._outputs.push(this._outdebug);
         }
 
-        if (toolkit == "cc65" || toolkit == "llvm") {
+        if (toolkit.isCpp) {
             this.#writeCompileCommands();
             this.#writeCppProperties();
         }
@@ -252,12 +176,16 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
-        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme' or 'cc65')"); }
-        this._toolkit = data.toolkit.toLowerCase();
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'cc65' or 'llvm')"); }
+        const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "cc65", "llvm"].indexOf(this._toolkit) < 0) {
+        if (["acme", "kick", "cc65", "llvm"].indexOf(toolkitId) < 0) {
             throw("property 'toolkit' needs to be either 'acme', 'kick', 'cc65' or 'llvm'");
         }
+
+        this._toolkit = Toolkit.fromName(toolkitId);
+
+        const toolkit = this._toolkit;
 
         const settings = this._settings;
         const projectDir = this.basedir;
@@ -297,7 +225,7 @@ class Project {
 
         this._sources = srcs;
 
-        if (this._toolkit == "kick") {
+        if (toolkit.isKick) {
 
             const asmSources = this.querySourceByExtension(Constants.AsmFileFilter);
             if (asmSources && asmSources.length > 1) {
@@ -312,7 +240,6 @@ class Project {
         this._assembler = data.assembler;
         this._linker = data.linker;
         this._buildType = data.build;
-        this._resourceCompilerArgs = data.rcFlags;
 
         { // definitions
             const definitions = [];
@@ -395,6 +322,31 @@ class Project {
             this._startAddress = data.startAddress;
         }
 
+        {
+            this._resourceCompilerArgs = Arguments.fromString(data.rcFlags);
+            const rcArguments = this._resourceCompilerArgs;
+
+            let rcFormat = null;
+            if (!rcArguments.hasOption("format")) {
+                if (toolkit.isCC65) rcFormat = "cc";
+                else if (toolkit.isLLVM) rcFormat = "cpp";
+                else rcFormat = toolkit.name;
+                rcArguments.setOption("format", rcFormat);
+            } else {
+                rcFormat = rcArguments.getOption("format");
+            }
+
+            this._resourceOutputType = "asm"; // default
+
+            if (toolkit.isAssembler && (rcFormat == "cc" || rcFormat == "cpp")) {
+                rcArguments.setOption("format", toolkit.name); // format name = toolkit name
+                logger.warn("specified resource compiler output format '" + rcFormat + "' is not supported by assembler toolkits - using assembler output format instead");
+            } else {
+                if (rcFormat == "cc") this._resourceOutputType = "c";
+                else if (rcFormat == "cpp") this._resourceOutputType = "cpp";
+            }
+        }
+
     }
 
     hasSources() {
@@ -447,158 +399,6 @@ class Project {
         return null;
     }
 
-    #getReferences(filename, referenceList) {
-
-        if (!referenceList) {
-            referenceList = [];
-        }
-
-        logger.debug("scanFile: " + filename);
-
-        const dirname = path.dirname(filename);
-
-        let source = null;
-
-        try {
-            source = fs.readFileSync(filename, 'utf8');
-        } catch(err) {
-            return referenceList;
-        }
-
-        const tokens = this.#parse(source, filename);
-
-        if (tokens) {
-            for (const token of tokens) {
-                if (token.type == TokenType.Include) {
-                    const ref = this.resolveFile(token.value, dirname);
-                    if (ref) {
-                        if (referenceList.indexOf(ref) == -1) {
-                            referenceList.push(ref);
-                            this.#getReferences(ref, referenceList);
-                        }
-                    }
-                }
-            }
-        }
-
-        return referenceList;
-    }
-
-    #parse(source, filename) {
-
-        if (!source) return null;
-
-        let lineNumber = 0;
-        let colNumber = 0;
-
-        let pos = 0;
-        let endpos = source.length;
-
-        let line = "";
-
-        let tokens = [];
-
-        while (pos < endpos) {
-
-            const c = source[pos];
-            pos++;
-
-            if (c == '\r' || c == '\n' || pos == endpos) {
-                if (c == '\r' && pos < endpos) {
-                    if (source[pos] == '\n') pos++;
-                }
-
-                const token = this.#parseLine(line, lineNumber);
-                if (token) {
-                    tokens.push(token);
-                }
-
-                line = "";
-                lineNumber++;
-                colNumber = 0;
-                continue;
-            }
-
-            line += c;
-            colNumber++;
-
-        }
-
-        return tokens;
-
-    }
-
-    #parseLine(source, lineNumber) {
-        if (!source || source.length < 1) return null;
-
-        let pos = 0;
-        let endpos = source.length;
-
-        while (pos < endpos && isWhitespace(source[pos])) { pos++; }
-
-        if (pos == endpos) return null;
-
-        const firstChar = source[pos];
-
-        // just scan for special tokens
-        if (firstChar != '!' && firstChar != '#') return null;
-
-        if (source.startsWith("!if", pos)) {
-            pos += 3;
-            while (pos < endpos && source[pos] != '!') {
-                pos++;
-            }
-
-            if (pos == endpos) return null;
-        }
-
-        let token = null;
-
-        for (const tokenName of Object.keys(TokenDescriptors)) {
-            const tokenDescriptor = TokenDescriptors[tokenName];
-
-            if (source.startsWith(tokenName, pos)) {
-                pos += tokenName.length;
-
-                while (pos < endpos && isWhitespace(source[pos])) { pos++; }
-                if (pos == endpos) break;
-
-                const startChar = source.charAt(pos);
-                if (startChar != '\"' && startChar != '\'' && startChar != '<') break;
-
-                pos++;
-                const startPos = pos;
-
-                let escaped = false;
-                while (pos < endpos) {
-                    const c = source.charAt(pos);
-                    if (escaped) {
-                        escaped = false;
-                    } else {
-                        if (c == '>') {
-                            if (startChar == '<') break;
-                        } else if (c == startChar) {
-                            break;
-                        } else if (c == '\\') {
-                            escaped = true;
-                        }
-                    }
-                    pos++;
-                }
-
-                let value = source.substring(startPos, pos).trim();
-
-                if (value.length > 0) {
-                    token = new Token(tokenDescriptor, value, lineNumber);
-                }
-
-                break;
-            }
-        }
-
-        return token;
-    }
-
     querySourceItemsByExtension(extensions) {
         const srcs = this.sources;
         if (!srcs || srcs.length < 1) return null;
@@ -606,7 +406,7 @@ class Project {
         const result = [];
 
         for (const srcItem of srcs) {
-            const src = srcItem.filename;
+            const _src_ = srcItem.filename;
             const ext = srcItem.extension;
             if (ext && extensions.indexOf('|' + ext + '|') >= 0) {
                 result.push(srcItem);
@@ -635,77 +435,21 @@ class Project {
         return result;
     }
 
-    #join(elements, prefix, separator, do_escape) {
-        if (!elements || elements.length < 1) return "";
-
-        let s = "";
-        if (!separator) separator = " ";
-
-        for (let i=0; i<elements.length; i++) {
-            const element = elements[i];
-            if (i>0 && separator) s += separator;
-            if (prefix) s += prefix;
-            s += (do_escape ? this.#escape(element) : element);
-        }
-
-        return s;
-    }
-
-    #keyValue(key, value) {
-        return key + " = " + value;
-    }
-
-    #escape(s) {
-
-        if (!s) return s;
-
-        let esc = "";
-
-        for (const c of s) {
-            if (c == ':') esc += "$:"
-            else if (c == ' ') esc += "$ "
-            else if (c == '$') esc += "$$"
-            else esc += c;
-        }
-
-        return esc;
-    }
-
-    #createDependencyFile(filename, target, dependencies) {
-
-        let s = "";
-
-        s += target + ":";
-
-        if (dependencies && dependencies.length > 0) {
-            for (let i=0; i<dependencies.length; i++) {
-                s += " \\\n";
-                s += "  " + dependencies[i];
-            }
-        }
-
-        s += '\n';
-
-        try {
-            fs.writeFileSync(filename, s, "utf8");
-        } catch (err) {
-            console.log("failed to write dependency file: " + err);
-        }
-
-    }
-
     #writeCppProperties() {
 
         this.#createBuildDir();
 
+        const settings = this._settings;
+        const includes = this.includes;
+
         const filename = this.cpppropertiesfile;
         const filetime = Utils.getFileTime(filename);
-        if (filetime >= this._modificationTime) {
+        if (this._modificationTime && filetime >= this._modificationTime) {
             return;
         }
 
         let compilerPath = this.#getCompilerExecutable();
-        if (!Utils.fileExists(compilerPath)) compilerPath = "";
+        if (this.toolkit.isCC65 || !Utils.fileExists(compilerPath)) compilerPath = "";
 
         const data = {
             configurations: [
@@ -720,6 +464,24 @@ class Project {
             ],
             version: 4
         };
+
+        if (this.toolkit.isCC65) {
+
+            const includePath = [];
+
+            if (settings && settings.cc65Includes) {
+                settings.cc65Includes.forEach((item) => { includePath.push(item); });
+
+            }
+
+            if (includes) {
+                includes.forEach((item) => { includePath.push(item); });
+            }
+
+            if (includePath.length > 0) {
+                data.configurations[0].includePath = includePath;
+            }
+        }
 
         try {
             const parentDir = path.dirname(filename);
@@ -738,7 +500,7 @@ class Project {
 
         const filename = this.compilecommandsfile;
         const filetime = Utils.getFileTime(filename);
-        if (filetime >= this._modificationTime) {
+        if (this._modificationTime && filetime >= this._modificationTime) {
             return;
         }
 
@@ -748,10 +510,12 @@ class Project {
         const includes = this.includes;
         const defines = this.definitions;
 
+        const resourceOutputType = this._resourceOutputType;
+
         const resSources = this.querySourceByExtension(Constants.ResourceFileFilter);
         if (resSources && resSources.length > 0) {
             for (let resSource of resSources) {
-                const cppFile = this.#getBuildPath(resSource, "cpp");
+                const cppFile = this.#getBuildPath(resSource, resourceOutputType);
                 if (cppSources.indexOf(cppFile) == -1) cppSources.push(cppFile);
             }
         }
@@ -768,15 +532,28 @@ class Project {
         }
     }
 
-    #getCompilerExecutable() {
+    #getCompilerExecutable(filename) {
 
         const toolkit = this.toolkit;
         const settings = this._settings;
 
         let compilerPath = "";
-        if (toolkit == "llvm") {
-            compilerPath = (this.compiler || settings.clangExecutable);
-        } else if (toolkit == "cc65") {
+        if (toolkit.isLLVM) {
+            if (this.compiler) {
+                compilerPath = this.compiler;
+            } else {
+                if (filename) {
+                    const extension = Utils.getExtension(filename);
+                    if (extension == 'c') {
+                        compilerPath = settings.clangcExecutable;
+                    } else {
+                        compilerPath = settings.clangExecutable;
+                    }
+                } else {
+                    compilerPath = settings.clangExecutable;
+                }
+            }
+        } else if (toolkit.isCC65) {
             compilerPath = (this.compiler || settings.cc65Executable);
         }
 
@@ -787,9 +564,9 @@ class Project {
 
         const toolkit = this.toolkit;
         const settings = this._settings;
-        const workingDirectory = process.cwd();
+        const workingDirectory = this._basedir;
 
-        const compilerPath = this.#getCompilerExecutable();
+        const compilerPath = this.#getCompilerExecutable(filename);
 
         const command = {
             directory: workingDirectory,
@@ -809,7 +586,7 @@ class Project {
             }
         }
 
-        if (toolkit == "cc65") {
+        if (toolkit.isCC65) {
             command.arguments.push("-D__fastcall__=/**/");
             command.arguments.push("-D__C64__");
         }
@@ -821,9 +598,9 @@ class Project {
         }
 
         let compilerIncludes = null;
-        if (toolkit == "llvm") {
+        if (toolkit.isLLVM) {
             compilerIncludes = settings.llvmIncludes;
-        } else if (toolkit == "cc65") {
+        } else if (toolkit.isCC65) {
             compilerIncludes = settings.cc65Includes;
         }
 
@@ -874,7 +651,18 @@ class Project {
         return buildPath;
     }
 
-    getAsmSourceFiles() {
+    getFileReferences(filename, referenceList) {
+        const project = this;
+        return Scanner.scan(filename, referenceList, project);
+    }
+
+    getAsmSourceFiles(resolve) {
+
+        // Special function to maintain sequence order of files given in project file
+        // This is needed because we need the same order in the generated report file
+        // ACME is not adding source file information in the report for multiple modules
+        // Instead, it just generates a 0xff byte into the text file.
+        // This seems to be a BUG in ACME.
 
         const srcs = this.sources;
         if (!srcs || srcs.length < 1) return null;
@@ -894,69 +682,151 @@ class Project {
                     asmSources.push(asmFile);
                 }
             }
-
         }
 
-        if (asmSources.length < 1) return null;
-
-        return asmSources;
-
-    }
-
-    queryAllAsmFiles() {
-
-        const project = this;
-        const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-        const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
-
-        if (resSources && resSources.length > 0) {
-            for (let resSource of resSources) {
-                const asmFile = this.#getBuildPath(resSource, "asm");
-                if (asmSources.indexOf(asmFile) == -1) {
-                    asmSources.push(asmFile);
-                }
-            }
+        if (asmSources.length < 1) {
+            return null;
         }
 
-        const queryResult = [ ...asmSources ];
+        if (!resolve) {
+            return asmSources;
+        }
+
+        const resolvedAsmSources = [ ...asmSources ];
         for (const asmSource of asmSources) {
-            this.#getReferences(asmSource, queryResult);
+            this.getFileReferences(asmSource, resolvedAsmSources);
         }
 
-        return queryResult;
+        return resolvedAsmSources;
+
     }
 
-    createBuildFile() {
+    updateBuildTree() {
+        this._buildTree = this.#createBuildTree();
+    }
+
+    #createBuildTree() {
+
+        const thisInstance = this;
+
+        const toolkit = this.toolkit;
+
+        const doNotResolveResources = false;
+
+        const asmFiles = TranslationList.fromList(
+            (toolkit.isAcme) ?
+            this.getAsmSourceFiles() : // (workaround for ACME debug report bug)
+            this.querySourceByExtension(Constants.AsmFileFilter)
+        );
+
+        const resFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ResourceFileFilter));
+        const cppFiles = TranslationList.fromList(this.querySourceByExtension(Constants.CppFileFilter));
+        const objFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ObjFileFilter));
+        const genFiles = TranslationList.createEmpty();
+        const depFiles = TranslationList.createEmpty();
+
+        const resourceOutputType = toolkit.isCpp ? this._resourceOutputType : "asm";
+
+        resFiles.forEach((input) => {
+            const output = this.#getBuildPath(input, resourceOutputType);
+            genFiles.add(output, input, "res");
+            depFiles.add(output, input, "res");
+
+            if (!doNotResolveResources) {
+                if (resourceOutputType == "asm" || toolkit.isAssembler) asmFiles.add(output, input);
+                else cppFiles.add(output, input);
+            }
+
+        });
+
+        cppFiles.forEach((input) => {
+            if (toolkit.isCC65) {
+                // c files get compiled to asm
+                const output = this.#getBuildPath(input, "s");
+                asmFiles.add(output, input, "cpp");
+                depFiles.add(output, input, "asm");
+
+                const dependencies = this.getFileReferences(input);
+                depFiles.add(output, dependencies);
+
+            } else {
+                // c/c++ files get compiled to obj
+                const output = this.#getBuildPath(input, "o");
+                const extension = Utils.getExtension(input);
+                const rule = (extension != "c") ? "cpp" : "cc";
+                objFiles.add(output, input, rule);
+                depFiles.add(output, input, rule);
+            }
+        });
+
+
+        if (toolkit.isCpp) {
+            // add dependency information for object files
+            asmFiles.forEach((input) => {
+                objFiles.add(this.#getBuildPath(input, "o"), input, "asm");
+            });
+        } else if (toolkit.isAcme) {
+            // generate one dependency list for all compilation units
+            const dependencies = asmFiles.clone();
+            asmFiles.forEach((filename) => {
+                this.getFileReferences(filename, dependencies);
+            });
+            depFiles.add(thisInstance.outfile, dependencies);
+        } else if (toolkit.isKick) {
+            // generate one dependency list for all compilation units
+            const dependencies = [];
+            let asmMain = null;
+            asmFiles.forEach((filename) => {
+                if (!asmMain) {
+                    asmMain = filename;
+                    dependencies.push(asmMain);
+                }
+                this.getFileReferences(filename, dependencies);
+            });
+            genFiles.forEach((filename) => {
+                dependencies.push(filename);
+            });
+
+            depFiles.add(thisInstance.outfile, dependencies);
+        }
+
+        const buildTree = {
+            res: resFiles,  // resource files
+            gen: genFiles,  // generated resource files (all)
+            cpp: cppFiles,  // cpp files
+            asm: asmFiles,  // asm files
+            obj: objFiles,  // obj files (llvm and cc65)
+            deps: depFiles  // dependencies (kick)
+        }
+
+        return buildTree;
+    }
+
+    createBuildFile(forcedOverwrite) {
+
+        const settings = this._settings;
 
         const project = this;
-        const settings = this._settings;
         const toolkit = project.toolkit;
-
-        const releaseBuild = this.releaseBuild;
+        const releaseBuild = project.releaseBuild;
 
         this.#createBuildDir();
 
+        this.updateBuildTree();
+
         const buildFile = this.buildfile;
 
-        let buildFileDirty = true;
-
-        let modificationTime = Utils.getFileTime(buildFile);
-        if (modificationTime && modificationTime >= project.modificationTime) {
-            // already up-to-date
-            buildFileDirty = false;
-
-            if (toolkit == "llvm") {
-                // early exit as for llvm, there is no need
-                // to manually create depencency files for ninja
+        if (!forcedOverwrite) {
+            let modificationTime = Utils.getFileTime(buildFile);
+            if (modificationTime && modificationTime >= project.modificationTime) {
+                // already up-to-date
                 return;
             }
         }
 
-        const defines = [];
-
-        if (project.definitions) {
-            defines.push(...project.definitions);
-        }
+        const buildTree = this.buildTree;
+        const defines = new ArgumentList(project.definitions);
+        const includes = new NinjaArgs(project.includes, project.builddir);
 
         const script = [];
 
@@ -968,73 +838,59 @@ class Project {
             script.push("");
 
             script.push("ninja_required_version = 1.3");
-            script.push(this.#keyValue("builddir", project.builddir));
+            script.push(Ninja.keyValue("toolkit", toolkit.name));
+            script.push(Ninja.keyValue("builddir", project.builddir));
             script.push("");
 
-            script.push(this.#keyValue("project", project.name));
-            script.push(this.#keyValue("config", project.configfile));
-            script.push(this.#keyValue("target", project.outfile));
-            script.push(this.#keyValue("dbg_out", project.outdebug));
+            script.push(Ninja.keyValue("project", project.name));
+            script.push(Ninja.keyValue("config", project.configfile));
+            script.push(Ninja.keyValue("target", project.outfile));
+            script.push(Ninja.keyValue("dbg_out", project.outdebug));
 
             if (settings.pythonExecutable) {
-                script.push(this.#keyValue("python_exe", settings.pythonExecutable));
+                script.push(Ninja.keyValue("python_exe", settings.pythonExecutable));
             }
 
             if (settings.javaExecutable) {
-                script.push(this.#keyValue("java_exe", settings.javaExecutable));
+                script.push(Ninja.keyValue("java_exe", settings.javaExecutable));
             }
 
-            const extensionPath = settings.extensionPath;
-            script.push(this.#keyValue("rc_exe", settings.resourceCompiler));
+            script.push(Ninja.keyValue("rc_exe", settings.resourceCompiler));
 
-            let rcFlags = project.resourceCompilerArgs || "";
-
-            if (rcFlags.length > 0) rcFlags += " ";
-            rcFlags += "--config $config";
-
-            if (rcFlags.indexOf("--format ") == -1) {
-                let rcFormat = toolkit;
-                if (toolkit == "cc65") rcFormat = "cc";
-                else if (toolkit == "llvm") rcFormat = "cpp";
-                rcFlags += " --format " + rcFormat;
+            // resource compiler flags
+            const rcArguments = project._resourceCompilerArgs
+            let rcFlags = new NinjaArgs(rcArguments.argv);
+            if (!rcArguments.hasOption("config")) {
+                rcFlags.add("--config", "\"$config\"");
             }
-            script.push(this.#keyValue("rc_flags", rcFlags));
+            script.push(Ninja.keyArgs("rc_flags", rcFlags));
         }
 
-        if (toolkit == "kick") {
+        if (toolkit.isKick) {
 
-            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-
-            script.push(this.#keyValue("asm_exe", (project.assembler || settings.kickExecutable)));
+            script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.kickExecutable)));
+            script.push(Ninja.keyValue("asminfo", path.resolve(project.builddir, project.name + ".info")));
             script.push("");
 
-            let flags = "-debugdump";
-
-            flags += " -asminfo \"files|errors\" -asminfofile " + path.resolve(project.builddir, project.name + ".info");
+            const flags = new NinjaArgs(
+                "-debugdump",
+                "-asminfo",
+                "\"files|errors\""
+            );
 
             if (!releaseBuild) {
-                defines.push("DEBUG");
-                flags += " -debug";
+                defines.add("DEBUG");
+                flags.add("-debug");
             }
 
-            flags += " -odir " + project.builddir;
+            flags.add(
+                this._args,
+                this._assemblerFlags
+            );
 
-            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
-            if (this._assemblerFlags) flags += " " + this._assemblerFlags;
-
-            script.push(this.#keyValue("flags", flags.trim()));
-
-            let includes = this.#join(project.includes, "-libdir ");
-            includes += (includes.length > 0 ? " " : "") + "-libdir " + project.builddir;
-
-            script.push(this.#keyValue("includes", includes));
-
-            let defs = "";
-            if (defines && defines.length > 0) {
-                defs += this.#join(defines, "-define ");
-            }
-
-            script.push(this.#keyValue("defs", defs));
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-libdir ")));
+            script.push(Ninja.keyValueRaw("defs", defines.join("-define ")));
 
             script.push("");
 
@@ -1045,60 +901,49 @@ class Project {
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $java_exe -jar $asm_exe $flags $includes -o $out $in");
+            script.push("    command = $java_exe -jar $asm_exe -odir \"$builddir\" -asminfofile \"$asminfo\" $flags $includes -o $out $in");
             script.push("");
 
-            const generatedAsmSources = [];
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
 
-            if (resSources && resSources.length > 0) {
-                for (let resSource of resSources) {
-                    const asmFile = this.#getBuildPath(resSource, "asm");
-                    if (generatedAsmSources.indexOf(asmFile) == -1) {
-                        generatedAsmSources.push(asmFile);
-                    }
-                    script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
-                }
-                script.push("");
-            }
+            const pgmDeps = buildTree.deps.getAsArray(project.outfile);
+            const asmMain = pgmDeps[0]||"main.asm";
+            const pgmRefs = pgmDeps.slice(1);
 
-            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+            let asmBuild = "build $target | $dbg_out : asm " + Ninja.escape(asmMain);
 
-            const dependencies = [ ...asmSources ];
-            for (const asmSource of asmSources) {
-                this.#getReferences(asmSource, dependencies);
-            }
-            this.#createDependencyFile(project.outfile + ".d", project.outfile, dependencies);
-
-            let asmBuild = "build $target | $dbg_out : asm " + this.#join(asmSources, null, null, true);
-            if (generatedAsmSources.length > 0) {
-                asmBuild += " | " + this.#join(generatedAsmSources, null, null, true);
+            if (!buildTree.deps.empty()) {
+                asmBuild += " | " + Ninja.join(pgmRefs);
             }
 
             script.push(asmBuild);
-
-        } else if (toolkit == "acme") {
-
-            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-
-            script.push(this.#keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
 
-            let flags = "--msvc --maxerrors 99 ";
+        } else if (toolkit.isAcme) {
+
+            script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
+            script.push("");
+
+            const flags = new NinjaArgs(
+                "--msvc",
+                "--maxerrors", "99"
+            );
 
             if (!releaseBuild) {
-                flags += " -DDEBUG=1";
+                flags.add("-DDEBUG=1");
             }
 
-            flags += " -r $dbg_out";
+            flags.add(this._args);
+            flags.add(this._assemblerFlags);
 
-            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
-            if (this._assemblerFlags) flags += " " + this._assemblerFlags;
+            if (flags.indexOf("-f") == -1) flags.add("-f", "cbm");
+            if (flags.indexOf("--cpu") == -1) flags.add("--cpu", "6510");
 
-            if (flags.indexOf("-f") == -1) flags += " -f cbm";
-            if (flags.indexOf("--cpu") == -1) flags += " --cpu 6510";
-
-            script.push(this.#keyValue("flags", flags.trim()));
-            script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
             script.push("");
 
             script.push("rule res");
@@ -1108,83 +953,55 @@ class Project {
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $asm_exe $flags $includes -o $out $in");
+            script.push("    command = $asm_exe $flags $includes -r \"$dbg_out\" -o $out $in");
             script.push("");
 
-            if (resSources && resSources.length > 0) {
-                for (let resSource of resSources) {
-                    const asmFile = this.#getBuildPath(resSource, "asm");
-                    script.push("build " + this.#escape(asmFile) + ": res " + this.#escape(resSource));
-                }
-                script.push("");
-            }
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
 
-            //const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
+            script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()))
+            script.push("");
 
-            // Special function to maintain sequence order of files given in project file
-            // This is needed because we need the same order in the generated report file
-            // ACME is not adding source file information in the report for multiple modules
-            // Instead, it just generates a 0xff byte into the text file.
-            // This seems to be a BUG in ACME.
-            const asmSources = project.getAsmSourceFiles();
+        } else if (toolkit.isCC65) {
 
-            const dependencies = [ ...asmSources ];
-            for (const asmSource of asmSources) {
-                this.#getReferences(asmSource, dependencies);
-            }
-            this.#createDependencyFile(project.outfile + ".d", project.outfile, dependencies);
+            const flags = new NinjaArgs();
+            const c_flags = new NinjaArgs();
+            const asm_flags = new NinjaArgs();
 
-            script.push("build $target | $dbg_out : asm " + this.#join(asmSources, null, null, true))
-
-        } else if (toolkit == "cc65") {
-
-            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-            const cppSources = project.querySourceByExtension(Constants.CppFileFilter)||[];
-            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
-            const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
-
-            let flags = "-g";
-            let c_flags = "";
-            let asm_flags = "";
+            flags.add("-g");
 
             if (releaseBuild) {
-                c_flags += "-O -Oirs";
+                c_flags.add("-O", "-Oirs");
             }
 
-            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
-            if (this._assemblerFlags) asm_flags += " " + this._assemblerFlags;
-            if (this._compilerFlags) c_flags += " " + this._compilerFlags;
+            flags.add(this._args);
+            asm_flags.add(this._assemblerFlags);
+            c_flags.add(this._compilerFlags);
 
-            let ln_flags = "--dbgfile $dbg_out";
-            if (project.startAddress) {
-                ln_flags += " -S" + project.startAddress;
-            }
-
-            if (this._linkerFlags) ln_flags += " " + this._linkerFlags;
+            const ln_flags = new NinjaArgs();
+            if (project.startAddress) ln_flags.add("-S", project.startAddress);
+            ln_flags.add(this._linkerFlags);
 
             // default target
-            const defaultTargetConf = "-t c64";
-            if (flags.indexOf("-t ") == -1 && ln_flags.indexOf("-C ") == -1 && ln_flags.indexOf("-t ") == -1) ln_flags += " " + defaultTargetConf;
-            if (flags.indexOf("-t ") == -1 && c_flags.indexOf("-t ") == -1) c_flags += " " + defaultTargetConf;
-            if (flags.indexOf("-t ") == -1 && asm_flags.indexOf("-t ") == -1) asm_flags += " " + defaultTargetConf;
+            const defaultTargetConf = ["-t", "c64"];
+            if (flags.indexOf("-t ") == -1 && ln_flags.indexOf("-C ") == -1 && ln_flags.indexOf("-t ") == -1) ln_flags.add(defaultTargetConf);
+            if (flags.indexOf("-t ") == -1 && c_flags.indexOf("-t ") == -1) c_flags.add(defaultTargetConf);
+            if (flags.indexOf("-t ") == -1 && asm_flags.indexOf("-t ") == -1) asm_flags.add(defaultTargetConf);
 
-            let defs = "";
-            if (defines && defines.length > 0) {
-                defs += this.#join(defines, "-D");
-            }
-
-            script.push(this.#keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
-            script.push(this.#keyValue("asm_exe", (project.assembler || settings.ca65Executable)));
-            script.push(this.#keyValue("ln_exe", (project.linker || settings.ld65Executable)));
+            script.push(Ninja.keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
+            script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.ca65Executable)));
+            script.push(Ninja.keyValue("ln_exe", (project.linker || settings.ld65Executable)));
             script.push("");
 
-            script.push(this.#keyValue("flags", flags.trim()));
-            script.push(this.#keyValue("asm_flags", asm_flags.trim()));
-            script.push(this.#keyValue("c_flags", c_flags.trim()));
-            script.push(this.#keyValue("ln_flags", ln_flags.trim()));
-            script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
-            script.push(this.#keyValue("defs", defs));
-            script.push(this.#keyValue("libs", "c64.lib"));
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyArgs("asm_flags", asm_flags));
+            script.push(Ninja.keyArgs("c_flags", c_flags));
+            script.push(Ninja.keyArgs("ln_flags", ln_flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
+            script.push(Ninja.keyValueRaw("defs", defines.join("-D")));
+            script.push(Ninja.keyValue("libs", "c64.lib"));
             script.push("");
 
             script.push("rule res");
@@ -1204,161 +1021,116 @@ class Project {
             script.push("");
 
             script.push("rule link");
-            script.push("    command = $ln_exe -o $out $ln_flags $in $libs");
+            script.push("    command = $ln_exe -o $out --dbgfile \"$dbg_out\" $ln_flags $in $libs");
             script.push("");
 
-            if (resSources && resSources.length > 0) {
-                for (let resSource of resSources) {
-                    const cFile = this.#getBuildPath(resSource, "c");
-                    if (cppSources.indexOf(cFile) == -1) {
-                        cppSources.push(cFile);
-                    }
-                    script.push("build " + this.#escape(cFile) + ": res " + this.#escape(resSource));
-                }
-                script.push("");
-            }
-
-            if (cppSources && cppSources.length > 0) {
-                for (let cppSource of cppSources) {
-
-                    const asmSource = this.#getBuildPath(cppSource, "s");
-                    if (asmSources.indexOf(asmSource) == -1) {
-                        asmSources.push(asmSource);
-                    }
-
-                    script.push("build " + this.#escape(asmSource) + ": cc " + this.#escape(cppSource));
-                    this.#createDependencyFile(asmSource + ".d", asmSource, [ cppSource, ...this.#getReferences(cppSource) ]);
-                }
-                script.push("");
-            }
-
-            if (asmSources && asmSources.length > 0) {
-                for (const asmSource of asmSources) {
-                    const objFile = this.#getBuildPath(asmSource, "o");
-                    if (objFiles.indexOf(objFile) == -1) {
-                        objFiles.push(objFile);
-                    }
-                    script.push("build " + this.#escape(objFile) + ": asm " + this.#escape(asmSource));
-                    this.#createDependencyFile(objFile + ".d", objFile, [ asmSource, ...this.#getReferences(asmSource) ]);
-                }
-                script.push("");
-            }
-
-            if (objFiles && objFiles.length > 0) {
-                script.push("build $target | $dbg_out : link " + this.#join(objFiles, null, null, true));
-            }
-
-        } else if (toolkit == "llvm") {
-            const resSources = project.querySourceByExtension(Constants.ResourceFileFilter);
-            const cppSources = project.querySourceByExtension(Constants.CppFileFilter)||[];
-            const asmSources = project.querySourceByExtension(Constants.AsmFileFilter)||[];
-            const objFiles = project.querySourceByExtension(Constants.ObjFileFilter)||[];
-
-            const defaultTargetConf = "--config mos-c64.cfg";
-            let defaultFlags = "-Wall -std=gnu++20 -g -fstandalone-debug -fno-limit-debug-info -fno-discard-value-names -c";
-            // defaultFlags += "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
-
-            if (releaseBuild) {
-                defaultFlags += " -Ofast";
-            } else {
-                defaultFlags += " -O0";
-            }
-
-            let defs = "";
-            if (defines && defines.length > 0) {
-                defs += this.#join(defines, "-D");
-            }
-
-            let flags = "";
-            let asm_flags = defaultFlags + " -x assembler-with-cpp";
-            let c_flags = defaultFlags;
-            let ld_flags = "";
-
-            if (this._args && this._args.length > 0) flags += " " + this._args.join(" ");
-            if (this._assemblerFlags) asm_flags += " " + this._assemblerFlags;
-            if (this._compilerFlags) c_flags += " " + this._compilerFlags;
-            if (this._linkerFlags) ld_flags += " " + this._linkerFlags;
-
-            if (flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags += " " + defaultTargetConf;
-            if (flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags += " " + defaultTargetConf;
-            if (flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags += " " + defaultTargetConf;
-
-            script.push(this.#keyValue("clang", (project.compiler || settings.clangExecutable)));
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
             script.push("");
 
-            script.push(this.#keyValue("flags", flags.trim()));
-            script.push(this.#keyValue("asmflags", asm_flags.trim()));
-            script.push(this.#keyValue("cflags", c_flags.trim()));
-            script.push(this.#keyValue("ldflags", ld_flags.trim()));
-            script.push(this.#keyValue("includes", this.#join(project.includes, "-I ")));
-            script.push(this.#keyValue("defs", defs));
+            buildTree.asm.forEach((to, from) => {
+                if (from) script.push(Ninja.build(to, from, "cc"));
+            });
+            script.push("");
+
+            buildTree.obj.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "asm"));
+            });
+            script.push("");
+
+            script.push("build $target | $dbg_out : link " + Ninja.join(buildTree.obj.array()));
+            script.push("");
+
+        } else if (toolkit.isLLVM) {
+            const defaultFlags = [
+                "-Wall", "-g",
+                "-c",
+                (releaseBuild ? "-Ofast" : "-O0")
+                // "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
+            ];
+
+            const defaultCFlags = [
+                "-fno-limit-debug-info", "-fstandalone-debug", "-fno-discard-value-names"
+            ];
+
+            let flags = new NinjaArgs(this._args);
+            let c_flags = new NinjaArgs(defaultFlags, defaultCFlags);
+            let asm_flags = new NinjaArgs(defaultFlags, "-x", "assembler-with-cpp");
+            let cpp_flags = new NinjaArgs("-std=gnu++20");
+            let ld_flags = new NinjaArgs();
+
+            asm_flags.add(this._assemblerFlags);
+            c_flags.add(this._compilerFlags);
+            cpp_flags.add(this._compilerFlags);
+            ld_flags.add(this._linkerFlags);
+
+            const defaultTargetConf = ["--config", "mos-c64.cfg"];
+            if (flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags.add(defaultTargetConf);
+            if (flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags.add(defaultTargetConf);
+            if (flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags.add(defaultTargetConf);
+
+            script.push(Ninja.keyValue("clang", (project.compiler || settings.clangExecutable)));
+            script.push(Ninja.keyValue("clangc", (project.compiler || settings.clangcExecutable)));
+            script.push("");
+
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyArgs("asmflags", asm_flags));
+            script.push(Ninja.keyArgs("cflags", c_flags));
+            script.push(Ninja.keyArgs("cppflags", cpp_flags));
+            script.push(Ninja.keyArgs("ldflags", ld_flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
+            script.push(Ninja.keyValueRaw("defs", defines.join("-D")));
             script.push("");
 
             script.push("rule res");
             script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
             script.push("");
 
+            script.push("rule cpp");
+            script.push("    depfile = $out.d");
+            script.push("    deps = gcc");
+            script.push("    command = $clang -MD -MF $out.d $flags $cppflags $cflags $defs $includes -o $out $in");
+            script.push("");
+
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $clang -MD -MF $out.d $flags $cflags $defs $includes -o $out $in");
+            script.push("    command = $clangc -MD -MF $out.d $flags $cflags $defs $includes -o $out $in");
             script.push("");
 
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $clang -MD -MF $out.d $flags $asmflags $defs $includes -o $out $in");
+            script.push("    command = $clang $flags $asmflags $includes -o $out $in");
             script.push("");
 
             script.push("rule link");
             script.push("    command = $clang $flags $ldflags -O0 -o $out $in");
             script.push("");
 
-            if (resSources && resSources.length > 0) {
-                for (let resSource of resSources) {
-                    const cppFile = this.#getBuildPath(resSource, "cpp");
-                    if (cppSources.indexOf(cppFile) == -1) {
-                        cppSources.push(cppFile);
-                    }
-                    script.push("build " + this.#escape(cppFile) + ": res " + this.#escape(resSource));
-                }
-                script.push("");
-            }
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
 
-            if (cppSources && cppSources.length > 0) {
-                for (let cppSource of cppSources) {
-                    const objFile = this.#getBuildPath(cppSource, "o");
-                    if (objFiles.indexOf(objFile) == -1) {
-                        objFiles.push(objFile);
-                    }
-                    script.push("build " + this.#escape(objFile) + ": cc " + this.#escape(cppSource));
-                }
-                script.push("");
-            }
+            buildTree.obj.forEach((to, from, rule) => {
+                script.push(Ninja.build(to, from, (rule || "cpp")));
+            });
+            script.push("");
 
-            if (asmSources && asmSources.length > 0) {
-                    for (const asmSource of asmSources) {
-                    const objFile = this.#getBuildPath(asmSource, "o");
-                    if (objFiles.indexOf(objFile) == -1) {
-                        objFiles.push(objFile);
-                    }
-                    script.push("build " + this.#escape(objFile) + ": asm " + this.#escape(asmSource));
-                }
-                script.push("");
-            }
-
-            if (objFiles && objFiles.length > 0) {
-                script.push("build $target | $dbg_out : link " + this.#join(objFiles, null, null, true));
-            }
+            script.push("build $target | $dbg_out : link " + Ninja.join(buildTree.obj.array()));
+            script.push("");
 
         }
 
-        script.push("");
         script.push("build all: phony $target");
         script.push("default all");
         script.push("");
 
-        if (buildFileDirty) {
+        {
+            // write build file
+
             const fileData = script.join("\n");
             try {
                 fs.writeFileSync(buildFile, fileData, "utf8");

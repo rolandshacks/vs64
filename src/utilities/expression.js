@@ -13,10 +13,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
-
-const logger = new Logger("Expression");
-
 //-----------------------------------------------------------------------------------------------//
 // Expression Parser
 //-----------------------------------------------------------------------------------------------//
@@ -68,7 +64,7 @@ class ExpressionLanguage {
 
 }
 
-function dumpTokens(t) {
+function _dumpTokens_(t) {
     if (null == t) console.log("null");
     let i=0;
 
@@ -81,7 +77,7 @@ function dumpTokens(t) {
 
 }
 
-function dump(o) {
+function _dump_(o) {
     if (null == o) console.log("null");
     let i=0;
 
