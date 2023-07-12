@@ -72,6 +72,8 @@ class BaseFormatter:
         self.bytearray_singlelinemode: bool = False
         self.bytearray_end: str = '}};\n'
         self.bytearray_size: str = '{0}_size = {1};\n'
+        self.constant_begin: str = '{0} {1}'
+        self.constant_end: str = '\n'
 
     def begin_namespace(self, name: str):
         """Return namespace opening."""
@@ -158,6 +160,13 @@ class BaseFormatter:
         s = self.bytearray_size.format(name, sz)
         return s
 
+    def constant(self, name: str, data):
+        """Format constant."""
+
+        s = ""
+        s += self.constant_begin.format(name, data)
+        s += self.constant_end.format(name, data)
+        return s
 
     def binary(self, data, ofs: Optional[int]=None, sz: Optional[int]=None,
                bitmask: Optional[int]=None, bitscale: Optional[int]=None, elements_per_line: Optional[int]=None,
@@ -217,6 +226,7 @@ class CppFormatter(BaseFormatter):
         self.bytearray_begin = 'extern const unsigned char {0}[] = {{\n'
         self.bytearray_end = '}}; // {0}\n'
         self.bytearray_size = 'extern const unsigned short {0}_size = {1};\n'
+        self.constant_begin = '#define {0} {1}'
 
 class CFormatter(BaseFormatter):
     """C formatter."""
@@ -229,6 +239,7 @@ class CFormatter(BaseFormatter):
         self.bytearray_begin = 'unsigned char {0}[{1}] = {{\n'
         self.bytearray_end = '}}; // {0}\n'
         self.bytearray_size = 'const unsigned short {0}_size = {1};\n'
+        self.constant_begin = '#define {0} {1}'
 
 class AsmFormatter(BaseFormatter):
     """Assembler formatter."""
@@ -246,12 +257,14 @@ class AsmFormatter(BaseFormatter):
             self.bytearray_begin = '{0}\n'
             self.bytearray_linebegin = '    !byte '
             self.bytearray_end = '{0}_end\n'
+            self.constant_begin = '{0} = {1}'
         else:
             self.comment_begin = '//'
             self.commentline_char = '/'
             self.bytearray_begin = '{0}:\n'
             self.bytearray_linebegin = '    .byte '
             self.bytearray_end = '{0}_end:\n'
+            self.constant_begin = '.const {0} = {1}'
 
 class CompileError:
     """Compile errors."""
@@ -1120,6 +1133,10 @@ class CharsetResource(Resource):
 
     def __init__(self, filename: str, resource_type: ResourceType):
         super().__init__(filename, resource_type)
+        self.color_back = 0
+        self.color_fgr = 0
+        self.color_m1 = 0
+        self.color_m2 = 0
 
     def parse(self) -> Optional[CompileError]:
         """Parset resource data."""
@@ -1160,6 +1177,21 @@ class CharsetResource(Resource):
         if display_mode_info: s += formatter.comment(f"Display Mode: {display_mode_info}\n")
 
         s += formatter.comment_line() + "\n"
+        s += '\n'
+
+        ######
+
+        s += formatter.constant(self.identifier + "_color_back", self.color_back)
+        s += formatter.constant(self.identifier + "_color_fgr", self.color_fgr)
+        s += formatter.constant(self.identifier + "_color_m1", self.color_m1)
+        s += formatter.constant(self.identifier + "_color_m2", self.color_m2)
+        s += '\n'
+
+        ######
+
+        s += formatter.constant(self.identifier + "_width", self.map_width)
+        s += formatter.constant(self.identifier + "_height", self.map_height)
+        s += '\n'
 
         ######
 
@@ -1270,6 +1302,10 @@ class CharPadResource(CharsetResource):
             flags = self.read_byte()
 
         tiles_used = has_bit(flags, 0)
+        self.color_back = col_background0
+        self.color_fgr = col_background1
+        self.color_m1 = col_background2
+        self.color_m2 = col_background3
         self.palette = f"{col_background0}, {col_background1}, {col_background2}, {col_background3}"
 
         #### block
