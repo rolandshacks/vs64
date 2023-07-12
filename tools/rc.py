@@ -1165,6 +1165,7 @@ class CharsetResource(Resource):
 
     def __init__(self, filename: str, resource_type: ResourceType):
         super().__init__(filename, resource_type)
+        self.col_method = 0
         self.color_back = 0
         self.color_fgr = 0
         self.color_m1 = 0
@@ -1223,6 +1224,11 @@ class CharsetResource(Resource):
 
         s += formatter.constant(self.identifier + "_width", self.map_width)
         s += formatter.constant(self.identifier + "_height", self.map_height)
+        s += '\n'
+
+        s += formatter.constant(self.identifier + "_per_project_color", 1 if self.col_method == 0 else 0)
+        s += formatter.constant(self.identifier + "_per_tile_color", 1 if self.col_method == 1 else 0)
+        s += formatter.constant(self.identifier + "_per_char_color", 1 if self.col_method == 2 else 0)
         s += '\n'
 
         ######
@@ -1309,7 +1315,7 @@ class CharPadResource(CharsetResource):
 
         if format_version >= 8:
             self.display_mode = self.read_byte()
-            col_method = self.read_byte()
+            self.col_method = self.read_byte()
             flags = self.read_byte()
 
             col_background0 = self.read_byte() & 0xf
@@ -1321,6 +1327,8 @@ class CharPadResource(CharsetResource):
             col_matrixbase1 = self.read_byte() & 0xf
             col_matrixbase2 = self.read_byte() & 0xf
 
+            self.color_fgr = col_matrixbase0
+
         else:
 
             col_background0 = self.read_byte() & 0xf
@@ -1329,15 +1337,16 @@ class CharPadResource(CharsetResource):
             col_background3 = self.read_byte() & 0xf
             col_globalcolor = self.read_byte() & 0xf
 
-            col_method = self.read_byte()
+            self.color_fgr = col_globalcolor
+
+            self.col_method = self.read_byte()
             self.display_mode = self.read_byte()
             flags = self.read_byte()
 
         tiles_used = has_bit(flags, 0)
         self.color_back = col_background0
-        self.color_fgr = col_background1
-        self.color_m1 = col_background2
-        self.color_m2 = col_background3
+        self.color_m1 = col_background1
+        self.color_m2 = col_background2
         self.palette = f"{col_background0}, {col_background1}, {col_background2}, {col_background3}"
 
         #### block
@@ -1359,7 +1368,7 @@ class CharPadResource(CharsetResource):
 
         #### block
 
-        if col_method == 2:
+        if self.col_method == 2:
 
             block_idx = self.next_block()
             if block_idx is None: return None
@@ -1391,7 +1400,7 @@ class CharPadResource(CharsetResource):
 
             #### block
 
-            if col_method == 1:
+            if self.col_method == 1:
 
                 block_idx = self.next_block()
                 if block_idx is None: return None
