@@ -73,7 +73,7 @@ class BaseFormatter:
         self.bytearray_end: str = '}};\n'
         self.bytearray_size: str = '{0}_size = {1};\n'
         self.constant_begin: str = '{0} {1}'
-        self.constant_end: str = '\n'
+        self.constant_end: str = ''
 
     def begin_namespace(self, name: str):
         """Return namespace opening."""
@@ -160,12 +160,18 @@ class BaseFormatter:
         s = self.bytearray_size.format(name, sz)
         return s
 
-    def constant(self, name: str, data):
+    def constant(self, name: str, data, comment = ""):
         """Format constant."""
 
         s = ""
         s += self.constant_begin.format(name, data)
         s += self.constant_end.format(name, data)
+
+        if len(comment) > 0:
+            s += " " +  self.comment_begin + " " + comment + self.comment_end
+
+        s += '\n'
+
         return s
 
     def binary(self, data, ofs: Optional[int]=None, sz: Optional[int]=None,
@@ -868,6 +874,8 @@ class Sprite(ResourceElement):
         super().__init__()
         self.palette = None
         self.color = 0
+        self.color_m1 = 0
+        self.color_m2 = 0
         self.multicolor = False
         self.double_x = False
         self.double_y = False
@@ -896,6 +904,24 @@ class SpriteResource(Resource):
             data_size += len(sprite.data)
 
         s = ""
+
+        ######
+
+        if len(self.sprites) > 0:
+            s += formatter.constant(self.identifier + "_m1", self.sprites[0].color_m1)
+            s += formatter.constant(self.identifier + "_m2", self.sprites[0].color_m2)
+
+            for i, sprite in enumerate(self.sprites):
+                s += '\n'
+                s += formatter.constant(sprite.identifier + "_color", sprite.color)
+                s += formatter.constant(sprite.identifier + "_is_multicolor", 1 if sprite.multicolor else 0)
+                s += formatter.constant(sprite.identifier + "_is_double_x", 1 if sprite.double_x else 0)
+                s += formatter.constant(sprite.identifier + "_is_double_y", 1 if sprite.double_y else 0)
+            
+            s += '\n'
+
+        ######
+
         s += formatter.bytearray_begin.format(self.identifier, data_size) + "\n"
 
         idx = 0
@@ -915,6 +941,7 @@ class SpriteResource(Resource):
             s += formatter.comment(f"Flags:        %{sprite.flags:08b} (MYXOCCCC: stored in data byte 64)\n")
 
             s += formatter.comment_line() + "\n"
+            s += '\n'
 
             scale = 1 if sprite.multicolor else 0
 
@@ -929,6 +956,7 @@ class SpriteResource(Resource):
                 s += sprite.identifier + "_end\n"
 
             s += '\n'
+
             idx += 1
 
         s += formatter.bytearray_end.format(self.identifier, data_size) + '\n'
@@ -980,6 +1008,8 @@ class SpriteMateResource(SpriteResource):
             sprite.name = sprite_info['name']
             sprite.identifier = self.package.get_unique_id(self.filename, sprite.name)
             sprite.color = sprite_info['color']
+            sprite.color_m1 = colors['2']
+            sprite.color_m2 = colors['3']
             sprite.multicolor = sprite_info['multicolor']
             sprite.double_y = sprite_info['double_y']
             sprite.double_x = sprite_info['double_x']
@@ -1107,6 +1137,8 @@ class SpritePadResource(SpriteResource):
 
             flags = self.read_byte()
             sprite.color = (flags & 0x0f)
+            sprite.color_m1 = col_multicolor1
+            sprite.color_m2 = col_multicolor2
             sprite.multicolor = (flags & 0x80) != 0
             sprite.double_y = (flags & 0x40) != 0
             sprite.double_x = (flags & 0x20) != 0
