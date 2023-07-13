@@ -948,12 +948,12 @@ class SpriteResource(Resource):
             continued = (idx < len(self.sprites) - 1)
 
             if formatter.format == OutputFormat.ASM:
-                s += sprite.identifier + "\n"
+                s += sprite.identifier + ":\n"
 
             s += formatter.binary(sprite.data, None, None, bits_per_pixel, scale, 3, continued)
 
             if formatter.format == OutputFormat.ASM:
-                s += sprite.identifier + "_end\n"
+                s += sprite.identifier + "_end:\n"
 
             s += '\n'
 
