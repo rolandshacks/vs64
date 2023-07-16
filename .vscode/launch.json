@@ -25,11 +25,12 @@
             "program": "${workspaceFolder}/tools/rc.py",
             "console": "integratedTerminal",
             "justMyCode": true,
+            "cwd": "${workspaceFolder}",
             "args": [
-                "--format", "cpp",
+                "--format", "kick",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "--output", "${workspaceFolder}/build/waveout.cpp",
-                "${workspaceFolder}/test/data/sample2.wav"
+                "--output", "${workspaceFolder}/test/temp/build/out.asm",
+                "${workspaceFolder}/test/data/wave_mono.wav"
             ]
         },
         {

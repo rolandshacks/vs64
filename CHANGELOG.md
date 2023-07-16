@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.3 Minor Update
+
+- Added meta data to generated resource files
+- Refactored and modularized resource compiler code base
+- Minor bug-fixes and improvements
+
 ## 2.4.2 Minor Update
 
 - Improved resource compiler argument handling
