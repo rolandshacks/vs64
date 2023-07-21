@@ -145,7 +145,7 @@ class TranslationList {
     }
 
     get(indexOrKey) {
-        if (!indexOrKey) return null;
+        if (indexOrKey == null) return null;
 
         if (typeof indexOrKey === 'string') {
             // get dependencies for 'to'
@@ -154,8 +154,11 @@ class TranslationList {
             return from;
 
         } else {
-            if (indexOrKey >= 0 || indexOrKey < this._mapping.length) {
-                return this._mapping[indexOrKey];
+            if (indexOrKey >= 0 && indexOrKey < this._mapping.size) {
+                const entries = Array.from(this._mapping.values());
+                if (entries) {
+                    return entries[indexOrKey];
+                }
             }
         }
 
@@ -163,8 +166,9 @@ class TranslationList {
     }
 
     getAsArray(to) {
-        const from = this._mapping.get(to);
-        if (!from) return [];
+        const entry = this._mapping.get(to);
+        if (!entry || !entry.from) return [];
+        const from = entry.from;
         if (typeof from === 'string') {
             return [ from ];
         } else {

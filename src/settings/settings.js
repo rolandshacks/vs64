@@ -301,6 +301,8 @@ class Settings {
 
         logger.debug("extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
         logger.debug("auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
+        logger.debug("clang++ executable: " + settings.clangExecutable);
+        logger.debug("clang executable: " + settings.clangcExecutable);
         logger.debug("acme executable: " + settings.acmeExecutable);
         logger.debug("kickass executable: " + settings.kickExecutable);
         logger.debug("cc65 executable: " + settings.cc65Executable);

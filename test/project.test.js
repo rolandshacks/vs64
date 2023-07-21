@@ -146,13 +146,10 @@ describe('project', () => {
         expect(buildTree.asm.get(1).to.substr(-8)).toBe("asm2.asm");
         expect(buildTree.asm.get(2).to.substr(-7)).toBe("raw.asm");
 
-        expect(buildTree.obj.size).toBe(3);
-        expect(buildTree.obj.get(0).to.substr(-5)).toBe("asm.o");
-        expect(buildTree.obj.get(0).from.substr(-7)).toBe("asm.asm");
-        expect(buildTree.obj.get(1).to.substr(-6)).toBe("asm2.o");
-        expect(buildTree.obj.get(1).from.substr(-8)).toBe("asm2.asm");
-        expect(buildTree.obj.get(2).to.substr(-5)).toBe("raw.o");
-        expect(buildTree.obj.get(2).from.substr(-7)).toBe("raw.asm");
+        expect(buildTree.deps.size).toBe(2);
+        expect(buildTree.deps.get(0).to.substr(-7)).toBe("raw.asm");
+        expect(buildTree.deps.get(0).from.substr(-7)).toBe("raw.raw");
+        expect(buildTree.deps.get(1).to.substr(-8)).toBe("name.prg");
 
     });
 
@@ -224,7 +221,7 @@ describe('project', () => {
 
     });
 
-    test.only("project_build_file_kick", () => {
+    test("project_build_file_kick", () => {
 
         const config = {
             name: "kickproject",

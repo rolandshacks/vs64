@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.4 Minor Update
+
+- Bug fix for kickassembler build file generation
+
 ## 2.4.3 Minor Update
 
 - Added meta data to generated resource files
