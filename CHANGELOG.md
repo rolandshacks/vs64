@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.5 Minor Update
+
+- Added support for PNG and Koala bitmaps to resource compiler
+- Bug-fixes and minor improvements
+
 ## 2.4.4 Minor Update
 
 - Bug fix for kickassembler build file generation

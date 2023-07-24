@@ -2,7 +2,7 @@
 
 import os
 
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 import json
 
@@ -103,6 +103,10 @@ class ResourceType():
             resource_type = ResourceType("sprite", "spritepad")
         elif ext == ".ctm":
             resource_type = ResourceType("charset", "charpad")
+        elif ext == ".png":
+            resource_type = ResourceType("bitmap", "png")
+        elif ext == ".kla" or ext == ".koa":
+            resource_type = ResourceType("bitmap", "koala")
         elif ext == ".wav":
             resource_type = ResourceType("music", "wave")
         else:
@@ -139,7 +143,7 @@ class Resource:
         """Attach resource package reference."""
         self.package = package
 
-    def get_config(self, name: str, default_value: Optional[str]):
+    def get_config(self, name: str, default_value: Any):
         """Get configuration value."""
         if not self.package: return default_value
         return self.package.get_config(name, default_value)
@@ -334,7 +338,7 @@ class ResourcePackage:
 
         return None
 
-    def get_config(self, name: str, default_value: Optional[str]):
+    def get_config(self, name: str, default_value: Any):
         """Get configuration value."""
 
         config = self.config

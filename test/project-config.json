@@ -8,7 +8,8 @@
     ],
     "resources": {
         "sampleFrequency": 6000,
-        "sampleBits": 8
+        "sampleBits": 8,
+        "bitmapDithering": false
     },
     "definitions": [],
     "includes": ["data"],

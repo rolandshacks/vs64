@@ -27,10 +27,10 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "args": [
-                "--format", "kick",
+                "--format", "cpp",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "--output", "${workspaceFolder}/test/temp/build/out.asm",
-                "${workspaceFolder}/test/data/wave_mono.wav"
+                "--output", "${workspaceFolder}/test/temp/build/out.cpp",
+                "${workspaceFolder}/test/data/koala.kla"
             ]
         },
         {
