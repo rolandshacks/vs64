@@ -6,6 +6,7 @@ from .sid import SidResource
 from .sprite import SpriteMateResource, SpritePadResource
 from .charset import CharPadResource
 from .wave import WaveResource
+from .bitmap import BitmapResource
 
 class ResourceFactory(ResourceFactoryBase):
     """Resource factory."""
@@ -24,6 +25,8 @@ class ResourceFactory(ResourceFactoryBase):
             resource = SpritePadResource(filename, resource_type)
         elif resource_type.equals("charset.charpad"):
             resource = CharPadResource(filename, resource_type)
+        elif resource_type.equals("bitmap.png") or resource_type.equals("bitmap.koala"):
+            resource = BitmapResource(filename, resource_type)
         elif resource_type.equals("music.wave"):
             resource = WaveResource(filename, resource_type)
         else:

@@ -16,7 +16,7 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
-* Resource compiler for sprites, charsets, tiles, maps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, SID, PCM Wave)
+* Resource compiler for sprites, charsets, tiles, maps, bitmaps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, Koala Paint, PNG, SID, PCM Wave)
 * Syntax highlighting for ACME assembler files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
@@ -256,10 +256,13 @@ Overrides the path to the compiler executable. The default path is specified in 
 > resources
 
 Optional parameters for the resource compiler. Currently, the following list of parameters is supported:
-- **sampleFrequency**: resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
-- **sampleBits**: target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
-- **sampleLoudness**: target RMS loudness in dB for sample output (e.g. -9.0)
-- **sampleNormalizationMax**: maximum normalization factor for sample output (e.g. 5.0)
+- **sampleFrequency** (WAV) : resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
+- **sampleBits** (WAV) : target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
+- **sampleLoudness** (WAV) : target RMS loudness in dB for sample output (e.g. -9.0)
+- **sampleNormalizationMax** (WAV) : maximum normalization factor for sample output (e.g. 5.0)
+- **bitmapWidth** (PNG) : scale PNG bitmaps to target size (e.g. scale larger bitmap to 160 pixels or less width, must be multiples of 4 pixels)
+- **bitmapHeight**  (PNG) : scale PNG bitmaps to (e.g. scale larger bitmap to 200 pixels or less height, must be multiples of 8 pixels)
+- **bitmapDithering** (PNG) : enable dithering for PNG bitmaps during color palette reduction (default is 'false')
 
 Example:
 
