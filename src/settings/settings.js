@@ -134,6 +134,8 @@ class Settings {
         settings.autoBuild = workspaceConfig.get("vs64.autoBuild");
         if (null == settings.autoBuild) settings.autoBuild = true;
 
+        settings.recursiveLabelParsing = workspaceConfig.get("vs64.recursiveLabelParsing")||true;
+
         this.setupPython(workspaceConfig);
         this.setupJava(workspaceConfig);
         this.setupResourceCompiler(workspaceConfig);

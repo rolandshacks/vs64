@@ -901,7 +901,9 @@ const CharCode = {
     Asterisk: '*'.charCodeAt(0),
     Equals: '='.charCodeAt(0),
     LessThan: '<'.charCodeAt(0),
-    GreaterThan: '>'.charCodeAt(0)
+    GreaterThan: '>'.charCodeAt(0),
+    Dollar: '$'.charCodeAt(0),
+    Percent: '%'.charCodeAt(0)
 };
 
 //-----------------------------------------------------------------------------------------------//

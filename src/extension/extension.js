@@ -137,6 +137,7 @@ class Extension {
             subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerReferenceProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerDocumentSymbolProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
 
             this._languageFeatureProvider = languageFeatureProvider;
         }

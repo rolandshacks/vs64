@@ -121,8 +121,8 @@ class AsmParser extends ParserBase {
         super();
     }
 
-    parse(src, filename, options) {
-        super.parse(src, filename, options);
+    parse(src, filename, options, cancellationToken) {
+        super.parse(src, filename, options, cancellationToken);
 
         const ast = this._ast;
 
@@ -132,16 +132,20 @@ class AsmParser extends ParserBase {
 
         let isKickAss = false;
         let isAcme = false;
+        let isLLVM = false
 
         if (options && options.toolkit) {
             isKickAss = options.toolkit.isKick;
             isAcme = options.toolkit.isAcme;
+            isLLVM = options.toolkit.isLLVM;
         }
 
         let tokensPerLineOfs = -1;
         let tokensPerLineCount = 0;
 
         while (!it.eof()) {
+
+            if (cancellationToken && cancellationToken.isCancellationRequested) return;
 
             const c = it.peek();
             const c2 = (it.ofs+1 < len) ? src.charCodeAt(it.ofs+1) : 0;
@@ -183,7 +187,7 @@ class AsmParser extends ParserBase {
             } else if (c == CharCode.NumberSign && (c2 == CharCode.LessThan || c2 == CharCode.GreaterThan)) { // #< or #>
                 it.next(); // skip #< or #>
                 it.next();
-            } else if (c == CharCode.NumberSign && isKickAss) { // preprocessor
+            } else if ((c == CharCode.NumberSign && isKickAss) || (c == CharCode.Period && isLLVM)) { // preprocessor or LLVM directive
 
                 const range = new Range(it.ofs, it.row, it.col);
 
@@ -271,12 +275,22 @@ class AsmParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.String, src, range));
 
+            } else if (c == CharCode.Dollar || c == CharCode.Percent || ParserHelper.isNumeric(src.charCodeAt(it.ofs))) {
+
+                const range = new Range(it.ofs, it.row, it.col);
+                range.inc(); it.next();
+
+                while (it.ofs < len && ParserHelper.isNumeric(src.charCodeAt(it.ofs))) {
+                    range.inc(); it.next();
+                }
+
+                tokens.push(new Token(TokenType.Number, src, range));
+
             } else {
                 it.next();
             }
 
             if (tokens.length > 0) {
-
                 for (const token of tokens) {
                     ast.addToken(token);
                     if (tokensPerLineCount == 0) token.setFirstFlag();
@@ -303,42 +317,48 @@ class AsmParser extends ParserBase {
     }
 
     lexer(tokenOffset, tokenCount) {
-        if (tokenCount < 1) return null;
+        if (tokenCount < 1) return;
 
         const ofs = tokenOffset;
         const count = tokenCount;
 
         const ast = this._ast;
         const tokens = ast.tokens;
-        if (!tokens || tokens.length < ofs + count) return null;
+        if (!tokens || tokens.length < ofs + count) return;
 
         let statement = null;
 
         const token = tokens[ofs];
         const tokenType = token.type;
 
-        if (tokenType == TokenType.Identifier) {
-            if (!token.isOpcode()) {
-                statement = new Statement(StatementType.Definition, tokens, ofs, 1);
+        if (tokenType == TokenType.Comment) {
+            statement = new Statement(StatementType.Comment, null, tokens, ofs, 1);
+        } else if (tokenType == TokenType.Identifier) {
+            if (!token.isOpcode()) { // ignore ASM
+                statement = new Statement(StatementType.Definition, StatementType.LabelDefinition, token, tokens, ofs, count);
             }
-        } else if (tokenType == TokenType.Comment) {
-            statement = new Statement(StatementType.Comment, tokens, ofs, 1);
-        } else if (count > 1) {
-            const token2 = tokens[ofs+1];
+        } else if (tokenType == TokenType.Macro && count > 1) {
             const macroCommand = token.text;
-            if (tokenType == TokenType.Macro
-                && (macroCommand == "!macro" || macroCommand == "!set" || macroCommand == "!addr")
-                && token2.type == TokenType.Identifier) {
-                if (!token2.isOpcode()) {
-                    statement = new Statement(StatementType.Definition, tokens, ofs+1, 1);
-                }
+            const paramToken = tokens[ofs+1];
+
+            if (macroCommand == "!macro" && paramToken.type == TokenType.Identifier) {
+                statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+            } else if (macroCommand == "!set" && paramToken.type == TokenType.Identifier) {
+                statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
+            } else if (macroCommand == "!addr" && paramToken.type == TokenType.Identifier) {
+                statement = new Statement(StatementType.Definition, StatementType.AddressDefinition, paramToken, tokens, ofs, count);
+            } else if (macroCommand == "!src" && paramToken.type == TokenType.String) {
+                statement = new Statement(StatementType.Include, null, paramToken, tokens, ofs, count);
             }
+
         }
 
         if (statement) {
             ast.addStatement(statement);
             if (statement.type == StatementType.Definition) {
                 ast.addDefinition(statement);
+            } else if (statement.type == StatementType.Include) {
+                ast.addReference(statement);
             }
         }
     }

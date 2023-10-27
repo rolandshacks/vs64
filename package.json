@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.4.5",
+	"version": "2.4.6",
 	"preview": true,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -404,6 +404,11 @@
 							"Set logging level to TRACE. This is the maximum verbosity setting."
 						],
 						"description": "Set console output verbosity level"
+					},
+					"vs64.recursiveLabelParsing": {
+						"type": "boolean",
+						"default": true,
+						"description": "Recursively scan for definitions and references"
 					}
 				}
 			}

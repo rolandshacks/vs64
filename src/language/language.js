@@ -16,7 +16,7 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { TokenType } = require('language/language_base');
+const { TokenType, StatementType } = require('language/language_base');
 const { AsmParser, AsmGrammar } = require('language/language_asm');
 
 //-----------------------------------------------------------------------------------------------//
@@ -38,17 +38,19 @@ class Parser {
         return instance;
     }
 
-    static parseFile(filename, options) {
+    static parseFile(filename, options, cancellationToken) {
         const parser = Parser.fromType("asm");
         if (!parser) return null;
-        parser._impl.parseFile(filename, options);
+        parser._impl.parseFile(filename, options, cancellationToken);
+        if (cancellationToken && cancellationToken.isCancellationRequested) return null;
         return parser._impl.ast;
     }
 
-    static parse(source, filename, options) {
+    static parse(source, filename, options, cancellationToken) {
         const parser = Parser.fromType("asm");
         if (!parser) return null;
-        parser._impl.parse(source, filename, options);
+        parser._impl.parse(source, filename, options, cancellationToken);
+        if (cancellationToken && cancellationToken.isCancellationRequested) return null;
         return parser._impl.ast;
     }
 
@@ -92,6 +94,78 @@ class LanguageFeatureProvider {
         return items;
     }
 
+    // DocumentSymbolProvider
+
+    provideDocumentSymbols(document, cancellationToken) {
+
+        if (cancellationToken && cancellationToken.isCancellationRequested) return null;
+
+        const project = this._project;
+        if (!project.isValid()) return null;
+
+        const options = {
+            toolkit: project.toolkit
+        };
+
+        const text = document.getText();
+        if (null == text) return null;
+
+        const ast = Parser.parse(text, null, options, cancellationToken);
+        if (!ast || !ast.statements) return null;
+
+        const documentSymbols = [];
+
+        for (const statement of ast.statements) {
+
+            if (cancellationToken && cancellationToken.isCancellationRequested) return null;
+
+            if (statement.type != StatementType.Definition) continue;
+
+            const definitionType = statement.subtype;
+
+            let details = null;
+
+            let symbolKind = vscode.SymbolKind.Field;
+            if (definitionType == StatementType.ConstantDefinition) {
+                symbolKind = vscode.SymbolKind.Constant;
+                if (statement.tokenCount > 2) {
+                    details = statement.getTokensAsString(2);
+                }
+            } else if (definitionType == StatementType.AddressDefinition) {
+                symbolKind = vscode.SymbolKind.Interface;
+                if (statement.tokenCount > 2) {
+                    details = statement.getTokensAsString(2);
+                }
+            } else if (definitionType == StatementType.MacroDefinition) {
+                symbolKind = vscode.SymbolKind.Method;
+                details = "macro";
+            } else if (definitionType == StatementType.LabelDefinition) {
+                if (statement.tokenCount < 2) symbolKind = vscode.SymbolKind.Function;
+            }
+
+            const statementRange = statement.range;
+            const range = new vscode.Range(
+                new vscode.Position(statementRange.row, statementRange.col),
+                new vscode.Position(statementRange.row, statementRange.col + statementRange.length)
+            );
+
+            let txt = statement.text;
+
+            const documentSymbol = new vscode.DocumentSymbol(
+                txt,
+                details,
+                symbolKind,
+                range, range
+            );
+
+            documentSymbols.push(documentSymbol);
+        }
+
+        if (documentSymbols.length < 1) return null;
+
+        return documentSymbols;
+    }
+
     // DefinitionProvider
 
     provideDefinition(document, position, cancellationToken) {
@@ -107,7 +181,8 @@ class LanguageFeatureProvider {
         const project = this._project;
         if (!project.isValid()) return null;
 
-        const sources = project.getAsmSourceFiles();
+        const recursiveSearch = project.settings.recursiveLabelParsing||true;
+        const sources = project.getAsmSourceFiles(recursiveSearch);
         if (!sources) return null;
 
         const locations = [];
@@ -120,7 +195,7 @@ class LanguageFeatureProvider {
 
             if (cancellationToken && cancellationToken.isCancellationRequested) return null;
 
-            const ast = Parser.parseFile(filename, options);
+            const ast = Parser.parseFile(filename, options, cancellationToken);
             if (!ast) continue;
 
             const definition = ast.findDefinition(identifier);
@@ -160,7 +235,8 @@ class LanguageFeatureProvider {
         const project = this._project;
         if (!project.isValid()) return null;
 
-        const sources = project.getAsmSourceFiles();
+        const recursiveSearch = project.settings.recursiveLabelParsing||true;
+        const sources = project.getAsmSourceFiles(recursiveSearch);
         if (!sources) return null;
 
         const locations = [];
@@ -171,7 +247,7 @@ class LanguageFeatureProvider {
 
         for (const filename of sources) {
 
-            const ast = Parser.parseFile(filename, options);
+            const ast = Parser.parseFile(filename, options, cancellationToken);
             if (!ast) continue;
 
             const tokens = ast.tokens;

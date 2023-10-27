@@ -39,7 +39,14 @@ const TokenType = {
 const StatementType = {
     Unknown: 0,
     Comment: 1,
-    Definition: 2
+    Definition: 2,
+    Include: 3,
+
+    MacroDefinition: 100,
+    ConstantDefinition: 101,
+    AddressDefinition: 102,
+    LabelDefinition: 103,
+    FunctionDefinition: 104
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -99,11 +106,13 @@ class Token {
 //-----------------------------------------------------------------------------------------------//
 
 class Statement {
-    constructor(type, tokens, ofs, count) {
+    constructor(type, subtype, textToken, tokens, ofs, count) {
         this._type = type;
+        this._subtype = subtype;
         this._tokens = tokens;
         this._tokenOffset = ofs;
         this._tokenCount = count;
+        this._textToken = textToken;
         if (tokens && tokens.length > 0) {
             const startToken = tokens[ofs];
             const endToken = tokens[ofs + count - 1];
@@ -116,19 +125,41 @@ class Statement {
     }
 
     get type() { return this._type; }
+    get subtype() { return this._subtype; }
     get tokenOffset() { return this._tokenOffset; }
     get tokenCount() { return this._tokenCount; }
     get range() { return this._range; }
-    get text() { return this._range.substringFrom(this._src); }
-    get length() { return this._tokenCount; }
+    get text() { return this._textToken.text; }
 
     getToken(idx) { return this._tokens[this._tokenOffset + idx]; }
+
+
+    getTokensAsString(ofs, len) {
+        ofs ||= 0;
+        len ||= this.tokenCount - ofs;
+
+        const startToken = this._tokens[this._tokenOffset + ofs];
+        const endToken = this._tokens[this._tokenOffset + ofs + len - 1]
+
+        const startOfs = startToken.range.offset;
+        const endOfs = endToken.range.offset + endToken.range.length;
+
+        const s =  this._src.substring(startOfs, endOfs);
+
+        return s;
+    }
 
     getTypeName() {
         const type = this._type;
 
-        if (type == StatementType.Comment) return "comment";
-        if (type == StatementType.Definition) return "definition";
+        if (type == StatementType.Comment) return "Comment";
+        if (type == StatementType.Definition) return "Definition";
+        if (type == StatementType.Include) return "Include";
+        if (type == StatementType.MacroDefinition) return "MacroDefinition";
+        if (type == StatementType.ConstantDefinition) return "ConstantDefinition";
+        if (type == StatementType.AddressDefinition) return "AddressDefinition";
+        if (type == StatementType.LabelDefinition) return "LabelDefinition";
+        if (type == StatementType.FunctionDefinition) return "FunctionDefinition";
 
         return "unknown";
     }
@@ -175,10 +206,24 @@ class Range {
 }
 
 //-----------------------------------------------------------------------------------------------//
-// Define
+// Definition
 //-----------------------------------------------------------------------------------------------//
 
 class Definition {
+    constructor(statement) {
+        this._statement = statement;
+    }
+
+    get statement() { return this._statement; }
+    get text() { return this._statement.text; }
+    get range() { return this._statement.range; }
+}
+
+//-----------------------------------------------------------------------------------------------//
+// AbstractSyntaxTreeElement
+//-----------------------------------------------------------------------------------------------//
+
+class AbstractSyntaxTreeElement {
     constructor(statement) {
         this._statement = statement;
     }
@@ -197,11 +242,13 @@ class AbstractSyntaxTree {
         this._tokens = null;
         this._statements = null;
         this._definitions = null;
+        this._references = null;
     }
 
     get tokens() { return this._tokens; }
     get statements() { return this._statements; }
     get definitions() { return this._definitions; }
+    get references() { return this._references; }
 
     dump() {
 
@@ -238,10 +285,21 @@ class AbstractSyntaxTree {
     addDefinition(statement) {
         if (!this._definitions) this._definitions = new Map();
 
-        const definition = new Definition(statement);
+        const definition = new AbstractSyntaxTreeElement(statement);
         const text = definition.text;
 
         this._definitions.set(text, definition);
+    }
+
+    addReference(statement) {
+        if (!this._references) this._references = [];
+
+        const reference = new AbstractSyntaxTreeElement(statement);
+        this._references.push(reference);
+    }
+
+    getReferences() {
+        return this._references;
     }
 
     findDefinition(text) {
@@ -267,7 +325,7 @@ class ParserBase {
 
     get ast() { return this._ast; }
 
-    parseFile(filename, options) {
+    parseFile(filename, options, cancellationToken) {
         let src = null;
         try {
             src = fs.readFileSync(filename, "utf8");
@@ -275,10 +333,10 @@ class ParserBase {
             return null;
         }
 
-        return this.parse(src, filename, options);
+        return this.parse(src, filename, options, cancellationToken);
     }
 
-    parse(src, filename, _options_) {
+    parse(src, filename, _options_, _cancellationToken_) {
         if (!src || src.length < 1) return;
         this._ast = new AbstractSyntaxTree(filename);
     }
@@ -289,9 +347,9 @@ class ParserBase {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    Definition: Definition,
     Range: Range,
     ParserBase: ParserBase,
+    AbstractSyntaxTreeElement: AbstractSyntaxTreeElement,
     AbstractSyntaxTree: AbstractSyntaxTree,
     TokenType: TokenType,
     Token: Token,

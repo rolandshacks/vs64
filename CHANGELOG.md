@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.6 Minor Update
+
+- Added support for ASM source code outline view
+- Bug-fixes and minor improvements
+
 ## 2.4.5 Minor Update
 
 - Added support for PNG and Koala bitmaps to resource compiler

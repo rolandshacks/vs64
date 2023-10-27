@@ -487,6 +487,11 @@ Additional emulator command line options.
 
 Set console output verbosity level (error, warn, info, debug, trace).
 
+> VS64: Recursive Label Parsing
+
+Can be used to disable recursive parsing of assembly files. Mostly used for
+debugging purposes. Default and recommendation is to leave it enabled.
+
 > VS64: Show Welcome
 
 Enable the welcome page. This setting is automatically disabled after the welcome page has been shown.
