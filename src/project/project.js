@@ -1043,12 +1043,20 @@ class Project {
             script.push("");
 
         } else if (toolkit.isLLVM) {
+
             const defaultFlags = [
                 "-Wall", "-g",
                 "-c",
-                (releaseBuild ? "-Ofast" : "-O0")
-                // "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all";
+                "-fnonreentrant"
+                // "-fcrash-diagnostics-dir=" + project.builddir + -fcrash-diagnostics=all"
             ];
+
+            if (releaseBuild) {
+                defaultFlags.push("-Os", "-flto");
+                //defaultFlags.push("-Ofast");
+            } else {
+                defaultFlags.push("-O0");
+            }
 
             const defaultCFlags = [
                 "-fno-limit-debug-info", "-fstandalone-debug", "-fno-discard-value-names"
