@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.7 Minor Update
+
+- Changed optimization flags for LLVM
+- Bug-fixes and minor improvements
+
 ## 2.4.6 Minor Update
 
 - Added support for ASM source code outline view

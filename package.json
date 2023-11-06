@@ -2,8 +2,8 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.4.6",
-	"preview": true,
+	"version": "2.4.7",
+	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
 	"icon": "resources/icons/icon.png",
@@ -51,9 +51,15 @@
 	"keywords": [
 		"vs64",
 		"c64",
+		"commodore",
 		"assembler",
-		"6502",
-		"emulator"
+		"acme", "kickassembler", "llvm",
+		"c++", "cc65",
+		"6502", "6510",
+		"vice",
+		"emulator",
+		"debugger",
+		"build"
 	],
 	"categories": [
 		"Programming Languages",
