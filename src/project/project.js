@@ -33,12 +33,14 @@ class Project {
         this._modificationTime = null;
         this._outputs = null;
         this._toolkit = null;
+        this._machine = null;
         this._buildTree = null;
     }
 
     get error() { return this._error; }
     get name() { return this._name; }
     get toolkit() { return this._toolkit; }
+    get machine() { return this._machine; }
     get sources() { return this._sources; }
     get description() { return this._description_; }
     get basedir() { return this._basedir; }
@@ -235,7 +237,7 @@ class Project {
         }
 
         this._description = data.description||"";
-
+        this._machine = data.machine;
         this._compiler = data.compiler;
         this._assembler = data.assembler;
         this._linker = data.linker;
@@ -839,6 +841,8 @@ class Project {
 
             script.push("ninja_required_version = 1.3");
             script.push(Ninja.keyValue("toolkit", toolkit.name));
+            script.push(Ninja.keyValue("machine", toolkit.machine||""));
+            script.push(Ninja.keyValue("basedir", project.basedir));
             script.push(Ninja.keyValue("builddir", project.builddir));
             script.push("");
 
@@ -927,6 +931,11 @@ class Project {
             script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.acmeExecutable)));
             script.push("");
 
+            let cpu = "6510";
+            if (project.machine) {
+                cpu = (project.machine != "none") ? project.machine : null;
+            }
+
             const flags = new NinjaArgs(
                 "--msvc",
                 "--maxerrors", "99"
@@ -940,7 +949,7 @@ class Project {
             flags.add(this._assemblerFlags);
 
             if (flags.indexOf("-f") == -1) flags.add("-f", "cbm");
-            if (flags.indexOf("--cpu") == -1) flags.add("--cpu", "6510");
+            if (cpu && flags.indexOf("--cpu") == -1) flags.add("--cpu", cpu);
 
             script.push(Ninja.keyArgs("flags", flags));
             script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
@@ -984,11 +993,23 @@ class Project {
             if (project.startAddress) ln_flags.add("-S", project.startAddress);
             ln_flags.add(this._linkerFlags);
 
-            // default target
-            const defaultTargetConf = ["-t", "c64"];
-            if (flags.indexOf("-t ") == -1 && ln_flags.indexOf("-C ") == -1 && ln_flags.indexOf("-t ") == -1) ln_flags.add(defaultTargetConf);
-            if (flags.indexOf("-t ") == -1 && c_flags.indexOf("-t ") == -1) c_flags.add(defaultTargetConf);
-            if (flags.indexOf("-t ") == -1 && asm_flags.indexOf("-t ") == -1) asm_flags.add(defaultTargetConf);
+            const useLinkerConfigFile = (ln_flags.indexOf("--config") != -1 || ln_flags.indexOf("-C") != -1);
+
+            let targetName = "c64";
+            if (project.machine) {
+                targetName = (project.machine != "none") ? project.machine : null;
+            }
+
+            let defaultTargetConf = targetName ? ["-t", targetName] : null;
+
+            if (useLinkerConfigFile) {
+                ln_flags.add("--cfg-path");
+                ln_flags.add("\"$basedir\"");
+            }
+
+            if (!useLinkerConfigFile && defaultTargetConf && flags.indexOf("-t ") == -1 && flags.indexOf("--target ") == -1 && ln_flags.indexOf("-t ") == -1 && ln_flags.indexOf("--target ") == -1) ln_flags.add(defaultTargetConf);
+            if (defaultTargetConf && flags.indexOf("-t ") == -1 && flags.indexOf("--target ") == -1 && c_flags.indexOf("-t ") == -1 && c_flags.indexOf("--target ") == -1) c_flags.add(defaultTargetConf);
+            if (defaultTargetConf && flags.indexOf("-t ") == -1 && flags.indexOf("--target ") == -1 && asm_flags.indexOf("-t ") == -1 && asm_flags.indexOf("--target ") == -1) asm_flags.add(defaultTargetConf);
 
             script.push(Ninja.keyValue("cc_exe", (project.compiler || settings.cc65Executable)));
             script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.ca65Executable)));
@@ -1073,10 +1094,16 @@ class Project {
             cpp_flags.add(this._compilerFlags);
             ld_flags.add(this._linkerFlags);
 
-            const defaultTargetConf = ["--config", "mos-c64.cfg"];
-            if (flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags.add(defaultTargetConf);
-            if (flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags.add(defaultTargetConf);
-            if (flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags.add(defaultTargetConf);
+            let targetName = "c64";
+            if (project.machine) {
+                targetName = (project.machine != "none") ? project.machine : null;
+            }
+
+            let defaultTargetConf = targetName ? ["--config", "mos-" + targetName + ".cfg"] : null;
+
+            if (defaultTargetConf && flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags.add(defaultTargetConf);
+            if (defaultTargetConf && flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags.add(defaultTargetConf);
+            if (defaultTargetConf && flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags.add(defaultTargetConf);
 
             script.push(Ninja.keyValue("clang", (project.compiler || settings.clangExecutable)));
             script.push(Ninja.keyValue("clangc", (project.compiler || settings.clangcExecutable)));

@@ -27,7 +27,7 @@ const logger = new Logger("Settings");
 const Constants = {
     BinaryMonitorPort: 6502,
     ProjectConfigFile: "project-config.json",
-    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "raw", "spm" ],
+    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "raw", "spm", "properties" ],
     AssemblerLanguageId: "asm",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",

@@ -169,6 +169,7 @@ A project file for CC65 could like like this:
     "name": "cppexample",
     "description": "Example for the LLVM-MOS sdk",
     "toolkit": "llvm",
+    "machine": "c64",
     "sources": [
         "src/assem.asm",
         "src/main.cpp"
@@ -216,6 +217,16 @@ Defines all used source and resource files. The build system will keep track of 
 
 Specifies which build toolkit is used. Currently supported are "acme", "kick", "cc65" and "llvm".
 
+> machine
+
+Specifies the target system which the binaries should be generated for. Default is the C64, possible settings are dependent on the used toolkit.
+
+- For ACME, this is equivalent to the "--cpu" command line setting. Currently available are: 6502, nmos6502, 6510, 65c02, r65c02, w65c02, 65816, 65ce02, 4502, m65, c64dtv2.
+
+- For LLVM, this is used to specify the configuration file. For example: machine "c64" would result in the command line flags "--config mos-c64.cfg". Currently available are: atari2600-4k, atari2600-3e, atari8, atari8-stdcart, c128, c64, vic20, cx16, pet, mega65, cpm65, nes, nes-action53, nes-cnrom, nes-gtrom, nes-mmc1, nes-mmc3, nes-nrom, nes-unrom, nes-unrom-512, osi-c1p, dodo, eater, pce, pce-cd, rpc8e, sim, 
+
+- For CC65, this is equivalent to the "-t" command line setting. Currently available are: apple2, apple2enh, atari, atarixl, atmos, c16, c64, c128, cbm510, cbm610, geos-apple, geos-cbm, lunix, lynx, nes, osic1p, pet, plus4, sim6502, sim65c02, supervision, telestrat, vic20
+
 > main
 
 Can be used instead of 'sources' in simple projects. Defines the main source file which is compiled and used as the entry point for recursive dependency scanning.
@@ -248,6 +259,14 @@ Optional arguments to be added to the compiler command.
 > linkerFlags
 
 Optional arguments to be added to the linker command.
+
+Example to use a specific linker configuration for cc65:
+
+```
+"linkerFlags": [
+    "--config", "c64.cfg"
+]
+```
 
 > compiler
 

@@ -80,7 +80,7 @@ class Build {
             } catch (e) {;}
         }
 
-        this.deleteDependencyFiles();        
+        this.deleteDependencyFiles();
     }
 
     #doInitialize() {
@@ -154,7 +154,7 @@ class Build {
         } finally {
             logger.notWhen(LogLevel.Trace, () => {
                 this.deleteDependencyFiles();
-            });            
+            });
         }
 
         return { error: BuildResult.Success };
@@ -192,11 +192,14 @@ class Build {
 
         let proc = null;
 
+        const workingDir = project.basedir;
+
         try {
             proc = await Utils.exec(
                 executable,
                 args,
                 {
+                    cwd: workingDir,
                     sync: true,
                     onstdout: (data) => {
                         instance.buildOutput(data);
@@ -225,7 +228,7 @@ class Build {
 
         const project = this._project;
 
-        //const toolkit = project.toolkit;        
+        //const toolkit = project.toolkit;
         //if (toolkit.isLLVM) return; // llvm or gcc will do
 
         const buildTree = project.buildTree;
@@ -247,7 +250,7 @@ class Build {
             const filename = to + ".d";
             if (fs.existsSync(filename)) {
                 fs.unlinkSync(filename);
-            }            
+            }
         });
     }
 

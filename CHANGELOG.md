@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.4.8 Minor Update
+
+- Support for defining the target system/machine
+- Support for ld65 custom linker file option
+- Bug-fixes and minor improvements
+
 ## 2.4.7 Minor Update
 
 - Changed optimization flags for LLVM

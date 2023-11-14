@@ -325,6 +325,12 @@ let Utils = {
 
         return new Promise((resolve, reject) => {
 
+            const spawnOptions = {};
+
+            if (options && options.cwd) {
+                spawnOptions.cmd = options.cwd;
+            }
+
             const procInfo = {
                 process: null,
                 created: false,
@@ -335,7 +341,7 @@ let Utils = {
                 errorInfo: null
             };
 
-            const proc = spawn(executable, args);
+            const proc = spawn(executable, args, spawnOptions);
             procInfo.process = proc;
 
             proc.stdout.setEncoding('utf8');
