@@ -15,7 +15,7 @@
             "name": "Run Modules",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/runners/elf.run.js",
+            "program": "${workspaceFolder}/test/runners/language.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {
@@ -34,6 +34,40 @@
             ]
         },
         {
+            "name": "Run Basic Compiler",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/bc.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--map", "${workspaceFolder}/test/temp/build/out.bmap",
+                "--verbose",
+                "--include", "${workspaceFolder}/test/data",
+                "-I", "${workspaceFolder}/test/temp",
+                "--output", "${workspaceFolder}/test/temp/build/out.prg",
+                //"${workspaceFolder}/test/temp/build/out.bas"
+                "${workspaceFolder}/test/data/main.bas"
+            ]
+        },
+        {
+            "name": "Run Basic Unpacker",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/bc.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--unpack",
+                "--verbose",
+                "--output", "${workspaceFolder}/test/temp/build/out.bas",
+                "D:/Temp/tsb/examples/sokoban 1.1.prg"
+                //"${workspaceFolder}/test/temp/build/out.prg"
+            ]
+        },
+        {
             "name": "Run Unit Tests",
             "type": "node",
             "request": "launch",
@@ -44,7 +78,7 @@
                 "--runInBand",
                 "--config",
                 "${workspaceFolder}/test/jest.config.js",
-                "-t", "project"
+                "-t", "language"
             ]
         },
         {

@@ -11,8 +11,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { ParserHelper, CharCode } = require('utilities/utils');
-const { Range, ParserBase, TokenType, Token, StatementType, Statement } = require('language/language_base');
+const { Range, ParserBase, TokenType, Token, StatementType, Statement, ParserHelper, ParserIterator, CharCode } = require('language/language_base');
 
 //-----------------------------------------------------------------------------------------------//
 // ACME Grammar
@@ -77,42 +76,6 @@ const AsmGrammar = {
 };
 
 //-----------------------------------------------------------------------------------------------//
-// Parser Iterator
-//-----------------------------------------------------------------------------------------------//
-
-class ParserIterator {
-    constructor(src, ofs, row, col) {
-        this.src = src;
-        this.len = src.length;
-        this.ofs = ofs||0;
-        this.row = row||0;
-        this.col = col||0;
-    }
-
-    eof() {
-        return (this.ofs >= this.len);
-    }
-
-    peek() {
-        if (this.eof()) return 0;
-        return this.src.charCodeAt(this.ofs);
-    }
-
-    next() {
-        this.ofs++;
-        this.col++;
-    }
-
-    nextline() {
-        this.ofs++;
-        this.row++;
-        this.col = 0;
-    }
-
-}
-
-
-//-----------------------------------------------------------------------------------------------//
 // Assembler Parser
 //-----------------------------------------------------------------------------------------------//
 
@@ -121,24 +84,18 @@ class AsmParser extends ParserBase {
         super();
     }
 
-    parse(src, filename, options, cancellationToken) {
-        super.parse(src, filename, options, cancellationToken);
+    parse(src, filename, options) {
+        if (null == src || src.length < 1) return;
+        super.parse(src, filename, options);
 
+        const cancellationToken = options ? options.cancellationToken : null;
         const ast = this._ast;
-
         const len = src.length;
-
         const it = new ParserIterator(src);
 
-        let isKickAss = false;
-        let isAcme = false;
-        let isLLVM = false
-
-        if (options && options.toolkit) {
-            isKickAss = options.toolkit.isKick;
-            isAcme = options.toolkit.isAcme;
-            isLLVM = options.toolkit.isLLVM;
-        }
+        let isKickAss = this.isKickAss;
+        let isAcme = this.isAcme;
+        let isLLVM = this.isLLVM;
 
         let tokensPerLineOfs = -1;
         let tokensPerLineCount = 0;
@@ -187,7 +144,7 @@ class AsmParser extends ParserBase {
             } else if (c == CharCode.NumberSign && (c2 == CharCode.LessThan || c2 == CharCode.GreaterThan)) { // #< or #>
                 it.next(); // skip #< or #>
                 it.next();
-            } else if ((c == CharCode.NumberSign && isKickAss) || (c == CharCode.Period && isLLVM)) { // preprocessor or LLVM directive
+            } else if (c == CharCode.NumberSign && isKickAss) { // preprocessor or LLVM directive
 
                 const range = new Range(it.ofs, it.row, it.col);
 
@@ -247,7 +204,7 @@ class AsmParser extends ParserBase {
 
             } else if (
                 (c == CharCode.Exclamation && isAcme) ||
-                (c == CharCode.Period && isKickAss)) { // directive or macro
+                (c == CharCode.Period && (isKickAss || isLLVM))) { // directive or macro
 
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
@@ -275,7 +232,8 @@ class AsmParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.String, src, range));
 
-            } else if (c == CharCode.Dollar || c == CharCode.Percent || ParserHelper.isNumeric(src.charCodeAt(it.ofs))) {
+
+            } else if (ParserHelper.isNumeric(src.charCodeAt(it.ofs))) {
 
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
@@ -285,6 +243,34 @@ class AsmParser extends ParserBase {
                 }
 
                 tokens.push(new Token(TokenType.Number, src, range));
+
+            } else if (c == CharCode.Dollar && ParserHelper.isNumericHex(c2)) {
+
+                const range = new Range(it.ofs, it.row, it.col);
+                range.inc(); it.next();
+
+                while (it.ofs < len && ParserHelper.isNumericHex(src.charCodeAt(it.ofs))) {
+                    range.inc(); it.next();
+                }
+
+                tokens.push(new Token(TokenType.Number, src, range));
+
+            } else if (c == CharCode.Percent && ParserHelper.isNumericBin(c2)) {
+
+                const range = new Range(it.ofs, it.row, it.col);
+                range.inc(); it.next();
+
+                while (it.ofs < len && ParserHelper.isNumericBin(src.charCodeAt(it.ofs))) {
+                    range.inc(); it.next();
+                }
+
+                tokens.push(new Token(TokenType.Number, src, range));
+
+            } else if (c == CharCode.Equals) {
+
+                const range = new Range(it.ofs, it.row, it.col);
+                range.inc(); it.next();
+                tokens.push(new Token(TokenType.Operator, src, range));
 
             } else {
                 it.next();
@@ -319,6 +305,10 @@ class AsmParser extends ParserBase {
     lexer(tokenOffset, tokenCount) {
         if (tokenCount < 1) return;
 
+        const isKickAss = this.isKickAss;
+        const isAcme = this.isAcme;
+        const isLLVM = this.isLLVM;
+
         const ofs = tokenOffset;
         const count = tokenCount;
 
@@ -334,21 +324,39 @@ class AsmParser extends ParserBase {
         if (tokenType == TokenType.Comment) {
             statement = new Statement(StatementType.Comment, null, tokens, ofs, 1);
         } else if (tokenType == TokenType.Identifier) {
-            if (!token.isOpcode()) { // ignore ASM
-                statement = new Statement(StatementType.Definition, StatementType.LabelDefinition, token, tokens, ofs, count);
+            if (!token.isAssemblerOpcode()) { // ignore ASM
+
+                const nextToken = tokens[ofs+1];
+                if (count > 1 && nextToken.text == "=") {
+                    statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, token, tokens, ofs, count);
+                } else if (!isLLVM || count == 1) {
+                    statement = new Statement(StatementType.Definition, StatementType.LabelDefinition, token, tokens, ofs, count);
+                }
             }
         } else if (tokenType == TokenType.Macro && count > 1) {
             const macroCommand = token.text;
             const paramToken = tokens[ofs+1];
 
-            if (macroCommand == "!macro" && paramToken.type == TokenType.Identifier) {
-                statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
-            } else if (macroCommand == "!set" && paramToken.type == TokenType.Identifier) {
-                statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
-            } else if (macroCommand == "!addr" && paramToken.type == TokenType.Identifier) {
-                statement = new Statement(StatementType.Definition, StatementType.AddressDefinition, paramToken, tokens, ofs, count);
-            } else if (macroCommand == "!src" && paramToken.type == TokenType.String) {
-                statement = new Statement(StatementType.Include, null, paramToken, tokens, ofs, count);
+            if (isAcme) {
+                if (macroCommand == "!macro" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                } else if (macroCommand == "!set" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
+                } else if (macroCommand == "!addr" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.AddressDefinition, paramToken, tokens, ofs, count);
+                } else if (macroCommand == "!src" && paramToken.type == TokenType.String) {
+                    statement = new Statement(StatementType.Include, null, paramToken, tokens, ofs, count);
+                }
+            } else if (isKickAss) {
+                if (macroCommand == ".macro" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                } else if (macroCommand == ".const" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
+                }
+            } else if (isLLVM) {
+                if (macroCommand == ".macro" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                }
             }
 
         }
@@ -363,49 +371,6 @@ class AsmParser extends ParserBase {
         }
     }
 
-    getTokenAtDocumentPos(document, position, leftOnly, greedyParsing) {
-        if (!document || !position) return null;
-
-        const textLine = document.lineAt(position.line);
-        if (!textLine ||textLine.isEmptyOrWhitespace) return null;
-
-        const source = textLine.text;
-        const offset = position.character;
-
-        return this.getTokenAtSourcePos(source, offset, leftOnly, greedyParsing);
-    }
-
-    getTokenAtSourcePos(source, offset, leftOnly, greedyParsing) {
-
-        let startPos = offset;
-        while (startPos > 0) {
-            const c = source.charCodeAt(startPos-1);
-            if (greedyParsing) {
-                if (ParserHelper.isWhitespace(c)) break;
-            } else {
-                if (c != CharCode.Period && c != CharCode.Exclamation && !ParserHelper.isSymbolChar(c)) break;
-            }
-            startPos--;
-            if (c == CharCode.Period || c == CharCode.Exclamation) {
-                break; // just accept single '.' or '!' as prefix to label
-            }
-        }
-
-        let endPos = offset + 1;
-
-        if (!leftOnly) {
-            while (endPos < source.length) {
-                const c = source.charCodeAt(endPos);
-                if (!ParserHelper.isSymbolChar(c)) break;
-                endPos++;
-            }
-        }
-
-        const token = source.substring(startPos, endPos).trim();
-        if (token.length < 1) return null;
-
-        return token;
-    }
 
 };
 

@@ -9,6 +9,9 @@
 			"include": "#acme"
 		},
 		{
+			"include": "#llvm"
+		},
+		{
 			"include": "#kick"
 		}
 	],
@@ -97,7 +100,7 @@
 		"generic-labels": {
 			"patterns": [
 				{
-					"name": "entity.name.function",
+					"name": "emphasis",
 					"match": "\\b(\\w+)\\:"
 				}
 			]
@@ -360,6 +363,15 @@
 				{
 					"name": "keyword.instructions",
 					"match": "\\.(?i)[\\s]*\\b(te|text|)\\b"
+				}
+			]
+		},
+
+		"llvm": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(endm)\\b"
 				}
 			]
 		}

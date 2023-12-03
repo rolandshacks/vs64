@@ -1,5 +1,5 @@
 //
-// Language Features
+// Language Provider
 //
 
 //-----------------------------------------------------------------------------------------------//
@@ -16,68 +16,28 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
+const { LanguageServer } = require('language/language_server');
 const { TokenType, StatementType } = require('language/language_base');
-const { AsmParser, AsmGrammar } = require('language/language_asm');
 
 //-----------------------------------------------------------------------------------------------//
-// Parser
-//-----------------------------------------------------------------------------------------------//
-
-class Parser {
-    constructor(impl) {
-        this._impl = impl;
-    }
-
-    static fromType(typeName) {
-        let impl = null;
-        if (typeName == "asm") {
-            impl = new AsmParser();
-        }
-        if (!impl) return null;
-        const instance = new Parser(impl);
-        return instance;
-    }
-
-    static parseFile(filename, options, cancellationToken) {
-        const parser = Parser.fromType("asm");
-        if (!parser) return null;
-        parser._impl.parseFile(filename, options, cancellationToken);
-        if (cancellationToken && cancellationToken.isCancellationRequested) return null;
-        return parser._impl.ast;
-    }
-
-    static parse(source, filename, options, cancellationToken) {
-        const parser = Parser.fromType("asm");
-        if (!parser) return null;
-        parser._impl.parse(source, filename, options, cancellationToken);
-        if (cancellationToken && cancellationToken.isCancellationRequested) return null;
-        return parser._impl.ast;
-    }
-
-    static getTokenAtDocumentPos(document, position, leftOnly, greedyParsing) {
-        const parser = Parser.fromType("asm");
-        if (!parser) return null;
-        return parser._impl.getTokenAtDocumentPos(document, position, leftOnly, greedyParsing);
-    }
-
-}
-
-//-----------------------------------------------------------------------------------------------//
-// DefinitionProvider
+// LanguageProvider
 //-----------------------------------------------------------------------------------------------//
 
 class LanguageFeatureProvider {
-    constructor(project) {
+    constructor(project, languageServer) {
         this._project = project;
+        this._languageServer = languageServer;
+
     }
 
     // CompletionProvider
 
-    async provideCompletionItems(document, position, _cancellationToken_) {
-        const identifier = Parser.getTokenAtDocumentPos(document, position, true, true);
+    async provideCompletionItems(document, position, cancellationToken) {
+        const lang = this._languageServer;
+        const identifier = lang.getTokenAtDocumentPos(document, position, true, true);
         if (!identifier) return null;
 
-        const completedItems = AsmGrammar.fuzzySearch(identifier);
+        const completedItems = lang.fuzzySearch(document.languageId, identifier);
         if (!completedItems || completedItems.length < 1) return null;
 
         const startPosition = new vscode.Position(position.line, position.character - identifier.length);
@@ -85,6 +45,7 @@ class LanguageFeatureProvider {
         const items = [];
 
         for (const item of completedItems) {
+            if (cancellationToken && cancellationToken.isCancellationRequested) return null;
             const completionItem = new vscode.CompletionItem(item);
             completionItem.kind = vscode.CompletionItemKind.Keyword;
             completionItem.range = new vscode.Range(startPosition, position);
@@ -99,18 +60,17 @@ class LanguageFeatureProvider {
     provideDocumentSymbols(document, cancellationToken) {
 
         if (cancellationToken && cancellationToken.isCancellationRequested) return null;
-
+        const lang = this._languageServer;
         const project = this._project;
         if (!project.isValid()) return null;
 
         const options = {
-            toolkit: project.toolkit
+            toolkit: project.toolkit,
+            languageId: document.languageId,
+            cancellationToken: cancellationToken
         };
 
-        const text = document.getText();
-        if (null == text) return null;
-
-        const ast = Parser.parse(text, null, options, cancellationToken);
+        const ast = lang.getAstFromDocument(document, options);
         if (!ast || !ast.statements) return null;
 
         const documentSymbols = [];
@@ -118,7 +78,7 @@ class LanguageFeatureProvider {
         for (const statement of ast.statements) {
 
             if (cancellationToken && cancellationToken.isCancellationRequested) return null;
-
+            if (statement.tokenCount < 1) continue;
             if (statement.type != StatementType.Definition) continue;
 
             const definitionType = statement.subtype;
@@ -128,9 +88,19 @@ class LanguageFeatureProvider {
             let symbolKind = vscode.SymbolKind.Field;
             if (definitionType == StatementType.ConstantDefinition) {
                 symbolKind = vscode.SymbolKind.Constant;
-                if (statement.tokenCount > 2) {
-                    details = statement.getTokensAsString(2);
+                let ofs = 2;
+                if (statement.getToken(0).type != TokenType.Identifier) ofs++;
+                if (statement.tokenCount > ofs) {
+                    details = statement.getTokensAsString(ofs);
                 }
+            } else if (definitionType == StatementType.VariableDefinition) {
+                symbolKind = vscode.SymbolKind.Variable;
+                let ofs = 2;
+                if (statement.getToken(0).type != TokenType.Identifier) ofs++;
+                if (statement.tokenCount > ofs) {
+                    details = statement.getTokensAsString(ofs);
+                }
+
             } else if (definitionType == StatementType.AddressDefinition) {
                 symbolKind = vscode.SymbolKind.Interface;
                 if (statement.tokenCount > 2) {
@@ -140,6 +110,7 @@ class LanguageFeatureProvider {
                 symbolKind = vscode.SymbolKind.Method;
                 details = "macro";
             } else if (definitionType == StatementType.LabelDefinition) {
+                if (statement.getToken(0).type == TokenType.LineNumber) continue;
                 if (statement.tokenCount < 2) symbolKind = vscode.SymbolKind.Function;
             }
 
@@ -169,7 +140,8 @@ class LanguageFeatureProvider {
     // DefinitionProvider
 
     provideDefinition(document, position, cancellationToken) {
-        const identifier = Parser.getTokenAtDocumentPos(document, position);
+        const lang = this._languageServer;
+        const identifier = lang.getTokenAtDocumentPos(document, position);
         if (!identifier) return null;
         return this.findDefinitionLocation(identifier, cancellationToken);
     }
@@ -178,24 +150,26 @@ class LanguageFeatureProvider {
 
         if (!identifier || identifier.length < 1) return null;
 
+        const lang = this._languageServer;
         const project = this._project;
         if (!project.isValid()) return null;
 
         const recursiveSearch = project.settings.recursiveLabelParsing||true;
-        const sources = project.getAsmSourceFiles(recursiveSearch);
+        const sources = lang.getSources(recursiveSearch, project);
         if (!sources) return null;
 
         const locations = [];
 
         const options = {
-            toolkit: project.toolkit
+            toolkit: project.toolkit,
+            cancellationToken: cancellationToken
         };
 
         for (const filename of sources) {
 
             if (cancellationToken && cancellationToken.isCancellationRequested) return null;
 
-            const ast = Parser.parseFile(filename, options, cancellationToken);
+            const ast = lang.getAstFromFile(filename, options);
             if (!ast) continue;
 
             const definition = ast.findDefinition(identifier);
@@ -223,7 +197,8 @@ class LanguageFeatureProvider {
     // Reference Provider
 
     provideReferences(document, position, context, cancellationToken) {
-        const identifier = Parser.getTokenAtDocumentPos(document, position);
+        const lang = this._languageServer;
+        const identifier = lang.getTokenAtDocumentPos(document, position);
         if (!identifier) return null;
         return this.findReferenceLocation(identifier, (context && context.includeDeclaration), cancellationToken);
     }
@@ -232,22 +207,24 @@ class LanguageFeatureProvider {
 
         if (!identifier || identifier.length < 1) return null;
 
+        const lang = this._languageServer;
         const project = this._project;
         if (!project.isValid()) return null;
 
         const recursiveSearch = project.settings.recursiveLabelParsing||true;
-        const sources = project.getAsmSourceFiles(recursiveSearch);
+        const sources = lang.getSources(recursiveSearch, project);
         if (!sources) return null;
 
         const locations = [];
 
         const options = {
-            toolkit: project.toolkit
+            toolkit: project.toolkit,
+            cancellationToken: cancellationToken
         };
 
         for (const filename of sources) {
 
-            const ast = Parser.parseFile(filename, options, cancellationToken);
+            const ast = lang.getAstFromFile(filename, options);
             if (!ast) continue;
 
             const tokens = ast.tokens;
@@ -257,7 +234,7 @@ class LanguageFeatureProvider {
 
                 if (cancellationToken && cancellationToken.isCancellationRequested) return null;
 
-                if (token.type != TokenType.Identifier) continue;
+                if (token.type != TokenType.Identifier && token.type != TokenType.Number) continue;
                 if (token.isDeclaration() && !includeDeclaration) continue;
                 if (token.text != identifier) continue;
 
@@ -280,6 +257,7 @@ class LanguageFeatureProvider {
         return locations;
     }
 
+
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -287,6 +265,5 @@ class LanguageFeatureProvider {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    Parser: Parser,
     LanguageFeatureProvider: LanguageFeatureProvider
 }

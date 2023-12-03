@@ -8,8 +8,8 @@ const path = require('path');
 // Init module and lookup path
 //-----------------------------------------------------------------------------------------------//
 
-global._sourcebase = path.resolve(__dirname, "../src");
-global._mockup = path.resolve(__dirname, "../test/mockup");
+global._sourcebase = path.resolve(__dirname, "../../src");
+global._mockup = path.resolve(__dirname, "../mockup");
 global.BIND = function (_module) {
     _module.paths.push(global._mockup);
     _module.paths.push(global._sourcebase);
@@ -23,13 +23,13 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
 const { StopWatch } = require('utilities/utils');
-const { Parser } = require('language/language');
+const { Parser } = require('language/language_server');
 
 //-----------------------------------------------------------------------------------------------//
 // Tests
 //-----------------------------------------------------------------------------------------------//
 
-function runLanguage() {
+function runAsmLanguage2() {
 
     let src = "";
 
@@ -81,10 +81,60 @@ function runLanguage() {
     console.log("****");
 }
 
+function runAsmLanguage() {
+    const source = ".macro set_border_color col\n";
+
+    const options = {
+        toolkit: {
+            isLLVM: true
+        }
+    };
+
+    const parser = Parser.fromType("asm")._impl;
+
+    parser.parse(source, null, options);
+    const ast = parser.ast;
+    const tokens = ast.tokens;
+
+    const tokenTexts = [];
+
+    for (const token of tokens) {
+        tokenTexts.push(token.text);
+        console.log(`${token.text}`);
+    }
+
+    const definition = ast.findDefinition("hck");
+
+    console.log("DONE");
+
+}
+
+function runBasicLanguage() {
+    const source = "printLine:\n";
+
+    const parser = Parser.fromType("bas")._impl;
+
+    parser.parse(source);
+    const ast = parser.ast;
+    const tokens = ast.tokens;
+
+    const tokenTexts = [];
+
+    for (const token of tokens) {
+        tokenTexts.push(token.text);
+        console.log(`${token.text}`);
+    }
+
+    const definition = ast.findDefinition("a");
+
+    console.log("DONE");
+
+}
+
 function main() {
     Logger.setGlobalLevel(LogLevel.Trace);
 
-    runLanguage();
+    runAsmLanguage();
 }
 
 main();

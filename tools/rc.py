@@ -33,8 +33,13 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "o:", ["format=", "config=", "help", "output="])
-    except getopt.GetoptError:
+        opts, args = getopt.getopt(sys.argv[1:], "ho:", ["format=", "config=", "help", "output="])
+    except getopt.GetoptError as err:
+        print(err.msg)
+        usage()
+        sys.exit(2)
+
+    if len(opts) == 0 and len(args) == 0:
         usage()
         sys.exit(2)
 

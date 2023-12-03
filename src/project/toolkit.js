@@ -21,6 +21,7 @@ class Toolkit {
         this.isKick = (name == "kick");
         this.isCC65 = (name == "cc65");
         this.isLLVM = (name == "llvm");
+        this.isBasic = (name == "basic");
 
         this.isCpp = (this.isCC65 || this.isLLVM);
         this.isAssembler = (this.isAcme || this.isKick);

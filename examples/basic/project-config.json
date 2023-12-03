@@ -1,0 +1,8 @@
+{
+    "name": "basic_example",
+    "description": "Example for BASIC V2",
+    "toolkit": "basic",
+    "sources": [
+        "src/modern.bas"
+    ]
+}

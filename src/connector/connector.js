@@ -753,6 +753,10 @@ class ViceMonitorClient {
             eventObj = { type: responseType };
         } else if (responseType == RequestType.CMD_EXECUTE_UNTIL_RETURN) { // execute until return
             eventObj = { type: responseType };
+        } else if (responseType == RequestType.CMD_KEYBOARD_FEED) { // keyboard feed
+            eventObj = { type: responseType };
+        } else if (responseType == RequestType.CMD_MEMORY_SET) { // memory set
+            eventObj = { type: responseType };
         } else {
             logger.warn("Unhandled response type " + responseType + ", request id " + requestId + ", body: " + bodyLen + " payload bytes");
         }
@@ -849,6 +853,41 @@ class ViceMonitorClient {
         return token._promise;
     }
 
+    async cmdMemorySet(startAddress, endAddress, memoryType, haveEffect, memoryBlock) {
+        if (!endAddress) endAddress = startAddress; // write 1 byte
+
+        let bankId = 0x0;
+        if (this._bankIdMap) {
+            let bankName = 'default';
+            if (memoryType) {
+                if (memoryType == MemoryType.Default) bankName = 'default';
+                else if (memoryType == MemoryType.Cpu) bankName = 'cpu';
+                else if (memoryType == MemoryType.Ram) bankName = 'ram';
+                else if (memoryType == MemoryType.Rom) bankName = 'rom';
+                else if (memoryType == MemoryType.Io) bankName = 'io';
+                else if (memoryType == MemoryType.Cartridge) bankName = 'cart';
+            }
+            bankId = this._bankIdMap.get(bankName)||0x0;
+        }
+
+        const memorySpace = 0x0; // main memory
+
+        let body = [
+            haveEffect ? 0x1 : 0x0,
+            ((startAddress>>0) & 0xff), ((startAddress>>8) & 0xff),
+            ((endAddress>>0) & 0xff), ((endAddress>>8) & 0xff),
+            memorySpace,
+            ((bankId>>0) & 0xff), ((bankId>>8) & 0xff)
+        ];
+
+        body.push(...memoryBlock);
+
+        const result = await this.sendCommand(RequestType.CMD_MEMORY_SET, body);
+
+        return result;
+
+    }
+
     async cmdMemoryGet(startAddress, endAddress, memoryType, haveEffect) {
 
         if (!endAddress) endAddress = startAddress; // read 1 byte
@@ -904,7 +943,7 @@ class ViceMonitorClient {
     }
 
     async cmdPing(_memspace_) {
-        await this.sendCommand(RequestType.CMD_PINT, null);
+        await this.sendCommand(RequestType.CMD_PING, null);
     }
 
     async cmdRegistersGet(memspace) {
@@ -1003,6 +1042,33 @@ class ViceMonitorClient {
         return result;
     }
 
+    async cmdKeyboardFeed(text) {
+
+        let body = [
+            text.length & 0xff
+        ];
+
+        for (let i=0; i<text.length; i++) {
+            body.push(text.charCodeAt(i) & 0xff);
+        }
+
+        const result = await this.sendCommand(RequestType.CMD_KEYBOARD_FEED, body);
+
+        return result;
+    }
+
+    async cmdKeyboardFeedByte(keycode) {
+
+        let body = [
+            0x01,
+            keycode & 0xff
+        ];
+
+        const result = await this.sendCommand(RequestType.CMD_KEYBOARD_FEED, body);
+
+        return result;
+    }
+
     getState() {
         return this._cpu._cpuState;
     }
@@ -1024,6 +1090,10 @@ class ViceProcess {
 
     stdout(data) {
         if (!data) return;
+        if (data == "Sync reset\r") {
+            logger.trace(data);
+            return;
+        }
         logger.debug(data);
     }
 
@@ -1112,6 +1182,7 @@ class ViceConnector extends DebugRunner {
         super();
         this._session = session;
         this._settings = session._settings;
+        this._basicMode = session._isBasic;
         this._vice = null;
         this._initialized = false;
         this._stopped = false;
@@ -1176,9 +1247,11 @@ class ViceConnector extends DebugRunner {
 
         if (event.type == RequestType.RESPONSE_STOPPED) {
 
+            const stepMode = (this._runFlags != null && this._runFlags.debugStepType != null);
+
             const vice = this._vice;
             if (vice) {
-                if (this._runFlags != null && this._runFlags.debugStepType != null) {
+                if (!this._basicMode && stepMode) {
                     // get current pc
                     const cpuState = this.getCpuState();
                     const pc = cpuState.cpuRegisters.PC;
@@ -1213,17 +1286,78 @@ class ViceConnector extends DebugRunner {
                 } else if (this._activeBreakpoint) {
                     // stopped due to hitting a breakpoint
                     // signal event to listeners
-                    this._stopped = true;
-                    const breakpoint = this._activeBreakpoint;
-                    this.fireEvent('breakpoint', breakpoint);
-                    this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
-                    this._activeBreakpoint = null;
 
+                    const breakpoint = this._activeBreakpoint;
+
+                    if (breakpoint.isBasic) {
+
+                        this.readMemory(0x39, 0x3e).then((mem) => {
+                            const currentLineNumber = mem[1] != 0xff ? mem[0] + (mem[1]<<8) : 0;
+                            const currentStatement = mem[4] + (mem[5]<<8) + 1;
+
+                            if (breakpoint.basicBreakpoints) {
+
+                                if (currentLineNumber == 0 || currentStatement < 0x801) {
+                                    vice.cmdExit();
+                                    return
+                                }
+
+                                let hitBreakpoint = null;
+
+                                if (!stepMode) {
+                                    for (const basicBreakpoint of breakpoint.basicBreakpoints) {
+                                        if (basicBreakpoint.address == currentStatement) {
+                                            hitBreakpoint = basicBreakpoint;
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    hitBreakpoint = debugInfo.getAddressInfo(currentStatement);
+                                }
+
+                                if (null == hitBreakpoint) {
+                                    vice.cmdExit();
+                                    return;
+                                }
+
+                                this._stopped = true;
+                                const basicBreakpoint = {
+                                    isBasic: true,
+                                    address: currentStatement,
+                                    basicLine: currentLineNumber,
+                                    source: hitBreakpoint.source,
+                                    line: hitBreakpoint.line
+                                }
+
+                                this.fireEvent('breakpoint', basicBreakpoint);
+                                this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
+                                this._activeBreakpoint = null;
+                            } else {
+                                // end of program or BREAK or ERROR
+                                if (currentLineNumber != 0 || currentStatement != 0x801) {
+                                    this._stopped = true;
+                                    this.fireEvent('stopped', DebugInterruptReason.EXIT);
+                                    this._activeBreakpoint = null;
+                                } else {
+                                    this._stopped = false;
+                                    this._activeBreakpoint = null;
+                                    vice.cmdExit();
+                                }
+
+                            }
+                        });
+                    } else {
+                        this._stopped = true;
+                        this.fireEvent('breakpoint', breakpoint);
+                        this.fireEvent('stopped', DebugInterruptReason.BREAKPOINT);
+                        this._activeBreakpoint = null;
+                    }
                 } else {
                     // any command after initialization (during emulation run)
                     // will trigger a "stopped" event, we have to immediately
                     // resume to continue execution (as this is different to
                     // manual terminal/monitor interaction)
+
                     if (this._stopped) {
                         this._stopped = false;
                         vice.cmdExit();
@@ -1232,7 +1366,6 @@ class ViceConnector extends DebugRunner {
             }
 
         } else if (event.type == RequestType.RESPONSE_CHECKPOINT) {
-            logger.trace("VICE checkpoint event");
 
             this.#invalidateMemoryCache();
 
@@ -1246,10 +1379,14 @@ class ViceConnector extends DebugRunner {
                     if (breakpoint) {
                         this._activeBreakpoint = breakpoint;
                     } else {
-                        this._activeBreakpoint = new Breakpoint(
-                            checkpoint.startAddr, null,
-                            null, 0, null
-                        );
+                        if (!session.isBasic) {
+                            this._activeBreakpoint = new Breakpoint(
+                                checkpoint.startAddr, null,
+                                null, 0, null
+                            );
+                        } else {
+                            this._activeBreakpoint = null;
+                        }
                     }
                 }
             } else {
@@ -1295,6 +1432,23 @@ class ViceConnector extends DebugRunner {
         return mem;
     }
 
+    async writeMemory(startAddress, endAddress, data) {
+        const vice = this._vice;
+        if (!vice) return;
+
+        endAddress = endAddress || startAddress;
+
+        if (this._memoryCache) {
+            // immediately update cache
+            const len = endAddress + 1 - startAddress;
+            for (let i=0; i<len; i++) {
+                this._memoryCache[startAddress+i] = data[i];
+            }
+        }
+
+        await vice.cmdMemorySet(startAddress, endAddress, 0x0, false, data);
+    }
+
     async read(addr, size) {
 
         const memCache = await this.#getMemoryCache();
@@ -1303,7 +1457,7 @@ class ViceConnector extends DebugRunner {
         let val = 0x0;
 
         if (size > 1) {
-            val = memCache[addr]&0xff + (memCache[addr+1]<<8);
+            val = (memCache[addr]&0xff) + (memCache[addr+1]<<8);
         } else {
             val = memCache[addr]&0xff;
         }
@@ -1471,7 +1625,9 @@ class ViceConnector extends DebugRunner {
 
         this._initialized = true;
 
-        if (debugStepType == DebugStepType.STEP_OUT) {
+        if (this._basicMode) {
+            await vice.cmdExit();
+        } else if (debugStepType == DebugStepType.STEP_OUT) {
             await vice.cmdExecuteUntilReturn();
         } else {
             let stepOverSubroutines = true;
@@ -1495,6 +1651,7 @@ class ViceConnector extends DebugRunner {
 
         await vice.cmdReset();
         await vice.cmdAutostart(filename, true);
+
     }
 
     getCpuState() {

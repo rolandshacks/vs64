@@ -17,7 +17,7 @@ class CompileError:
         self.error = error
 
     def to_string(self):
-        """Get string representation fo error."""
+        """Get string representation for error."""
         if self.resource and hasattr(self.resource, "filename"):
             return f"{self.resource.filename}: error: {self.error}"
         else:

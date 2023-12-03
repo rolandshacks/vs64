@@ -27,8 +27,9 @@ const logger = new Logger("Settings");
 const Constants = {
     BinaryMonitorPort: 6502,
     ProjectConfigFile: "project-config.json",
-    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "res", "raw", "spm", "properties" ],
+    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
     AssemblerLanguageId: "asm",
+    BasicLanguageId: "bas",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
     CppStandard: "c++20",
@@ -40,7 +41,13 @@ const Constants = {
     CppOnlyFileFilter: "|cpp|cc|",
     COnlyFileFilter: "|c|",
     AsmFileFilter: "|s|asm|",
-    ObjFileFilter: "|o|obj|"
+    BasicFileFilter: "|bas|",
+    ObjFileFilter: "|o|obj|",
+    BasicInterpreterLoopRoutine: 0xa7e4,   // default adress of vector $308-309
+    BasicInterpreterBreakRoutine: 0xa84b,
+    BasicInterpreterErrorRoutine: 0xa437,
+    TSBInterpreterLoopRoutine: 0x80e8,
+    TSBInterpreterErrorRoutine: 0x839c  // TSC modified BASIC vector at $300/$301
 };
 
 const AnsiColors = {
@@ -71,7 +78,7 @@ const AnsiColors = {
     White: 97
 };
 
-const Opcodes = [
+const AssemblerOpcodes = [
     "ADC","AND","ASL","BCC","BCS","BEQ","BIT","BMI","BNE","BPL",
     "BRK","BVC","BVS","CLC","CLD","CLI","CLV","CMP","CPX","CPY",
     "DEC","DEX","DEY","EOR","INC","INX","INY","JMP","JSR","LDA",
@@ -85,6 +92,38 @@ const Opcodes = [
     "ALR", "ARR", "SBX", "SBC", "LAS", "JAM", "SHA", "SHX", "XAA",
     "SHY", "TAS"
 ];
+
+const BasicV2Keywords = [
+    "RESTORE", "INPUT#", "PRINT#", "RETURN", "RIGHT$", "STATUS",
+    "VERIFY", "CLOSE", "GOSUB", "INPUT", "LEFT$", "PRINT", "TIME$",
+    "CHR$", "CONT", "DATA", "GET#", "GOTO", "LIST", "LOAD", "MID$",
+    "NEXT", "OPEN", "PEEK", "POKE", "READ", "SAVE", "STEP", "STOP",
+    "STR$", "THEN", "TIME", "WAIT", "ABS", "AND", "ASC", "ATN", "CLR",
+    "CMD", "COS", "DEF", "DIM", "END", "EXP", "FOR", "FRE", "GET", "INT",
+    "LEN", "LET", "LOG", "NEW", "NOT", "POS", "REM", "RND", "RUN", "SGN",
+    "SIN", "SPC", "SQR", "SYS", "TAB", "TAN", "TI$", "USR", "VAL", "FN",
+    "IF", "ON", "OR", "TI", "TO", "GO"
+].sort((a, b) => b.length - a.length);
+
+const BasicTSBKeywords = [
+    "ENVELOPE", "END PROC", "END LOOP", "ON ERROR", "NO ERROR", "GRAPHICS",
+    "RENUMBER", "MOB SET", "DISABLE", "RETRACE", "RLOCMOB", "BCKGNDS",
+    "LOW COL", "DISPLAY", "HI COL", "RIGHTB", "RIGHTW", "COLOUR", "BFLASH",
+    "REPEAT", "CENTRE", "GLOBAL", "ON KEY", "RESUME", "SECURE", "DISAPA",
+    "CIRCLE", "OPTION", "INSERT", "DESIGN", "HRDCPY", "DETECT", "HIRES",
+    "BLOCK", "PLACE", "LEFTW", "LEFTB", "DOWNB", "DOWNW", "MULTI", "MUSIC",
+    "FLASH", "CGOTO", "FETCH", "UNTIL", "RESET", "DELAY", "LOCAL", "RCOMP",
+    "TRACE", "INKEY", "SOUND", "PAUSE", "SCRSV", "SCRLD", "PAINT", "MERGE",
+    "CHECK", "ERROR", "PLOT", "LINE", "FCHR", "FCOL", "FILL", "DRAW", "CHAR",
+    "MOVE", "MMOB", "PLAY", "WAVE", "PROC", "CALL", "EXEC", "EXIT", "LOOP",
+    "ELSE", "PAGE", "DUMP", "FIND", "AUTO", "INST", "TEST", "EXOR", "PENX",
+    "PENY", "CMOB", "ANGL", "COLD", "TEXT", "CSET", "DISK", "COPY", "REC",
+    "ROT", "INV", "UPB", "UPW", "USE", "CLS", "MAP", "DIR", "OLD", "JOY",
+    "MOD", "DIV", "DUP", "LIN", "POT", "NRM", "MOB", "OFF", "ARC", "VOL",
+    "KEY", "MEM", "OUT", "DO", "AT", "X!", "D!"
+].sort((a, b) => b.length - a.length);
+
+const BasicKeywords = BasicV2Keywords.concat(BasicTSBKeywords).sort((a, b) => b.length - a.length);
 
 //-----------------------------------------------------------------------------------------------//
 // Settings
@@ -106,6 +145,7 @@ class Settings {
         this.autoBuild = false;
         this.showWelcome = true;
         this.resourceCompiler = null;
+        this.basicCompiler = null;
     }
 
     disableWelcome(workspaceConfig) {
@@ -139,6 +179,7 @@ class Settings {
         this.setupPython(workspaceConfig);
         this.setupJava(workspaceConfig);
         this.setupResourceCompiler(workspaceConfig);
+        this.setupBasicCompiler(workspaceConfig);
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
         this.setupKickAssembler(workspaceConfig);
@@ -155,6 +196,15 @@ class Settings {
             this.resourceCompiler = resourceCompiler;
         } else {
             this.resourceCompiler = path.resolve(this.extensionPath, "tools", "rc.py");
+        }
+    }
+
+    setupBasicCompiler(workspaceConfig) {
+        let basicCompiler = this.#getAbsDir(workspaceConfig.get("vs64.basicCompiler"));
+        if (basicCompiler) {
+            this.basicCompiler = basicCompiler;
+        } else {
+            this.basicCompiler = path.resolve(this.extensionPath, "tools", "bc.py");
         }
     }
 
@@ -326,5 +376,8 @@ module.exports = {
     Constants: Constants,
     Settings: Settings,
     AnsiColors: AnsiColors,
-    Opcodes: Opcodes
+    AssemblerOpcodes: AssemblerOpcodes,
+    BasicKeywords: BasicKeywords,
+    BasicV2Keywords: BasicV2Keywords,
+    BasicTSBKeywords: BasicTSBKeywords
 };

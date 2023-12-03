@@ -155,6 +155,8 @@ class Project {
             this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
         } else if (toolkit.isCC65) {
             this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
+        } else if (toolkit.isBasic) {
+            this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
         }
 
         this._outputs = [
@@ -178,11 +180,11 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
-        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'cc65' or 'llvm')"); }
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'cc65', 'llvm' or 'basic')"); }
         const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "cc65", "llvm"].indexOf(toolkitId) < 0) {
-            throw("property 'toolkit' needs to be either 'acme', 'kick', 'cc65' or 'llvm'");
+        if (["acme", "kick", "cc65", "llvm", "basic"].indexOf(toolkitId) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', 'cc65', 'llvm' or 'basic'");
         }
 
         this._toolkit = Toolkit.fromName(toolkitId);
@@ -306,7 +308,10 @@ class Project {
 
             const args = [];
             if (data.args) {
-                args.push(...data.args);
+                if (typeof data.args === "string")
+                    args.push(data.args);
+                else
+                    args.push(...data.args);
             }
 
             if (settings.buildArgs) {
@@ -340,12 +345,16 @@ class Project {
 
             this._resourceOutputType = "asm"; // default
 
-            if (toolkit.isAssembler && (rcFormat == "cc" || rcFormat == "cpp")) {
+            if (toolkit.isAssembler && (rcFormat == "cc" || rcFormat == "cpp" || rcFormat == "basic")) {
                 rcArguments.setOption("format", toolkit.name); // format name = toolkit name
                 logger.warn("specified resource compiler output format '" + rcFormat + "' is not supported by assembler toolkits - using assembler output format instead");
+            } else if (toolkit.isBasic && rcFormat != "basic") {
+                rcArguments.setOption("format", "basic");
+                logger.warn("specified resource compiler output format '" + rcFormat + "' is not supported by the basic toolkit - using basic output format instead");
             } else {
                 if (rcFormat == "cc") this._resourceOutputType = "c";
                 else if (rcFormat == "cpp") this._resourceOutputType = "cpp";
+                else if (rcFormat == "basic") this._resourceOutputType = "basic";
             }
         }
 
@@ -658,6 +667,23 @@ class Project {
         return Scanner.scan(filename, referenceList, project);
     }
 
+    getBasicSourceFiles(resolve) {
+        const basFiles = this.querySourceByExtension(Constants.BasicFileFilter);
+
+        if (null == basFiles || basFiles.length < 1) return null;
+
+        if (!resolve) {
+            return basFiles;
+        }
+
+        const resolvedSources = [ ...basFiles ];
+        for (const basFile of basFiles) {
+            this.getFileReferences(basFile, resolvedSources);
+        }
+
+        return resolvedSources;
+    }
+
     getAsmSourceFiles(resolve) {
 
         // Special function to maintain sequence order of files given in project file
@@ -721,6 +747,7 @@ class Project {
             this.querySourceByExtension(Constants.AsmFileFilter)
         );
 
+        const basFiles = TranslationList.fromList(this.querySourceByExtension(Constants.BasicFileFilter));
         const resFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ResourceFileFilter));
         const cppFiles = TranslationList.fromList(this.querySourceByExtension(Constants.CppFileFilter));
         const objFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ObjFileFilter));
@@ -761,8 +788,14 @@ class Project {
             }
         });
 
-
-        if (toolkit.isCpp) {
+        if (toolkit.isBasic) {
+            // generate one dependency list for all compilation units
+            const dependencies = basFiles.clone();
+            basFiles.forEach((filename) => {
+                this.getFileReferences(filename, dependencies);
+            });
+            depFiles.add(thisInstance.outfile, dependencies);
+        } else if (toolkit.isCpp) {
             // add dependency information for object files
             asmFiles.forEach((input) => {
                 objFiles.add(this.#getBuildPath(input, "o"), input, "asm");
@@ -796,8 +829,9 @@ class Project {
             res: resFiles,  // resource files
             gen: genFiles,  // generated resource files (all)
             cpp: cppFiles,  // cpp files
-            asm: asmFiles,  // asm files
-            obj: objFiles,  // obj files (llvm and cc65)
+            asm: asmFiles,  // assembler files
+            bas: basFiles,  // basic files
+            obj: objFiles,  // object files (llvm and cc65)
             deps: depFiles  // dependencies (kick)
         }
 
@@ -870,7 +904,52 @@ class Project {
             script.push(Ninja.keyArgs("rc_flags", rcFlags));
         }
 
-        if (toolkit.isKick) {
+        if (toolkit.isBasic) {
+            const bc_flags = new NinjaArgs();
+
+            /*
+            if (!releaseBuild) {
+                bc_flags.add("--debug");
+            }
+            */
+
+            bc_flags.add(this._args);
+            bc_flags.add(this._compilerFlags);
+            bc_flags.add("--map", "\"$dbg_out\"");
+
+            script.push(Ninja.keyValue("bc_exe", settings.basicCompiler));
+            script.push(Ninja.keyArgs("bc_flags", bc_flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule bas");
+            script.push("    command = $python_exe $bc_exe $bc_flags $includes -o $out $in");
+            script.push("");
+
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
+
+            const pgmDeps = buildTree.deps.getAsArray(project.outfile);
+            const basMain = pgmDeps[0]||"main.bas";
+            const pgmRefs = pgmDeps.slice(1);
+
+            let basBuild = "build $target | $dbg_out : bas " + Ninja.escape(basMain);
+
+            if (!buildTree.deps.empty()) {
+                basBuild += " | " + Ninja.join(pgmRefs);
+            }
+
+            script.push(basBuild);
+            script.push("");
+
+
+        } else if (toolkit.isKick) {
 
             script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.kickExecutable)));
             script.push(Ninja.keyValue("asminfo", path.resolve(project.builddir, project.name + ".info")));

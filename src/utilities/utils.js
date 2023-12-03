@@ -878,69 +878,6 @@ class StopWatch {
 }
 
 //-----------------------------------------------------------------------------------------------//
-// Character Codes
-//-----------------------------------------------------------------------------------------------//
-
-const CharCode = {
-    A: 'A'.charCodeAt(0),
-    Z: 'Z'.charCodeAt(0),
-    a: 'a'.charCodeAt(0),
-    z: 'z'.charCodeAt(0),
-    _0: '0'.charCodeAt(0),
-    _9: '9'.charCodeAt(0),
-    Semicolon: ';'.charCodeAt(0),
-    LineFeed: '\n'.charCodeAt(0),
-    CarriageReturn: '\r'.charCodeAt(0),
-    Tabulator: '\t'.charCodeAt(0),
-    Period: '.'.charCodeAt(0),
-    SingleQuote: '\''.charCodeAt(0),
-    DoubleQuote: '\"'.charCodeAt(0),
-    Underscore: '_'.charCodeAt(0),
-    Colon: ':'.charCodeAt(0),
-    NumberSign: '#'.charCodeAt(0),
-    Exclamation: '!'.charCodeAt(0),
-    Space: ' '.charCodeAt(0),
-    Plus: '+'.charCodeAt(0),
-    Minus: '-'.charCodeAt(0),
-    Slash: '/'.charCodeAt(0),
-    Backslash: '\\'.charCodeAt(0),
-    Asterisk: '*'.charCodeAt(0),
-    Equals: '='.charCodeAt(0),
-    LessThan: '<'.charCodeAt(0),
-    GreaterThan: '>'.charCodeAt(0),
-    Dollar: '$'.charCodeAt(0),
-    Percent: '%'.charCodeAt(0)
-};
-
-//-----------------------------------------------------------------------------------------------//
-// ParserHelper
-//-----------------------------------------------------------------------------------------------//
-
-class ParserHelper {
-
-    static isNumeric(c) {
-        return (c >= CharCode._0 && c <= CharCode._9); // 0-9
-    }
-
-    static isAlpha(c) {
-        return ((c >= CharCode.A && c <= CharCode.Z) || (c >= CharCode.a && c <= CharCode.z)); // A-Z | a-z
-    }
-
-    static isAlphaNumeric(c) {
-        return ParserHelper.isNumeric(c) || ParserHelper.isAlpha(c);
-    }
-
-    static isSymbolChar(c) {
-        return (ParserHelper.isAlphaNumeric(c) || c == CharCode.Underscore);
-    }
-
-    static isWhitespace(c) {
-        return (c == CharCode.Space || c == CharCode.Tabulator || c == CharCode.LineFeed || c == CharCode.CarriageReturn);
-    }
-
-}
-
-//-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
 
@@ -948,7 +885,5 @@ module.exports = {
     Utils: Utils,
     Formatter: Formatter,
     SortedArray: SortedArray,
-    StopWatch: StopWatch,
-    ParserHelper: ParserHelper,
-    CharCode: CharCode
+    StopWatch: StopWatch
 };

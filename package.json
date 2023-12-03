@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.4.8",
+	"version": "2.5.0",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -55,6 +55,7 @@
 		"assembler",
 		"acme", "kickassembler", "llvm",
 		"c++", "cc65",
+		"basic",
 		"6502", "6510",
 		"vice",
 		"emulator",
@@ -70,8 +71,13 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "vs64.showWelcome",
+				"command": "vs64.gettingStarted",
 				"title": "Getting Started",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.showWelcome",
+				"title": "Welcome",
 				"category": "VS64"
 			},
 			{
@@ -97,6 +103,11 @@
 			{
 				"command": "vs64.createProjectLlvm",
 				"title": "Create LLVM-MOS C++ Project",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.createProjectBasic",
+				"title": "Create C64 BASIC Project",
 				"category": "VS64"
 			},
 			{
@@ -198,7 +209,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -259,6 +270,12 @@
 				"configuration": "./language/asm.language.json"
 			},
 			{
+				"id": "bas",
+				"aliases": [ "BASIC" ],
+				"extensions": [ ".bas" ],
+				"configuration": "./language/bas.language.json"
+			},
+			{
 				"id": "res",
 				"aliases": [ "resource"	],
 				"extensions": [ ".res" ]
@@ -269,6 +286,11 @@
 				"language": "asm",
 				"scopeName": "source.asm",
 				"path": "./language/asm.grammar.json"
+			},
+			{
+				"language": "bas",
+				"scopeName": "source.bas",
+				"path": "./language/bas.grammar.json"
 			}
 		],
 		"snippets": [
@@ -353,10 +375,15 @@
 						"default": "",
 						"description": "Path to java executable. Leave empty to use the default java installation."
 					},
+					"vs64.basicCompiler": {
+						"type": "string",
+						"default": "",
+						"description": "Path to custom basic compiler (Python). Leave empty to use the default basic compiler coming with the extension package."
+					},
 					"vs64.resourceCompiler": {
 						"type": "string",
 						"default": "",
-						"description": "Path to custom resource compiler (Python). Leave empty to use the default resource compiler tool coming with the extension package."
+						"description": "Path to custom resource compiler (Python). Leave empty to use the default resource compiler coming with the extension package."
 					}
 				}
 			},
@@ -422,6 +449,9 @@
 		"breakpoints": [
 			{
 				"language": "asm"
+			},
+			{
+				"language": "bas"
 			}
 		],
 		"taskDefinitions": [

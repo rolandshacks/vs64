@@ -349,8 +349,6 @@ class ZeroPageState {
     }
 
     decode(memorySnapshot) {
-        logger.debug("decode");
-
         const mem = memorySnapshot.subarray(0x00, 0xff);
 
         const z = this;
@@ -361,6 +359,287 @@ class ZeroPageState {
     }
 
 }
+
+const _VARTYPE_INTEGER = 0;
+const _VARTYPE_FLOAT = 1;
+const _VARTYPE_STRING = 2;
+
+class BasicState {
+
+    constructor() {
+        this._memorySnapshot = null;
+
+        this._registers = {
+            programAddress : 0x0,
+            variablesAddress : 0x0,
+            arraysAddress : 0x0,
+            freeRamAddress : 0x0,
+            stringsAddress : 0x0,
+            currentLineNumber : 0x0,
+            lastLineNumber : 0x0,
+            currentStatement : 0x0,
+            currentDataLine : 0x0,
+            currentDataItem : 0x0
+        };
+
+        this._vectors = {
+            printError: 0xe38b,
+            mainProgramLoop: 0xa483,
+            textToToken: 0xa57c,
+            tokenToText: 0xa71a,
+            executeNextToken: 0xa7e4,
+            evalNumber: 0xae86
+        };
+
+        this._variables = null;
+        this._arrays = null;
+    }
+
+    get registers() { return this._registers; }
+    get vectors() { return this._vectors; }
+
+    static fromBytes(memorySnapshot) {
+        if (!memorySnapshot) return null;
+        const basicState = new BasicState();
+        if (false == basicState.decode(memorySnapshot)) return null;
+        return basicState;
+    }
+
+    decode(memorySnapshot) {
+        this._memorySnapshot = memorySnapshot;
+
+        // fetch registers from zero page
+        const mem = memorySnapshot;
+
+        const regs = this._registers;
+        regs.programAddress = mem[0x2b] + (mem[0x2c]<<8);
+        regs.variablesAddress = mem[0x2d] + (mem[0x2e]<<8);
+        regs.arraysAddress = mem[0x2f] + (mem[0x30]<<8);
+        regs.freeRamAddress = mem[0x31] + (mem[0x32]<<8);
+        regs.stringsAddress = mem[0x33] + (mem[0x34]<<8);
+
+        // if 0x3a == 0xff --> immediate mode
+        regs.currentLineNumber = mem[0x3a] != 0xff ? mem[0x39] + (mem[0x3a]<<8) : 0x0;
+        regs.lastLineNumber = mem[0x3b] + (mem[0x3c]<<8);
+        regs.currentStatement = mem[0x3d] + (mem[0x3e]<<8) + 1;
+        regs.currentDataLine = mem[0x3f] + (mem[0x40]<<8);
+        regs.currentDataItem = mem[0x41] + (mem[0x42]<<8);
+
+        let vector_addr = 0x300;
+        const vectors = this._vectors;
+        vectors.printError = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+        vectors.mainProgramLoop = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+        vectors.textToToken = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+        vectors.tokenToText = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+        vectors.executeNextToken = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+        vectors.evalNumber = mem[vector_addr] + (mem[vector_addr+1]<<8); vector_addr += 2;
+
+        return true;
+    }
+
+    getRegisters() {
+        return this._registers;
+    }
+
+    getVariables() {
+        if (this._variables) return this._variables;
+        if (!this._memorySnapshot) return null;
+
+        const mem = this._memorySnapshot;
+        const reg = this._registers;
+
+        const variables = [];
+        const numVariables = (reg.arraysAddress - reg.variablesAddress) / 7;
+        let addr = reg.variablesAddress;
+        for (let i=0; i<numVariables; i++) {
+            const basicVariable = BasicState.decodeBasicVariable(mem, addr);
+            addr += basicVariable.size;
+            variables.push(basicVariable);
+        }
+
+        this._variables = variables;
+        return variables;
+    }
+
+    getArrays() {
+        if (this._arrays) return this._arrays;
+        if (!this._memorySnapshot) return null;
+
+        const mem = this._memorySnapshot;
+        const reg = this._registers;
+
+        const arraysStart = reg.arraysAddress;
+        const arraysEnd = reg.freeRamAddress;
+
+        const arrays = [];
+        let addr = arraysStart;
+        while (addr < arraysEnd) {
+            const basicArray = BasicState.decodeBasicArray(mem, addr);
+            addr += basicArray.size;
+            arrays.push(basicArray);
+        }
+
+        this._arrays = arrays;
+        return arrays;
+    }
+
+    static decodeBasicFloat(mem, ofs) {
+        let floatValue = null;
+
+        const e = mem[ofs];
+
+        if (e == 0x0) return 0.0;
+
+        const m4 = mem[ofs+1];
+        const m3 = mem[ofs+2];
+        const m2 = mem[ofs+3];
+        const m1 = mem[ofs+4];
+
+        let mantissaBits = ((m4 | 0x80) << 24) + (m3 << 16) + (m2 << 8) + m1;
+
+        const exponent = e - 129; // excess-128 representation
+        const sign = (m4 >= 128) ? -1.0 : 1.0
+
+        let divisor = 0x80000000;
+        let mantissa = 0.0;
+        while (divisor != 0x0 && mantissaBits != 0x0) {
+            if ((mantissaBits & 0x1) != 0x0) {
+                mantissa += 1.0 / divisor;
+            }
+            mantissaBits >>>= 1;
+            divisor >>>= 1;
+        }
+
+        floatValue = (sign * mantissa * Math.pow(2, exponent));
+
+        return floatValue;
+    }
+
+    getVectors() {
+        return this._vectors;
+    }
+
+    static decodeBasicVariableInfo(mem, ofs) {
+
+        let type = null;
+        let suffix = "";
+
+        if ((mem[ofs] & 0x80) != 0 && (mem[ofs+1] & 0x80) != 0) {
+            // integer
+            type = _VARTYPE_INTEGER;
+            suffix = "%";
+
+        } else if ((mem[ofs] & 0x80) == 0 && (mem[ofs+1] & 0x80) != 0) {
+            // string
+            type = _VARTYPE_STRING;
+            suffix = "$";
+        } else {
+            // real
+            type = _VARTYPE_FLOAT;
+        }
+
+        const name = String.fromCharCode(
+            mem[ofs]&0x7f) + ((mem[ofs+1]&0x7f) != 0x0 ? String.fromCharCode(mem[ofs+1]&0x7f) : ""
+        );
+
+        const variable = {
+            name: name,
+            type: type,
+            suffix: suffix,
+            value: null,
+            size: 2
+        }
+
+        return variable;
+
+    }
+
+    static decodeBasicString(mem, ofs) {
+        const strlen = mem[ofs];
+        const strptr = (mem[ofs+2]<<8) + mem[ofs+1];
+
+        let value = "";
+        for (let i=0; i<strlen; i++) {
+            const c = mem[strptr + i];
+            value += String.fromCharCode(c);
+        }
+
+        return value;
+
+    }
+
+    static decodeBasicVariable(mem, ofs) {
+
+        const variable = BasicState.decodeBasicVariableInfo(mem, ofs);
+        if (null == variable) return null;
+
+        let value = null;
+
+        if (variable.type == _VARTYPE_INTEGER) {
+            // int number
+            value = ((mem[ofs+2]<<8) + mem[ofs+3]).toString();
+        } else if (variable.type == _VARTYPE_FLOAT) {
+            // real number
+            value = (Math.round(BasicState.decodeBasicFloat(mem, ofs+2) * 10000000.0) / 10000000.0).toString();
+        } else if (variable.type == _VARTYPE_STRING) {
+            // string
+            value = "'" + BasicState.decodeBasicString(mem, ofs+2);
+        } else {
+            value = "";
+        }
+
+        variable.size += 5;
+        variable.value = value;
+
+        return variable;
+    }
+
+    static decodeBasicArray(mem, ofs) {
+
+        const variable = BasicState.decodeBasicVariableInfo(mem, ofs); ofs += 2;
+        if (null == variable) return null;
+
+        const offsetToNext = ((mem[ofs+1]<<8) + mem[ofs]); ofs += 2;
+        const dimensions = mem[ofs]; ofs += 1;
+
+        let elementCount = 1;
+        const sizes = [];
+        for (let i=0; i<dimensions; i++) {
+            const dimensionElementCount = (mem[ofs]<<8) + mem[ofs+1];
+            ofs += 2;
+            sizes.push(dimensionElementCount);
+            elementCount *= dimensionElementCount;
+        }
+
+        const values = [];
+
+        for (let i=0; i<elementCount; i++) {
+            if (variable.type == _VARTYPE_INTEGER) {
+                values.push(((mem[ofs]<<8) + mem[ofs+1]).toString());
+                ofs += 2;
+            } else if (variable.type == _VARTYPE_FLOAT) {
+                values.push((Math.round(BasicState.decodeBasicFloat(mem, ofs) * 10000000.0) / 10000000.0).toString());
+                ofs += 5;
+            } else if (variable.type == _VARTYPE_STRING) {
+                values.push("'" + BasicState.decodeBasicString(mem, ofs) + "'");
+                ofs += 3;
+            }
+        }
+
+        variable.size += offsetToNext - 2;
+        variable.dimensions = dimensions;
+        variable.sizes = sizes;
+        variable.elementCount = elementCount;
+        variable.values = values;
+
+        return variable;
+    }
+
+}
+
+BasicState.VARTYPE_INTEGER = _VARTYPE_INTEGER;
+BasicState.VARTYPE_FLOAT = _VARTYPE_FLOAT;
+BasicState.VARTYPE_STRING = _VARTYPE_STRING;
 
 class ChipState {
     constructor() {
@@ -416,6 +695,8 @@ class Breakpoint extends DebugAddressInfo {
         super(address, addressEnd, source, line);
         this.logMessage = logMessage;
         this.key = this.generateKey();
+        this.isBasic = false;
+        this.basicBreakpoints = null;
     }
 
     generateKey() {
@@ -641,6 +922,7 @@ module.exports = {
     Breakpoint: Breakpoint,
     Breakpoints: Breakpoints,
     ChipState: ChipState,
+    BasicState: BasicState,
     SpriteInfo: SpriteInfo,
     MemoryType: MemoryType
 }

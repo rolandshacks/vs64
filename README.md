@@ -12,12 +12,13 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 
 ## Features
 
-* Supports ACME assembler, KickAssembler, CC65 C-compiler and LLVM-MOS C/C++
+* Supports ACME assembler, KickAssembler, CC65 C-compiler, LLVM-MOS C/C++ and BASIC
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
 * Resource compiler for sprites, charsets, tiles, maps, bitmaps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, Koala Paint, PNG, SID, PCM Wave)
-* Syntax highlighting for ACME assembler files
+* BASIC to PRG compiler and debugger (original BASIC V2 and Tuned Simons Basic NEO "TSBneo")
+* Syntax highlighting for assembler and BASIC files
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
@@ -42,7 +43,6 @@ If you want to do some manual steps or adjustments, these are the individual thi
 ### Creating Projects Quickly
 
 The "Create Project" commands are a great tool to configure and re-configure a code project. Whenever such a command is issued, the current workspace will be scanned and a fresh project configuration file will be generated based on the existing source files. Afterwards, everything should be ready to build and run.
-
 
 ## Setup
 
@@ -83,6 +83,81 @@ Please make sure you updated the VS64 settings with the correct LLVM-MOS install
 
 > **Please notice:** Currently, VS64 is not able to use the debug information from the ELF output file. Plain execution of the program file in an emulation session should just work fine.
 
+### BASIC Compiler
+
+VS64 supports compiling BASIC source to binary programs.
+
+* No installation needed.
+* Support for original BASIC V2
+* Tuned Simon's BASIC (TSBneo)
+
+In order to use the basic compiler, just add your basic sources files to the "sources" list of the project file.
+
+#### Auto-Numbering
+
+The compiler adds line numbers automatically. In case a basic line does not contain a line number, it uses 'last number + 1'. Whenever static line numbers are given in the source code, automatic counters continue from there.
+
+For example:
+
+```
+10 A$="HELLO"
+PRINT A$
+50 B$="WORLD"
+PRINT B$
+
+```
+
+Will be compiled to:
+
+```
+10 A$="HELLO"
+11 PRINT A$
+50 B$="WORLD"
+51 PRINT B$
+
+```
+
+#### Use of Labels
+
+In addition to using line numbers as jump targets, the basic compiler also lets you use labels.
+
+Here's one example:
+
+```
+label1:
+    A$="HELLO"
+    PRINT A$
+    GOTO label1
+```
+
+Will be compiled to:
+
+```
+1 A$="HELLO"
+2 PRINT A$
+3 GOTO 1
+```
+
+#### PETSCII Control Characters
+
+The usage of **PETSCII control characters** is supported via the extended string control character syntax:
+
+```
+PRINT "{clr}HELLO, {green}WORLD{$21}{lightblue}"
+```
+
+A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex}, {%binary} or {0bbinary}.
+
+> **The following mnemonics are available**:
+{space}, {return}, {shift-return}, {clr}, {clear}, {home}, {del}, {inst}, {run/stop},
+{cursor right}, {crsr right}, {cursor left}, {crsr left}, {cursor down}, {crsr down}, {cursor up}, {crsr dup},
+{black}, {blk}, {white}, {wht}, {red}, {cyan}, {cyn}, {purple}, {pur}, {green}, {grn}, {blue}, {blu}, {yellow}, {yel}, {orange}, {brown}, {pink}, {light-red}, {gray1}, {darkgrey}, {grey}, {lightgreen}, {lightblue}, {grey3}, {lightgrey}, {rvs on}, {rvs off},
+{f1}, {f3}, {f5}, {f7}, {f2}, {f4}, {f6}, {f8},
+{ctrl-c}, {ctrl-e}, {ctrl-h}, {ctrl-i}, {ctrl-m}, {ctrl-n}, {ctrl-r}, {ctrl-s}, {ctrl-t}, {ctrl-q},
+{ctrl-1}, {ctrl-2}, {ctrl-3}, {ctrl-4}, {ctrl-5}, {ctrl-6}, {ctrl-7}, {ctrl-8}, {ctrl-9}, {ctrl-0}, {ctrl-/},
+{c=1}, {c=2}, {c=3}, {c=4}, {c=5}, {c=6}, {c=7}, {c=8}
+
+
 ### Resource Compilation
 
 VS64 comes with an integrated resource compiler that turns media files into plain source code to be directly referenced by the code and compiled into the binary. Currently, the supported media formats are:
@@ -108,11 +183,11 @@ In case you did a manual or custom installation, please make sure you updated th
 
 > **Please notice:** It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
 
-## Basic Usage
+## General Usage
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
 
-For details, please look at the provided example projects for ACME, CC65 or LLVM-MOS.
+For details, please look at the provided example projects for ACME, CC65, LLVM-MOS or BASIC.
 
 ### Build System
 
@@ -126,7 +201,7 @@ Support for ACME assember syntax is provided. Syntax highlighting for KickAssemb
 
 The VS64 extension is mainly controlled and configured using a per-workspace project configuration file `project-config.json`. The project config file needs to reside in the root folder of the project and needs to be in JSON format.
 
-The basic structure of the file is like this:
+The general structure of the file is like this:
 
 ```
 {
@@ -201,6 +276,20 @@ the project file using the following syntax:
 }
 ```
 
+A project file for a BASIC program could look like this:
+
+```
+{
+    "name": "basic_example",
+    "description": "Example for BASIC",
+    "toolkit": "basic",
+    "sources": [
+        "src/main.bas"
+    ]
+    ""
+}
+```
+
 > name
 
 Project name, also defines the name of the output program file `name.prg`.
@@ -215,7 +304,7 @@ Defines all used source and resource files. The build system will keep track of 
 
 > toolkit
 
-Specifies which build toolkit is used. Currently supported are "acme", "kick", "cc65" and "llvm".
+Specifies which build toolkit is used. Currently supported are "acme", "kick", "cc65", "llvm" and "basic".
 
 > machine
 
@@ -223,9 +312,11 @@ Specifies the target system which the binaries should be generated for. Default 
 
 - For ACME, this is equivalent to the "--cpu" command line setting. Currently available are: 6502, nmos6502, 6510, 65c02, r65c02, w65c02, 65816, 65ce02, 4502, m65, c64dtv2.
 
-- For LLVM, this is used to specify the configuration file. For example: machine "c64" would result in the command line flags "--config mos-c64.cfg". Currently available are: atari2600-4k, atari2600-3e, atari8, atari8-stdcart, c128, c64, vic20, cx16, pet, mega65, cpm65, nes, nes-action53, nes-cnrom, nes-gtrom, nes-mmc1, nes-mmc3, nes-nrom, nes-unrom, nes-unrom-512, osi-c1p, dodo, eater, pce, pce-cd, rpc8e, sim, 
+- For LLVM, this is used to specify the configuration file. For example: machine "c64" would result in the command line flags "--config mos-c64.cfg". Currently available are: atari2600-4k, atari2600-3e, atari8, atari8-stdcart, c128, c64, vic20, cx16, pet, mega65, cpm65, nes, nes-action53, nes-cnrom, nes-gtrom, nes-mmc1, nes-mmc3, nes-nrom, nes-unrom, nes-unrom-512, osi-c1p, dodo, eater, pce, pce-cd, rpc8e, sim,
 
 - For CC65, this is equivalent to the "-t" command line setting. Currently available are: apple2, apple2enh, atari, atarixl, atmos, c16, c64, c128, cbm510, cbm610, geos-apple, geos-cbm, lunix, lynx, nes, osic1p, pet, plus4, sim6502, sim65c02, supervision, telestrat, vic20
+
+- For BASIC, this setting is ignored.
 
 > main
 
@@ -348,7 +439,12 @@ Debugging support for the LLVM Toolkit (Elf/Dwarf):
 - Resolve global symbol table
 - General debug and type information are not handled, yet
 
-> **Please notice:** Debugging with a release build can be quite challenging. In order to enable correct behavior, use a "debug" build for debugging sessions.
+Debugging support for the BASIC Toolkit:
+- Source level debugging
+- Resolving variables (integers, real, strings) and arrays
+- BASIC interpreter states, registers and counters
+
+> **Please notice:** Debugging with a release build can be quite challenging. In order to enable correct behavior, use a "debug" build for debugging sessions (by setting the flag in the project configuration).
 
 ### Debugger Launch Configuration
 
@@ -482,6 +578,10 @@ Leave blank to use an installed Python environment or (on Windows) use the minim
 Path to Java executable. Example: `C:\Tools\jdk\bin\java`.
 Leave blank to use an installed Java Runtime / JDK environment.
 
+> VS64: Basic Compiler
+
+Path to a Python script to be used as a drop-in replacement for the VS64 BASIC compiler (bc.py).
+
 > VS64: Resource Compiler
 
 Path to a Python script to be used as a drop-in replacement for the VS64 resource compiler (rc.py).
@@ -533,6 +633,7 @@ This package includes open source from other developers and I would like to than
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net
 * Ninja build system: https://ninja-build.org
 * Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js
+* Tuned Simon's BASIC: https://github.com/godot64/TSB
 * Example of vscode debugging extension: https://github.com/microsoft/vscode-mock-debug
 * SpritePad C64 Pro: https://subchristsoftware.itch.io/spritepad-c64-pro
 * CharPad C64 Pro: https://subchristsoftware.itch.io/charpad-c64-pro

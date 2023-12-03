@@ -5,11 +5,7 @@
     "terminal.integrated.shell.windows": "cmd.exe",
     "typescript.surveys.enabled": false,
     "C_Cpp.codeAnalysis.clangTidy.path": "/home/roland/llvm-mos/bin/clang-tidy",
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "ros.distro": "humble",
     "[python]": {
-        "editor.defaultFormatter": "ms-python.python"
+        "editor.defaultFormatter": "ms-python.black-formatter"
     },
-    "python.formatting.provider": "none"
 }

@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.0 Major Update
+
+- Added support for BASIC (Commodore BASIC V2 and Tuned Simons BASIC)
+- Minor clean-up, enhancements and bug-fixes
+
 ## 2.4.8 Minor Update
 
 - Support for defining the target system/machine

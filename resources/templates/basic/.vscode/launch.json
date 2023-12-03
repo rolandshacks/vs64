@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "vice",
+            "request": "launch",
+            "name": "Launch Vice",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "type": "vice",
+            "request": "attach",
+            "name": "Attach Vice",
+            "hostname": "localhost",
+            "port": 6502,
+            "preLaunchTask": "${defaultBuildTask}"
+        }
+    ]
+}

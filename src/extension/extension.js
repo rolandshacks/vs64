@@ -32,7 +32,8 @@ const { DiagnosticProvider } = require('extension/diagnostic_provider');
 const { TaskProvider } = require('extension/task_provider');
 const { StatusBar, StatusBarNotifier, StatusBarButton } = require('extension/statusbar');
 const { DisassemblerView } = require('extension/disassembler_view');
-const { LanguageFeatureProvider } = require('language/language');
+const { LanguageServer } = require('language/language_server');
+const { LanguageFeatureProvider } = require('language/language_provider');
 
 const logger = new Logger("Extension");
 
@@ -57,8 +58,10 @@ class Extension {
         this._taskProvider = null;
         this._buildTimer = null;
         this._intellisenseConfigurationProvider = null;
+        this._languageServer = new LanguageServer();
         this._languageFeatureProvider = null;
         this._statusBar = null;
+        //this._version = extensionContext.extension.packageJSON.version;
     }
 
     isActivated() {
@@ -132,12 +135,19 @@ class Extension {
 
         { // register language feature providers
 
-            const languageFeatureProvider = new LanguageFeatureProvider(this._project);
+            const languageFeatureProvider = new LanguageFeatureProvider(this._project, this._languageServer);
 
+            // assembler
             subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerReferenceProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerDocumentSymbolProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
+
+            // BASIC
+            subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.BasicLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerReferenceProvider(Constants.BasicLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.BasicLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerDocumentSymbolProvider(Constants.BasicLanguageId, languageFeatureProvider));
 
             this._languageFeatureProvider = languageFeatureProvider;
         }
@@ -185,9 +195,13 @@ class Extension {
             thisInstance.onSave(document);
         });
 
-        // register "show welcome" command
+        // register "show welcome" command (and "getting started" alias)
         {
             subscriptions.push(vscode.commands.registerCommand("vs64.showWelcome", function() {
+                thisInstance.showWelcome(true);
+            }));
+
+            subscriptions.push(vscode.commands.registerCommand("vs64.gettingStarted", function() {
                 thisInstance.showWelcome(true);
             }));
         }
@@ -212,6 +226,9 @@ class Extension {
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectLlvm", function() {
                 thisInstance.onCommandCreateProject("llvm");
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectBasic", function() {
+                thisInstance.onCommandCreateProject("basic");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.buildProject", function() {
                 thisInstance.triggerBuild();
@@ -354,7 +371,7 @@ class Extension {
 
         const destFolder = workspaceRoot;
 
-        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.res;.raw;.spm;.spd;.ctm;.sid;.wav;";
+        const sourceExtensions = ";.cpp;.cc;.c;.s;.asm;.res;.raw;.spm;.spd;.ctm;.sid;.wav;.bas;";
         const includeExtensions = ";.hpp;.hh;.h;.inc;";
 
         let sourceFilesExist = false;
@@ -412,9 +429,9 @@ class Extension {
         s += i + '"name": "' + name + '",\n';
         s += i + '"description": "' + desc + '",\n';
         s += i + '"toolkit": "' + toolkitName + '",\n';
-        s += i + '"sources": [\n';
 
-        if (sourceFiles) {
+        if (sourceFiles && sourceFiles.length > 0) {
+            s += i + '"sources": [\n';
             let idx = 0;
             for (const sourceFile of sourceFiles) {
                 const p = sourceFile.relFilePath.replaceAll('\\', '/');
@@ -423,14 +440,16 @@ class Extension {
                 s += '\n';
                 idx++;
             }
+            s += i + '],\n';
+        } else {
+            s += i + '"sources": [],\n';
         }
 
-        s += i + '],\n';
         s += i + '"build": "debug",\n';
         s += i + '"definitions": [],\n';
-        s += i + '"includes": [\n';
 
-        if (includeFolders) {
+        if (includeFolders && includeFolders.length > 0) {
+            s += i + '"includes": [\n';
             let idx = 0;
             for (const includeFolder of includeFolders) {
                 const p = includeFolder.replaceAll('\\', '/');
@@ -439,9 +458,11 @@ class Extension {
                 s += '\n';
                 idx++;
             }
+            s += i + '],\n';
+        } else {
+            s += i + '"includes": [],\n';
         }
 
-        s += i + '],\n';
         s += i + '"args": [],\n';
         s += i + '"compiler": ""\n';
         s += '}\n';

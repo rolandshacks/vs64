@@ -245,6 +245,83 @@ class KickAssemblerInfo {
 
 }
 
+class BasicMapParser {
+
+    constructor(project, src) {
+        this.project = project;
+        this.src = src;
+
+        // dbg data
+        this.sources = [];
+        this.labels = [];
+        this.addr = [];
+    }
+
+    parse() {
+
+        const src = this.src;
+
+        let currentSource = null;
+
+        const sourceSet = new Set()
+        let fileIndex = 0;
+
+        let lines = src.split("\n").filter(s => (s.trim().length > 0));
+        for (const raw_line of lines) {
+            const line = raw_line.trim();
+            const line_items = line.split(",");
+            if (!line_items || line_items.length < 1) continue;
+            if (line_items.length == 1) {
+                currentSource = line_items[0];
+                if (!sourceSet.has(currentSource)) {
+                    sourceSet.add(currentSource);
+                    this.sources.push(currentSource);
+                    fileIndex = this.sources.length - 1;
+                } else {
+                    fileIndex = this.sources.indexOf(currentSource);
+                }
+            } else if (line_items.length >= 5 && currentSource != null) {
+
+                let i = 0;
+                const startAddr = parseInt(line_items[i++], 10);
+                const endAddr = parseInt(line_items[i++], 10);
+                const basicLine = parseInt(line_items[i++], 10);
+                const line = parseInt(line_items[i++], 10);
+                const lineLen = parseInt(line_items[i++], 10);
+
+                const addr = {
+
+                    startAddr: startAddr,
+                    endAddr: endAddr,
+                    fileIndex: fileIndex,
+                    startLine: line,
+                    startPosition: 0,
+                    endLine: line,
+                    endPosition: lineLen
+
+                };
+
+                this.addr.push(addr);
+
+                /*
+                this.labels.push({
+                    addr: startAddr,
+                    name: basicLine.toString()
+                });
+                */
+
+            }
+        }
+
+        return {
+            sources: this.sources,
+            labels: this.labels,
+            addr: this.addr
+        };
+
+    }
+}
+
 class KickDebugParser {
 
     constructor(project, src) {
@@ -1188,8 +1265,8 @@ class DebugAddressInfo {
     constructor(address, address_end, source, line) {
         this.address = address;
         this.address_end = address_end ? address_end : address;
-        this.source = path.resolve(path.normalize(source));
-        this.normalizedPath = Utils.normalizePath(source);
+        this.source = source != null ? path.resolve(path.normalize(source)) : null;
+        this.normalizedPath = source != null ? Utils.normalizePath(source) : null;
         this.line = line;
         this.globalRef = null;
         this.localRef = null;
@@ -1293,9 +1370,11 @@ class DebugInfo {
     #load(filename, project) {
 
         const toolkit = project.toolkit;
-        const debugInfoType = path.extname(filename).toLowerCase();
+        const debugInfoType = filename != null ? path.extname(filename).toLowerCase() : null;
 
-        if (debugInfoType == ".report") {
+        if (toolkit.isBasic) {
+            this.#loadBasicDebug(filename, project);
+        } else if (debugInfoType == ".report") {
             this.#loadAcmeReport(filename, project);
         } else if (debugInfoType == ".elf") {
             this.#loadElf(filename, project);
@@ -1324,6 +1403,70 @@ class DebugInfo {
         }
 
         return list;
+    }
+
+    #loadBasicDebug(filename, project) {
+        let src = null;
+
+        try {
+            src = fs.readFileSync(filename, "utf8");
+        } catch (err) {
+            if (err.code == 'ENOENT') {
+                throw("label file " + filename + " does not exist");
+            } else {
+                throw("unable to read debug database file '" + filename + "'");
+            }
+        }
+
+        const parser = new BasicMapParser(project, src);
+        const dbg = parser.parse();
+
+        if (!dbg || !dbg.sources) throw("unable to read basic source map file");
+
+        for (const entry of dbg.sources) {
+            const normalizedPath = this.#getRefName(entry);
+            this.#getOrCreateLineList(normalizedPath);
+        }
+
+        if (dbg.addr) {
+            for (const entry of dbg.addr) {
+
+                const filename = dbg.sources[entry.fileIndex];
+
+                const addressInfo = new DebugAddressInfo(
+                    entry.startAddr,
+                    entry.endAddr,
+                    filename,
+                    entry.startLine + 1
+                );
+
+                addressInfo.globalRef = this._addresses.length;
+                this._addresses.push(addressInfo);
+
+                for (let addr = addressInfo.address; addr <= addressInfo.address_end; addr++) {
+                    this._addressMap[addr] = addressInfo;
+                }
+
+                const normalizedPath = this.#getRefName(filename);
+                const currentSourceRef = this.#getOrCreateLineList(normalizedPath);
+                if (null != currentSourceRef) {
+                    addressInfo.localRef = currentSourceRef.length;
+                    addressInfo.localRefTable = currentSourceRef;
+                    currentSourceRef.push(addressInfo);
+                }
+
+            }
+        }
+
+        if (dbg.labels) {
+            for (const entry of dbg.labels) {
+                this.storeSymbol(new DebugSymbol(
+                    entry.name,
+                    entry.addr,
+                    true
+                ));
+            }
+        }
     }
 
     #loadElf(filename, _project_) {
@@ -1470,12 +1613,6 @@ class DebugInfo {
                 ));
             }
         }
-
-
-
-
-
-
     }
 
     #loadCc65Dbg(filename, project) {

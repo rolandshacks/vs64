@@ -74,7 +74,7 @@ class Application {
         this._stopped = false;
     }
 
-    async createEmulatorProcess() {
+    async #createEmulatorProcess() {
         if (this._emulatorProcess && this._emulatorProcess.alive) {
             this._emulatorProcess.kill();
         }
@@ -98,7 +98,7 @@ class Application {
 
     }
 
-    destroyEmulatorProcess() {
+    #destroyEmulatorProcess() {
         //if (KILL_VICE_PROCESS_AT_STOP) {
 
         if (this._emulator) {
@@ -123,7 +123,7 @@ class Application {
         logger.info("create emulator process");
 
         if (!attachToRunningEmulator) {
-            await this.createEmulatorProcess();
+            await this.#createEmulatorProcess();
         }
 
         const emu = new ViceConnector(this);
@@ -251,7 +251,7 @@ class Application {
     shutdown() {
         logger.info("Application.shutdown()");
 
-        this.destroyEmulatorProcess();
+        this.#destroyEmulatorProcess();
     }
 
 }
