@@ -9,6 +9,9 @@
 			"include": "#strings"
 		},
 		{
+			"include": "#strings_single"
+		},
+		{
 			"include": "#labels"
 		},
 		{
@@ -174,6 +177,22 @@
 			"name": "string.quoted.double",
 			"begin": "\"",
 			"end": "\"",
+			"patterns": [
+				{
+					"name": "string.regexp",
+					"match": "(?i){([A-Z]+)}"
+				},
+				{
+					"name": "string.regexp",
+					"match": "(?i){(\\d+)}"
+				}
+			]
+		},
+
+		"strings_single": {
+			"name": "string.quoted.single",
+			"begin": "'",
+			"end": "'",
 			"patterns": [
 				{
 					"name": "string.regexp",

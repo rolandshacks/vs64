@@ -583,7 +583,7 @@ class BasicState {
             value = (Math.round(BasicState.decodeBasicFloat(mem, ofs+2) * 10000000.0) / 10000000.0).toString();
         } else if (variable.type == _VARTYPE_STRING) {
             // string
-            value = "'" + BasicState.decodeBasicString(mem, ofs+2);
+            value = "'" + BasicState.decodeBasicString(mem, ofs+2) + "'";
         } else {
             value = "";
         }

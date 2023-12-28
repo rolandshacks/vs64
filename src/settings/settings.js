@@ -44,8 +44,9 @@ const Constants = {
     BasicFileFilter: "|bas|",
     ObjFileFilter: "|o|obj|",
     BasicInterpreterLoopRoutine: 0xa7e4,   // default adress of vector $308-309
-    BasicInterpreterBreakRoutine: 0xa84b,
+    BasicInterpreterBreakRoutine: 0xa84b,  // when END is called
     BasicInterpreterErrorRoutine: 0xa437,
+    BasicInterpreterListRoutine: 0xa69c,   // when LIST is called
     TSBInterpreterLoopRoutine: 0x80e8,
     TSBInterpreterErrorRoutine: 0x839c  // TSC modified BASIC vector at $300/$301
 };

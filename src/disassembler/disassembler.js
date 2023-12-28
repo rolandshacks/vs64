@@ -8,7 +8,7 @@ const path = require("path");
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { OpcodeTable, JumpInstructions, InstructionNames, AddressMode } = require('./opcodes');
+const { OpcodeTable, JumpInstructions, InstructionNames, AddressMode, BasicTokens, TsbBasicTokens } = require('./opcodes');
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
@@ -37,6 +37,22 @@ function int8FromBytes(dataByte) {
     return (dataByte & 0xff);
 }
 
+function charFromBytes(dataByte) {
+    return String.fromCharCode(int8FromBytes(dataByte));
+}
+
+function charFromPetsciiBytes(dataByte, lower_case) {
+
+    let b = int8FromBytes(dataByte);
+
+    if (lower_case && b >= 65 && b <= 90)
+        b += 32;
+    else if (b >= 193 && b <= 218)
+        b -= 128;
+
+    return String.fromCharCode(b);
+}
+
 function int16FromBytes(dataByteHi, dataByteLo) {
     return ((dataByteLo & 0xff) << 8) + (dataByteHi & 0xff);
 }
@@ -60,11 +76,6 @@ function _formatStr_(str, len) {
         return str.substring(0, len);
     }
     return str + SPACES.substring(0, len - str.length);
-}
-
-function petscii_to_ascii(c) {
-    // cheap implementation
-    return c;
 }
 
 class _Options_ {
@@ -103,6 +114,16 @@ class Statement {
         statement.comment = comment;
 
         return statement;
+    }
+
+    static createBasic(basic_line, basic_code) {
+        const statement = new Statement("basic");
+
+        statement.basic_line = basic_line;
+        statement.basic_code = basic_code;
+
+        return statement;
+
     }
 
     static createBuffer(addr, buffer) {
@@ -326,50 +347,123 @@ function process(binary, write) {
     let out_s = "*=$" + format16(load_address);
 
     statements.push(Statement.createMeta(out_s, "load address (" + load_address + ")"));
+    statements.push(Statement.createEmpty());
 
-    const _basic_line_ptr_ = int16FromBytes(binary[ofs], binary[ofs + 1]);
-    ofs += 2;
+    if (load_address == 0x0801) {
+        // load address is BASIC start
 
-    const basic_line_num = int16FromBytes(binary[ofs], binary[ofs + 1]);
-    ofs += 2;
+        const lower_case = true;
 
-    while (ofs < binary_size) {
-        const dummy_byte = int8FromBytes(binary[ofs]);
-        if (dummy_byte == 0x9e) break;
-        ofs += 1;
+        const specialChars = [100, 34, 58, 40, 41];
+        const operatorChars = [170, 171, 172, 173, 174, 177, 178, 179];
+
+        const tokens = [];
+        for (const item of BasicTokens) {
+            const idx = (item[1] - 0x80);
+            while (tokens.length < idx) tokens.push("");
+            tokens.push(item[0]);
+        }
+
+        const tcb_tokens = [];
+        for (const item of TsbBasicTokens) {
+            const idx = (item[1] - 1);
+            while (tcb_tokens.length < idx) tcb_tokens.push("");
+            tcb_tokens.push(item[0]);
+        }
+
+        while (ofs < binary_size) {
+
+            let output_buffer = "";
+
+            // const basic_addr = load_address + ofs - basic_ofs;
+            const basic_next_addr = int16FromBytes(binary[ofs], binary[ofs + 1]);
+            ofs += 2;
+
+            if (0x0 == basic_next_addr) break;
+
+            const basic_line_num = int16FromBytes(binary[ofs], binary[ofs + 1]);
+            ofs += 2;
+
+            // read statement
+            while (ofs < binary_size) {
+
+                const b = int8FromBytes(binary[ofs]);
+                ofs++;
+
+                if (b == 0x0) {
+                    break; // end of line
+                } else if (b >= 0x80 || specialChars.indexOf(b) != -1) {
+
+                    if (b >= 0x80) {
+                        // BASIC tokens
+
+                        const token = tokens[b-0x80];
+
+                        if (operatorChars.indexOf(b) != -1) {
+                            // # operators +-*/()...
+                            output_buffer += token;
+                            // next_char_type = char_type_operator
+
+                        } else {
+                            output_buffer += lower_case ? token.toLowerCase() : token;
+
+                            if (b == 0x8f) { // REM
+                                while (ofs < binary_size && int8FromBytes(binary[ofs]) != 0) {
+                                    output_buffer += charFromPetsciiBytes(binary[ofs], lower_case);
+                                    ofs++;
+                                }
+                            }
+
+                        }
+
+                    } else if (b == 100) {
+                        // TSB tokens
+
+                        if (ofs >= binary_size) break;
+                        let b2 = int8FromBytes(binary[ofs]);
+                        ofs++;
+
+                        if (b2 == 179) b2 = 60; // patch for CLS (??)
+                        else if (b2 == 177) b2 = 62; // patch for MAP (??)
+
+                        const token = (b2 <= tcb_tokens.length) ? tcb_tokens[b2-1] : "{UNKNOWN TOKEN:" + b2 + "}";
+
+                        output_buffer += lower_case ? token.toLowerCase() : token;
+
+                        if (b2 == 40) {
+                            output_buffer += "(";
+                        }
+
+                    } else if (b == 34) {
+
+                        output_buffer += "\"";
+
+                        while (ofs < binary_size && int8FromBytes(binary[ofs]) != 34 && int8FromBytes(binary[ofs]) != 0) {
+                            output_buffer += charFromPetsciiBytes(binary[ofs], lower_case);
+                            ofs++;
+                        }
+
+                        if (ofs < binary_size && int8FromBytes(binary[ofs]) == 34) {
+                            output_buffer += "\"";
+                            ofs++;
+                        }
+
+                    } else if (b == 40 || b == 41) { // '('
+                        output_buffer += charFromBytes(b);
+                    } else if (b == 58) { // ':'
+                        output_buffer += charFromBytes(b);
+                    }
+                } else {
+                    output_buffer += charFromPetsciiBytes(b, lower_case);
+                }
+            }
+
+            if (output_buffer.length > 0) {
+                statements.push(Statement.createBasic(basic_line_num, output_buffer));
+            }
+        }
     }
 
-    const sys_command = int8FromBytes(binary[ofs]);
-    if (sys_command != 0x9e) {
-        console.log("unexpected basic SYS command $" + format8(sys_command));
-        return;
-    }
-
-    ofs += 1;
-
-    let basic_statement = "";
-    while (ofs < binary_size) {
-        const b = binary[ofs];
-        ofs += 1;
-        if (b == 0x0) break;
-        basic_statement += String.fromCharCode(petscii_to_ascii(b));
-    }
-
-    const basic_next_line_ptr = int16FromBytes(binary[ofs], binary[ofs + 1]);
-    if (basic_next_line_ptr != 0x0) {
-        console.log("basic next line address: $" + format16(basic_next_line_ptr));
-    }
-    ofs += 2;
-
-    let byte_s = "";
-    for (let i = 2; i < ofs; i++) {
-        const b = binary[i];
-        if (i > 2) byte_s += ",";
-        byte_s += "$" + format8(b);
-    }
-
-    out_s = "!byte " + byte_s;
-    statements.push(Statement.createMeta(out_s, basic_line_num + " SYS" + basic_statement));
     statements.push(Statement.createEmpty());
 
     let buffer_index = 0;
@@ -548,7 +642,8 @@ class Html {
 
     static tag(_class, _value, _fixedWidth) {
 
-        let s = (_value||"").trim();
+        let s = "";
+        if (_value) s = _value.trim();
         if (s.length > _fixedWidth) s = s.substring(0, _fixedWidth);
         let line = "<span class='" + _class + "'>" + s + "</span>";
         if (s.length < _fixedWidth) {
@@ -598,6 +693,19 @@ class Html {
             line += Html.tag("comment", _comment);
         }
         return line;
+    }
+
+    static basic(_basic_line, _basic_code) {
+
+        //const ln = this.fixedRight(_basic_line.toString(), 5)
+        const ln = _basic_line.toString();
+
+        let line = Html.tag("basiclinenumber", ln) +
+                   Html.tag("space", "&nbsp;") +
+                   Html.tag("basicstatement", _basic_code);
+
+        return line;
+
     }
 
     static opcode(_instruction, _params, _label, _addr, _hex, _comment) {
@@ -748,6 +856,12 @@ class Disassembler {
                 const meta = statement.meta;
                 const comment = statement.comment;
                 line = Formatter.meta(meta, comment);
+                break;
+            }
+            case 'basic': {
+                const basic_line = statement.basic_line;
+                const basic_code = statement.basic_code;
+                line = Formatter.basic(basic_line, basic_code);
                 break;
             }
             case 'opcode': {

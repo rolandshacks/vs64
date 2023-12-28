@@ -158,7 +158,7 @@ class BasicParser extends ParserBase {
                 const startOfs = it.clone();
 
                 // scan whole identifier
-                while (it.ofs < len && ParserHelper.isAlpha(src.charCodeAt(it.ofs))) {
+                while (it.ofs < len && ParserHelper.isSymbolChar(src.charCodeAt(it.ofs))) {
                     id += src[it.ofs];
                     range.inc(); it.next();
                 }
@@ -325,19 +325,25 @@ class BasicParser extends ParserBase {
                     // handle DIM statement
                     const paramToken = tokens[ofs+1];
                     if (paramToken.type == TokenType.Identifier && !this._variableSet.has(paramToken.text)) {
-                        if (!this._variableSet.has(paramToken.text)) {
-                            this._variableSet.add(paramToken.text);
-                            statement = new Statement(StatementType.Definition, StatementType.VariableDefinition, paramToken, tokens, ofs, 2);
-                        }
+                        this._variableSet.add(paramToken.text);
+                        statement = new Statement(StatementType.Definition, StatementType.VariableDefinition, paramToken, tokens, ofs, 2);
                     }
                     consumed = 2;
+                } else if (count > 1 && keyword == "PROC") {
+                    // handle PROC statement
+                    const paramToken = tokens[ofs+1];
+                    if (paramToken.type == TokenType.Identifier) {
+                        statement = new Statement(StatementType.Definition, StatementType.FunctionDefinition, paramToken, tokens, ofs, 2);
+                    }
+                    consumed = 2;
+
                 } else if (count > 1 && (keyword == "GOTO" || keyword == "GOSUB" || keyword == "GO" || keyword == "GO")) {
                     // skip/handle GOTO/GOSUB label
                     // statement = new Statement(StatementType.Definition, StatementType.LabelDefinition, token, tokens, ofs, 1);
                     consumed = 2;
                 }
 
-            } else if (tokenType == TokenType.Identifier) {
+            } else if (tokenType == TokenType.Identifier && count > 1) {
                 // handle auto-define at first usage / assignment
                 if (!this._variableSet.has(tokenText)) {
                     this._variableSet.add(tokenText);

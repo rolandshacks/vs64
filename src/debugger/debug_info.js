@@ -266,13 +266,51 @@ class BasicMapParser {
         const sourceSet = new Set()
         let fileIndex = 0;
 
-        let lines = src.split("\n").filter(s => (s.trim().length > 0));
-        for (const raw_line of lines) {
-            const line = raw_line.trim();
-            const line_items = line.split(",");
-            if (!line_items || line_items.length < 1) continue;
-            if (line_items.length == 1) {
-                currentSource = line_items[0];
+        let lines = src.split("\n");
+        for (const rawLine of lines) {
+
+            let line = null;
+
+            const pos = rawLine.indexOf('#');
+            if (pos != -1) {
+                line = rawLine.substring(0, pos).trim();
+            } else {
+                line = rawLine.trim();
+            }
+
+            if (line.length < 1) continue; // skip empty line
+
+            const firstChar = line[0];
+
+            if (firstChar >= '0' && firstChar <= '9') {
+                if (currentSource == null) continue;
+
+                const lineItems = line.split(",");
+                if (lineItems.length != 5) continue;
+
+                let i = 0;
+                const startAddr = parseInt(lineItems[i++], 10);
+                const endAddr = parseInt(lineItems[i++], 10);
+                const _basicLine_ = parseInt(lineItems[i++], 10);
+                const sourceLine = parseInt(lineItems[i++], 10);
+                const lineLen = parseInt(lineItems[i++], 10);
+
+                const addr = {
+
+                    startAddr: startAddr,
+                    endAddr: endAddr,
+                    fileIndex: fileIndex,
+                    startLine: sourceLine,
+                    startPosition: 0,
+                    endLine: sourceLine,
+                    endPosition: lineLen
+
+                };
+
+                this.addr.push(addr);
+
+            } else {
+                currentSource = line;
                 if (!sourceSet.has(currentSource)) {
                     sourceSet.add(currentSource);
                     this.sources.push(currentSource);
@@ -280,36 +318,6 @@ class BasicMapParser {
                 } else {
                     fileIndex = this.sources.indexOf(currentSource);
                 }
-            } else if (line_items.length >= 5 && currentSource != null) {
-
-                let i = 0;
-                const startAddr = parseInt(line_items[i++], 10);
-                const endAddr = parseInt(line_items[i++], 10);
-                const basicLine = parseInt(line_items[i++], 10);
-                const line = parseInt(line_items[i++], 10);
-                const lineLen = parseInt(line_items[i++], 10);
-
-                const addr = {
-
-                    startAddr: startAddr,
-                    endAddr: endAddr,
-                    fileIndex: fileIndex,
-                    startLine: line,
-                    startPosition: 0,
-                    endLine: line,
-                    endPosition: lineLen
-
-                };
-
-                this.addr.push(addr);
-
-                /*
-                this.labels.push({
-                    addr: startAddr,
-                    name: basicLine.toString()
-                });
-                */
-
             }
         }
 

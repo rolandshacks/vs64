@@ -328,7 +328,7 @@ let Utils = {
             const spawnOptions = {};
 
             if (options && options.cwd) {
-                spawnOptions.cmd = options.cwd;
+                spawnOptions.cwd = options.cwd;
             }
 
             const procInfo = {

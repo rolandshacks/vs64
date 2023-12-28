@@ -9,7 +9,7 @@ from typing import Optional
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(SCRIPT_DIR)
 
-from bclib import BasicCompiler
+from bclib import CompileOptions, BasicCompiler, BasicDecompiler
 
 #############################################################################
 # Main Entry
@@ -27,13 +27,15 @@ def usage():
     print("-I, --include     : Add include directory (multiple usage possible")
     print("-o, --output      : Name of file to be generated")
     print("-u, --unpack      : Unpack a .prg into BASIC source code")
+    print("-c, --crunch      : Crunch BASIC source code")
+    print("-p, --pretty      : Make BASIC source code pretty")
     print("input             : Source files")
 
 def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvnum:I:o:", ["help", "verbose", "noext", "unpack", "map=", "include=", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvnumcp:I:o:", ["help", "verbose", "noext", "unpack", "crunch", "pretty", "map=", "include=", "output="])
     except getopt.GetoptError as err:
         print(err.msg)
         usage()
@@ -43,12 +45,9 @@ def main():
         usage()
         sys.exit(2)
 
-    output: Optional[str] = None
-    map_file: Optional[str] = None
-    verbose: bool = False
-    include_path = []
-    disable_extensions: bool = False
     unpack: bool = False
+    output: Optional[str] = None
+    options = CompileOptions()
 
     for option, arg in opts:
         if option in ("-h", "--help"):
@@ -57,24 +56,28 @@ def main():
         elif option in ("-o", "--output"):
             output = arg
         elif option in ("-m", "--map"):
-            map_file = arg
+            options.set_map_file(arg)
         elif option in ("-I", "--include"):
-            include_path.append(arg)
+            options.append_include_path(arg)
         elif option in ("-n", "--noext"):
-            disable_extensions = True
+            options.set_disable_extensions()
         elif option in ("-v", "--verbose"):
-            verbose = True
+            options.set_verbose()
+        elif option in ("-c", "--crunch"):
+            options.set_crunch()
+        elif option in ("-p", "--pretty"):
+            options.set_pretty()
         elif option in ("-u", "--unpack"):
             unpack = True
-
-    basic_compiler = BasicCompiler()
 
     err = None
 
     if unpack:
-        err = basic_compiler.unpack(args, output, verbose, disable_extensions)
+        basic_decompiler = BasicDecompiler(options)
+        err = basic_decompiler.unpack(args, output)
     else:
-        err = basic_compiler.compile(args, output, map_file, include_path, verbose, disable_extensions)
+        basic_compiler = BasicCompiler(options)
+        err = basic_compiler.compile(args, output)
 
     if err:
         print(err.to_string())

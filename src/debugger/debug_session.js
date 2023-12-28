@@ -444,6 +444,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             // break at basic interpreter end (either end of program or end command or BREAK key)
             const exitHooks = [ Constants.BasicInterpreterBreakRoutine,
                                 Constants.BasicInterpreterErrorRoutine,
+                                Constants.BasicInterpreterListRoutine,
                                 Constants.TSBInterpreterErrorRoutine ];
             for (const hookAddr of exitHooks) {
                 const exitHook = new Breakpoint(hookAddr, null, null, null);

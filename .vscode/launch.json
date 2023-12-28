@@ -40,15 +40,14 @@
             "program": "${workspaceFolder}/tools/bc.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/test/data",
             "args": [
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
-                "--verbose",
                 "--include", "${workspaceFolder}/test/data",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
                 //"${workspaceFolder}/test/temp/build/out.bas"
-                "${workspaceFolder}/test/data/main.bas"
+                "${workspaceFolder}/test/data/src/main.bas"
             ]
         },
         {
@@ -63,7 +62,8 @@
                 "--unpack",
                 "--verbose",
                 "--output", "${workspaceFolder}/test/temp/build/out.bas",
-                "D:/Temp/tsb/examples/sokoban 1.1.prg"
+                "D:/Temp/tsb/disc/loadkoa2reu.dmo"
+                //"D:/Temp/tsb/examples/sokoban 1.1.prg"
                 //"${workspaceFolder}/test/temp/build/out.prg"
             ]
         },

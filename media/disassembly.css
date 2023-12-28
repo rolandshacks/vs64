@@ -7,6 +7,14 @@
 	color: var(--vscode-editor-foreground);
 }
 
+.basicstatement {
+	font-size: var(--vscode-editor-font-size);
+	font-family: var(--vscode-editor-font-family);
+	color: var(--vscode-editor-foreground);
+	white-space: pre;
+	white-space: nowrap;
+}
+
 /* Empty */
 
 .empty {
@@ -21,6 +29,10 @@
 	user-select: none;
 	color: var(--vscode-editorLineNumber-foreground);
 	margin-right: 2.0em;
+}
+
+.basiclinenumber {
+	color: var(--vscode-editorLineNumber-foreground);
 }
 
 .linecomment {

@@ -907,11 +907,9 @@ class Project {
         if (toolkit.isBasic) {
             const bc_flags = new NinjaArgs();
 
-            /*
-            if (!releaseBuild) {
-                bc_flags.add("--debug");
+            if (releaseBuild) {
+                bc_flags.add("--crunch");
             }
-            */
 
             bc_flags.add(this._args);
             bc_flags.add(this._compilerFlags);

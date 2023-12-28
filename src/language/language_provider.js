@@ -101,6 +101,14 @@ class LanguageFeatureProvider {
                     details = statement.getTokensAsString(ofs);
                 }
 
+            } else if (definitionType == StatementType.FunctionDefinition) {
+                symbolKind = vscode.SymbolKind.Function;
+                let ofs = 2;
+                if (statement.getToken(0).type != TokenType.Identifier) ofs++;
+                if (statement.tokenCount > ofs) {
+                    details = statement.getTokensAsString(ofs);
+                }
+
             } else if (definitionType == StatementType.AddressDefinition) {
                 symbolKind = vscode.SymbolKind.Interface;
                 if (statement.tokenCount > 2) {

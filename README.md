@@ -4,15 +4,19 @@
 
 [VS64](https://github.com/rolandshacks/vs64) is an open-source extension for [Visual Studio Code](https://code.visualstudio.com).
 
-The VS64 extension makes it easy to build, debug, inspect and run C64 assembly code from Visual Studio Code. It provides deep integration for the ACME assembler and the CC65 and LLVM-MOS compilers, an integrated project and build system, a resource compiler, and support for the Visual Studio Code task and launch system.
+The VS64 extension makes it easy to develop software for the C64 using Visual Studio Code. It provides in-depth support for 6502 assemblers, C and C++ compilers and the BASIC programming language. It comes with a project and build system, compilers and converters for BASIC and resource files, and it integrates well with all the advanced features of Visual Studio Code, such as the task and launch system, debugging and introspection and language grammar and semantics support.
 
 <p align="center">
   <img src="./resources/walkthroughs/welcome.png" alt="" />
 </p>
 
-## Features
+## Features and Supported Languages/Toolkits
 
-* Supports ACME assembler, KickAssembler, CC65 C-compiler, LLVM-MOS C/C++ and BASIC
+* ACME assembler
+* KickAssembler
+* CC65 C-compiler
+* LLVM-MOS C/C++
+* BASIC V2 and Tuned Simon's BASIC
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
@@ -22,8 +26,8 @@ The VS64 extension makes it easy to build, debug, inspect and run C64 assembly c
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for VICE emulator using the binary monitor protocol
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
-* Extended introspection for 6502 cpu states and C64 custom chips state information and memory contents
-* On-the-fly disassembly of C64 program files
+* Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
+* On-the-fly disassembly of C64 program files for assembly and BASIC code
 
 ## Quick and Start (TL;DR)
 
@@ -81,8 +85,6 @@ VS64 also supports the LLVM-MOS C/C++ Compiler.
 
 Please make sure you updated the VS64 settings with the correct LLVM-MOS installation and include paths.
 
-> **Please notice:** Currently, VS64 is not able to use the debug information from the ELF output file. Plain execution of the program file in an emulation session should just work fine.
-
 ### BASIC Compiler
 
 VS64 supports compiling BASIC source to binary programs.
@@ -90,8 +92,38 @@ VS64 supports compiling BASIC source to binary programs.
 * No installation needed.
 * Support for original BASIC V2
 * Tuned Simon's BASIC (TSBneo)
+* Support for code crunching
 
-In order to use the basic compiler, just add your basic sources files to the "sources" list of the project file.
+In order to use the basic compiler, just add your BASIC source files to the "sources" list of the project file.
+
+### Crunching BASIC Code
+
+The basic compiler supports crunching of BASIC code:
+
+* Removal of spaces
+* Line number re-ordering
+* Removal of REM statements
+
+To enable this feature, just set the build mode in the project file to "release":
+
+```
+"build": "release"
+```
+
+
+### Upper/Lower Case Characters
+
+In order to use the upper/lower case character set in BASIC programs, remapping between ASCII and PETSCII character codes is needed. This is automatically done by putting strings in single quotes:
+
+For example:
+
+```
+10 PRINT 'Hello'
+```
+instead of
+```
+10 PRINT "HELLO"
+```
 
 #### Auto-Numbering
 
@@ -185,7 +217,7 @@ In case you did a manual or custom installation, please make sure you updated th
 
 ## General Usage
 
-The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler for C64 program files is provided.
+The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler and BASIC-decompiler for C64 program files is provided.
 
 For details, please look at the provided example projects for ACME, CC65, LLVM-MOS or BASIC.
 
@@ -396,6 +428,11 @@ a specific output format, where format can be 'cpp', 'cc', 'acme' or 'kick'.
     "rcFlags": "--format cpp"
 }
 ```
+
+### Disassembler and BASIC De-Compiler
+
+VS64 supports on-the-fly disassembly of .prg files containing either machine code or BASIC programs.
+In order to use it, just open a .prg file in the Visual Studio Code editor.
 
 ### IntelliSense Support
 
