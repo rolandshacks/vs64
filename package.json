@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.1",
+	"version": "2.5.2",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -24,7 +24,8 @@
 	"scripts": {
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./test/jest.config.js",
-		"coverage": "jest --coverage --runInBand --config ./test/jest.config.js"
+		"coverage": "jest --coverage --runInBand --config ./test/jest.config.js",
+		"vsix": "vsce package --no-yarn --dependencies"
 	},
 	"dependencies": {
 		"@vscode/debugadapter": "1.51.0",
@@ -35,6 +36,7 @@
 	"devDependencies": {
 		"@types/node": "^18.11.11",
 		"@types/vscode": "^1.73.0",
+		"@vscode/vsce": "^2.22.0",
 		"eslint": "^8.29.0",
 		"jest": "^29.5.0",
 		"typescript": "^3.6.2"
@@ -53,10 +55,14 @@
 		"c64",
 		"commodore",
 		"assembler",
-		"acme", "kickassembler", "llvm",
-		"c++", "cc65",
+		"acme",
+		"kickassembler",
+		"llvm",
+		"c++",
+		"cc65",
 		"basic",
-		"6502", "6510",
+		"6502",
+		"6510",
 		"vice",
 		"emulator",
 		"debugger",
@@ -265,20 +271,33 @@
 		"languages": [
 			{
 				"id": "asm",
-				"aliases": [ "6502 Assembler" ],
-				"extensions": [ ".asm", ".s" ],
+				"aliases": [
+					"6502 Assembler"
+				],
+				"extensions": [
+					".asm",
+					".s"
+				],
 				"configuration": "./language/asm.language.json"
 			},
 			{
 				"id": "bas",
-				"aliases": [ "BASIC" ],
-				"extensions": [ ".bas" ],
+				"aliases": [
+					"BASIC"
+				],
+				"extensions": [
+					".bas"
+				],
 				"configuration": "./language/bas.language.json"
 			},
 			{
 				"id": "res",
-				"aliases": [ "resource"	],
-				"extensions": [ ".res" ]
+				"aliases": [
+					"resource"
+				],
+				"extensions": [
+					".res"
+				]
 			}
 		],
 		"grammars": [
@@ -437,6 +456,19 @@
 							"Set logging level to TRACE. This is the maximum verbosity setting."
 						],
 						"description": "Set console output verbosity level"
+					},
+					"vs64.basicCharset": {
+						"type": "string",
+						"default": "big/graphics",
+						"enum": [
+							"big/graphics",
+							"small/big"
+						],
+						"enumDescriptions": [
+							"Use charset 1 with upper case and graphics characters",
+							"Use charset 2 with lower case and upper case characters"
+						],
+						"description": "Set default charset for BASIC compiler and disassembler"
 					},
 					"vs64.recursiveLabelParsing": {
 						"type": "boolean",

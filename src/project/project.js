@@ -913,6 +913,11 @@ class Project {
 
             bc_flags.add(this._args);
             bc_flags.add(this._compilerFlags);
+
+            if (settings.basicCharset == 2 && bc_flags.indexOf("--lower") == -1) {
+                bc_flags.add("--lower");
+            }
+
             bc_flags.add("--map", "\"$dbg_out\"");
 
             script.push(Ninja.keyValue("bc_exe", settings.basicCompiler));

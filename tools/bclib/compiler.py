@@ -12,11 +12,13 @@ from .common import CompileError, CompileOptions, CompileBuffer, CompileHelper
 # Basic Module
 #############################################################################
 
+
 class BasicModule:
     """Basic module."""
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, options: CompileOptions):
         self.filename = filename
+        self.options = options
 
     def read(self) -> (Optional[str], Optional[CompileError]):
         """Read module source code from file."""
@@ -29,14 +31,16 @@ class BasicModule:
 
         return data, None
 
+
 #############################################################################
 # Basic Line
 #############################################################################
 
+
 class BasicLine:
     """Basic line."""
 
-    def __init__(self, module: BasicModule, line_number: Optional[int]=None):
+    def __init__(self, module: BasicModule, line_number: Optional[int] = None):
         self.buffer = CompileBuffer()
         self.module = module
         self.line_number = line_number
@@ -77,7 +81,9 @@ class BasicLine:
 
     def get_total_size(self) -> int:
         """Get line header and code size in bytes."""
-        return self.get_code_size() + 5 # 2 (next addr) + 2 (line number) + CODE + 1 (null byte for end)
+        return (
+            self.get_code_size() + 5
+        )  # 2 (next addr) + 2 (line number) + CODE + 1 (null byte for end)
 
     def add_verbose(self, s):
         """Add verbose info."""
@@ -93,33 +99,42 @@ class BasicLine:
         """Set line number."""
         self.line_number = line_number
 
-    def store_byte(self, value, verbose: Optional[str]=None):
+    def store_byte(self, value, verbose: Optional[str] = None):
         """Store byte to buffer."""
         self.buffer.store_byte(value)
-        if verbose: self.add_verbose(verbose)
+        if verbose:
+            self.add_verbose(verbose)
 
     def peek_last_char(self):
+        """Get last char from buffer."""
         return self.buffer.peek_last_char()
 
     def drop_last_char(self):
+        """Drop last char from buffer."""
         self.buffer.drop_last_char()
-        if len(self.verbose) > 0 and self.verbose[-1] == ':':
+        if len(self.verbose) > 0 and self.verbose[-1] == ":":
             self.verbose = self.verbose[:-1]
 
-    def store_char(self, c, verbose: Optional[str]=None):
+    def store_char(self, c, verbose: Optional[str] = None):
         """Store char to buffer."""
-        self.buffer.store_char(c)
+        self.buffer.store_char(c, self.module.options.lower_case)
         self.add_verbose(verbose if verbose else c)
 
-    def store_string(self, s: str, verbose: Optional[str]=None):
+    def store_char_raw(self, c, verbose: Optional[str] = None):
+        """Store char to buffer."""
+        self.buffer.store_char_raw(c)
+        self.add_verbose(verbose if verbose else c)
+
+    def store_string(self, s: str, verbose: Optional[str] = None):
         """Store string bytes to buffer."""
-        self.buffer.store_string(s)
+        self.buffer.store_string(s, self.module.options.lower_case)
         self.add_verbose(verbose if verbose else s)
 
-    def store_word_be(self, value, verbose: Optional[str]=None):
+    def store_word_be(self, value, verbose: Optional[str] = None):
         """Store word to buffer."""
         self.buffer.store_word_be(value)
-        if verbose: self.add_verbose(verbose)
+        if verbose:
+            self.add_verbose(verbose)
 
     def to_string(self) -> str:
         """Generate string representation."""
@@ -132,9 +147,11 @@ class BasicLine:
 
         return f"{self.line_number} {self.verbose}"
 
+
 #############################################################################
 # SourceMap
 #############################################################################
+
 
 class SourceMap:
     """Debug information."""
@@ -159,6 +176,7 @@ class SourceMap:
 #############################################################################
 # Basic Program
 #############################################################################
+
 
 class BasicProgram:
     """Basic program."""
@@ -188,7 +206,8 @@ class BasicProgram:
         addr = self.start_addr
 
         for basic_line in self.get_lines():
-            if basic_line.meta: continue
+            if basic_line.meta:
+                continue
             if basic_line.is_empty():
                 print(f"skip empty line {basic_line.line_number}")
                 continue
@@ -205,13 +224,18 @@ class BasicProgram:
 
         source_file = ""
 
-        s.append("################################################################################")
+        s.append(
+            "################################################################################"
+        )
         s.append("# MAP FILE")
         s.append("# generated file: DO NOT EDIT!")
-        s.append("################################################################################")
+        s.append(
+            "################################################################################"
+        )
 
         for basic_line in self.get_lines():
-            if basic_line.meta or basic_line.is_empty(): continue
+            if basic_line.meta or basic_line.is_empty():
+                continue
 
             if source_file != basic_line.module.filename:
                 source_file = basic_line.module.filename
@@ -244,7 +268,8 @@ class BasicProgram:
 
         if filename:
             err = CompileHelper.write_textfile(filename, content)
-            if err: return err
+            if err:
+                return err
         else:
             print(content)
 
@@ -259,30 +284,33 @@ class BasicProgram:
         CompileHelper.makedirs(filename)
 
         try:
-
             with open(filename, "wb") as binary_file:
-
                 # program load address (2 bytes)
                 addr = self.start_addr
-                binary_file.write(bytearray([addr&0xff, (addr & 0xFF00) >> 8]))
+                binary_file.write(bytearray([addr & 0xFF, (addr & 0xFF00) >> 8]))
 
                 # write basic lines
                 for basic_line in self.get_lines():
-                    if basic_line.meta: continue
+                    if basic_line.meta:
+                        continue
 
                     # address of next statement (2 bytes)
                     next_addr = basic_line.next_addr
-                    binary_file.write(bytearray([next_addr&0xff, (next_addr & 0xFF00) >> 8]))
+                    binary_file.write(
+                        bytearray([next_addr & 0xFF, (next_addr & 0xFF00) >> 8])
+                    )
 
                     # line number (2 bytes)
                     line_number = basic_line.line_number
-                    binary_file.write(bytearray([line_number&0xff, (line_number & 0xFF00) >> 8]))
+                    binary_file.write(
+                        bytearray([line_number & 0xFF, (line_number & 0xFF00) >> 8])
+                    )
 
                     # interpreter code
                     binary_file.write(basic_line.get_bytes())
 
                     # end of line (1 zero-byte)
-                    binary_file.write(b'\x00')  # end of line
+                    binary_file.write(b"\x00")  # end of line
 
                 # end of program (2 zero-bytes)
                 binary_file.write(bytearray([0x0, 0x0]))
@@ -292,9 +320,11 @@ class BasicProgram:
 
         return None
 
+
 #############################################################################
 # Basic Compiler
 #############################################################################
+
 
 class BasicCompiler:
     """Basic compiler."""
@@ -314,14 +344,16 @@ class BasicCompiler:
         self.modules = None
 
         if not self.options.disable_extensions:
-            all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(Constants.TSB_TOKENS.keys())
+            all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(
+                Constants.TSB_TOKENS.keys()
+            )
             self.sorted_token_list = sorted(all_tokens, key=lambda x: -len(x))
             self.token_map = {}
             self.token_map.update(Constants.BASIC_TOKENS)
             for k, v in Constants.TSB_TOKENS.items():
-                if k in  self.token_map:
+                if k in self.token_map:
                     continue
-                if v & 0xff00:
+                if v & 0xFF00:
                     v += 0x640000
                 else:
                     v += 0x6400
@@ -331,18 +363,22 @@ class BasicCompiler:
             self.token_map = Constants.BASIC_TOKENS
 
     def compile(
-        self,
-        inputs: "list[str]",
-        output: Optional[str]
+        self, inputs: "list[str]", output: Optional[str]
     ) -> Optional[CompileError]:
         """Compile basic source and generate encoded output."""
 
         options = self.options
 
+        # backup initial options (might be changed by preprocessor)
+        initial_lower_case_settings = options.lower_case
+
         # run preprocessing steps
         err = self.preprocessor(inputs)
         if err:
             return err
+
+        # restore initial options
+        options.lower_case = initial_lower_case_settings
 
         # compile all modules
         for module in self.modules:
@@ -376,13 +412,15 @@ class BasicCompiler:
 
         self.modules = []
         self.line_number_map = {}
+        options = self.options
 
         self.last_line = 0
         for filename in inputs:
             abs_filename = os.path.abspath(filename)
-            module = BasicModule(abs_filename)
+            module = BasicModule(abs_filename, options)
             err = self.preprocess_module(module)
-            if err: return err
+            if err:
+                return err
             self.modules.append(module)
         self.last_line = 0
 
@@ -392,7 +430,8 @@ class BasicCompiler:
         """Preprocess file."""
 
         data, err = module.read()
-        if err: return err
+        if err:
+            return err
 
         line_index = -1
         for raw_line in data:
@@ -406,23 +445,28 @@ class BasicCompiler:
             if line.startswith("#"):
                 # handle preprocessor line
                 err = self.preprocess_line(module, line, line_index, True)
-                if err: return err
+                if err:
+                    return err
             else:
                 # handle BASIC line
                 self.fetch_line_info(module, line, True)
 
         return None
 
-    def preprocess_line(self, module: BasicModule, line: str, line_index: int, preprocess: bool) -> Optional[CompileError]:
+    def preprocess_line(
+        self, module: BasicModule, line: str, line_index: int, preprocess: bool
+    ) -> Optional[CompileError]:
         """Handle proprocessor statements."""
 
         program = self.program
         filename = module.filename
+        options = self.options
 
-        if line.startswith("#include"):
+        directive = CompileHelper.get_next_word(line, 1).lower()
 
+        if directive == "include":
             # handle include statement
-            include_file = line[8:].strip()
+            include_file = line[len(directive) + 1 :].strip()
             if include_file.startswith("'"):
                 include_file = include_file.strip("'")
             elif include_file.startswith('"'):
@@ -431,19 +475,31 @@ class BasicCompiler:
             # lookup file using include path
             include_file_abs = self.lookup_file(include_file, os.path.dirname(filename))
             if not include_file_abs:
-                return CompileError(filename, f"include file not found '{include_file}'", line_index)
+                return CompileError(
+                    filename, f"include file not found '{include_file}'", line_index
+                )
 
-            included_module = BasicModule(include_file_abs)
+            included_module = BasicModule(include_file_abs, options)
 
             if preprocess:
                 # in preprocessing mode
                 err = self.preprocess_module(included_module)
-                if err: return err
+                if err:
+                    return err
             else:
                 # in compilation mode
                 program.add_meta(module, f'#include "{included_module.filename}"')
                 err = self.compile_module(included_module)
-                if err: return err
+                if err:
+                    return err
+
+        elif directive == "upper" or directive == "uppercase" or directive == "cset0":
+            # switch compiler text mode to upper case / PETSCII
+            options.lower_case = False
+
+        elif directive == "lower" or directive == "lowercase" or directive == "cset1":
+            # switch compiler text mode to lower/upper case
+            options.lower_case = True
 
         else:
             # ignore comments or unknown preprocessor statement
@@ -458,7 +514,8 @@ class BasicCompiler:
         program = self.program
 
         data, err = module.read()
-        if err: return err
+        if err:
+            return err
 
         line_index = -1
         for raw_line in data:
@@ -472,12 +529,14 @@ class BasicCompiler:
             if line.startswith("#"):
                 # handle preprocessor commands or comments
                 err = self.preprocess_line(module, line, line_index, False)
-                if err: return err
+                if err:
+                    return err
 
             else:
                 # handle BASIC line
                 (basic_line, err) = self.compile_line(module, line, line_index)
-                if err: return err
+                if err:
+                    return err
 
                 if basic_line:
                     basic_line.set_source_line(line)
@@ -487,7 +546,6 @@ class BasicCompiler:
     def compile_line(self, module: BasicModule, line: str, line_index: int):
         """Compile a single basic line of source code."""
 
-        verbose = self.options.verbose
         crunch = self.options.crunch
 
         # parse line number or label from line
@@ -503,7 +561,6 @@ class BasicCompiler:
         last_was_whitespace = True
 
         while ofs < len(line):
-
             c = line[ofs]
             current_char = c
 
@@ -520,18 +577,20 @@ class BasicCompiler:
             elif c == ":":
                 # handle statement separator ':'
                 last_was_jump = 0x0
-                if not crunch or (not basic_line.is_empty() and not basic_line.peek_last_char() == ':'):
+                if not crunch or (
+                    not basic_line.is_empty() and not basic_line.peek_last_char() == ":"
+                ):
                     basic_line.store_char(c)
 
                 ofs += 1
 
-            elif c == '"' or c == '\'':
+            elif c == '"' or c == "'":
                 # handle double quoted strings
 
                 quote_char = c
 
                 # single quote: convert upper/lowercase
-                switch_charset = (quote_char == '\'')
+                raw_mode = quote_char == "'"
                 basic_line.store_char('"')
                 ofs += 1
 
@@ -557,30 +616,25 @@ class BasicCompiler:
                                     control_char = int(control[2:], 2)
                                 else:
                                     control_char = (
-                                        int(control)
-                                        if control.isdigit()
-                                        else None
+                                        int(control) if control.isdigit() else None
                                     )
                             except ValueError:
                                 control_char = None
 
                             if not control_char:
-                                control_char = Constants.CONTROL_TOKENS.get(
-                                    control.lower()
-                                )
+                                control_char = Constants.CONTROL_TOKENS.get(control.lower())
                                 if not control_char:
-                                    control_char = 63   # '?' if unknown control sequence
+                                    control_char = 63  # '?' if unknown control sequence
 
-                            basic_line.store_string(chr(control_char), f"{{{control_char}}}")
+                            basic_line.store_byte(control_char, f"{{{control_char}}}")
+
                     else:
+                        # store string characters
                         c = line[ofs]
-                        if switch_charset:
-                            if c >= 'A' and c <= 'Z':
-                                c = chr(ord(c) + 32)
-                            elif c >= 'a' and c <= 'z':
-                                c = chr(ord(c) - 32)
-
-                        basic_line.store_char(c, line[ofs])
+                        if raw_mode:
+                            basic_line.store_char_raw(c, line[ofs])
+                        else:
+                            basic_line.store_char(c, line[ofs])
                         ofs += 1
 
                 if ofs < len(line) and line[ofs] == quote_char:
@@ -595,7 +649,9 @@ class BasicCompiler:
             elif last_was_jump != 0x0 and self.is_label_char(c):
                 # handle label after jump
                 label = ""
-                while ofs < len(line) and (self.is_label_char(c) or self.is_numeric_char(c)):
+                while ofs < len(line) and (
+                    self.is_label_char(c) or self.is_numeric_char(c)
+                ):
                     label += c
                     ofs += 1
                     if ofs < len(line):
@@ -616,7 +672,9 @@ class BasicCompiler:
                             0,
                             None,
                             CompileError(
-                                module.filename, f"undefined label '{label}'", line_index
+                                module.filename,
+                                f"undefined label '{label}'",
+                                line_index,
                             ),
                         )
 
@@ -634,17 +692,17 @@ class BasicCompiler:
 
                 basic_line.store_string(str(mapped_line_number))
 
-            else: # scan BASIC token
+            else:  # scan BASIC token
                 token, token_id, token_len = self.peek_token(line, ofs)
                 if token:
                     token_skipped = False
 
-                    if token_id & 0xff0000:
+                    if token_id & 0xFF0000:
                         # 3-byte token (TSB extensions)
-                        basic_line.store_byte((token_id&0xff0000)>>16)
-                        basic_line.store_byte((token_id&0xff00)>>8)
-                        basic_line.store_byte(token_id&0xff)
-                    elif token_id & 0xff00:
+                        basic_line.store_byte((token_id & 0xFF0000) >> 16)
+                        basic_line.store_byte((token_id & 0xFF00) >> 8)
+                        basic_line.store_byte(token_id & 0xFF)
+                    elif token_id & 0xFF00:
                         if token_id == 0x6428:
                             # special case 'AT(' because bracket needs to follow,
                             # but BASIC interpreter generates one automatically
@@ -654,7 +712,7 @@ class BasicCompiler:
                             basic_line.store_word_be(token_id)
                     else:
                         # 1-byte token (BASIC V2 originals)
-                        if not crunch or token_id != 0x8f: # ignore REM when crunching
+                        if not crunch or token_id != 0x8F:  # ignore REM when crunching
                             basic_line.store_byte(token_id)
                         else:
                             token_skipped = True
@@ -681,23 +739,30 @@ class BasicCompiler:
 
                 else:
                     # no token
-                    if c != "," and not self.is_numeric_char(c): last_was_jump = 0x0
-                    if c >= 'a' and c <= 'z': c = c.upper()
+                    if c != "," and not self.is_numeric_char(c):
+                        last_was_jump = 0x0
+
+                    # make sure code and variable names are using the right case
+                    if self.options.lower_case and c >= "A" and c <= "Z":
+                        c = c.lower()
+                    elif (not self.options.lower_case) and c >= "a" and c <= "z":
+                        c = c.upper()
+
                     basic_line.store_char(c)
                     ofs += 1
 
-            last_was_whitespace = (current_char == ' ')
+            last_was_whitespace = current_char == " "
 
-        while basic_line.peek_last_char() == ':':
+        while basic_line.peek_last_char() == ":":
             basic_line.drop_last_char()
 
         if crunch and basic_line.is_empty():
-            # TODO: re-number in case crunching eliminated referenced lines
-            basic_line.store_byte(0x8f, "REM")
+            # to be done: re-number in case crunching eliminated referenced lines
+            basic_line.store_byte(0x8F, "REM")
 
         return (basic_line, None)
 
-    def fetch_line_info(self, module: BasicModule, line: str, preprocess: bool):
+    def fetch_line_info(self, _module_: BasicModule, line: str, preprocess: bool):
         """Fetch line number from basic line"""
 
         line_number = 0
@@ -753,8 +818,8 @@ class BasicCompiler:
 
         return (line_number, label, ofs)
 
-    def map_line_number(self, module: BasicModule, number: int) -> int:
-        """"Map line number to crunched line number."""
+    def map_line_number(self, _module_: BasicModule, number: int) -> int:
+        """ "Map line number to crunched line number."""
 
         crunch = self.options.crunch
         if not crunch:
@@ -796,8 +861,8 @@ class BasicCompiler:
 
         uppercase_text = text.upper()
 
-        if text[ofs] == '?':
-            return ('?', 0x99, 1)
+        if text[ofs] == "?":
+            return ("?", 0x99, 1)
 
         for k in self.sorted_token_list:
             if len(k) >= 2:

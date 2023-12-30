@@ -1,8 +1,13 @@
-10 : goto 1234 :::: REM *****
-20 rem *****
-1000 print "A"
+#lower
 
-#include "src/include.bas"
+rem "* Hello, World!"
 
-1500 print "B"
-2000 list
+start:
+    print "{CLR}{LOWER}"
+    a$ = "{YELLOW}Hello, {GREEN}world!{WHITE}"
+    b$ = '{YELLOW}Hello, {GREEN}world!{WHITE}'
+
+main:
+    print A$
+    print B$
+    list

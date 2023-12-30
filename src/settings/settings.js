@@ -43,12 +43,15 @@ const Constants = {
     AsmFileFilter: "|s|asm|",
     BasicFileFilter: "|bas|",
     ObjFileFilter: "|o|obj|",
-    BasicInterpreterLoopRoutine: 0xa7e4,   // default adress of vector $308-309
-    BasicInterpreterBreakRoutine: 0xa84b,  // when END is called
+    BasicInterpreterLoopRoutine: 0xa7e4,    // default adress of vector $308-309
+    BasicInterpreterBreakRoutine: 0xa84b,   // when END is called
     BasicInterpreterErrorRoutine: 0xa437,
-    BasicInterpreterListRoutine: 0xa69c,   // when LIST is called
+    BasicInterpreterListRoutine: 0xa69c,    // when LIST is called
     TSBInterpreterLoopRoutine: 0x80e8,
-    TSBInterpreterErrorRoutine: 0x839c  // TSC modified BASIC vector at $300/$301
+    TSBInterpreterErrorRoutine: 0x839c,     // TSC modified BASIC vector at $300/$301
+    BasicCharset1: "big/graphics",          // used in settings
+    BasicCharset2: "small/big"              // used in settings
+
 };
 
 const AnsiColors = {
@@ -147,6 +150,7 @@ class Settings {
         this.showWelcome = true;
         this.resourceCompiler = null;
         this.basicCompiler = null;
+        this.basicCharset = null;
     }
 
     disableWelcome(workspaceConfig) {
@@ -207,6 +211,9 @@ class Settings {
         } else {
             this.basicCompiler = path.resolve(this.extensionPath, "tools", "bc.py");
         }
+
+        const basicCharsetName = workspaceConfig.get("vs64.basicCharset")||Constants.BasicCharset1;
+        this.basicCharset = basicCharsetName == Constants.BasicCharset2 ? 2 : 1;
     }
 
     setupNinja(workspaceConfig) {

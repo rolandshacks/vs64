@@ -23,6 +23,7 @@ def usage():
     print("-h, --help        . show this help")
     print("-v, --verbose     : Verbose output")
     print("-n, --noext       : Disable BASIC extensions")
+    print("-l, --lower       : Enable lower-case mode")
     print("-m, --map         : Name of source map file to be generated")
     print("-I, --include     : Add include directory (multiple usage possible")
     print("-o, --output      : Name of file to be generated")
@@ -35,7 +36,7 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvnumcp:I:o:", ["help", "verbose", "noext", "unpack", "crunch", "pretty", "map=", "include=", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvnlumcp:I:o:", ["help", "verbose", "noext", "lower", "unpack", "crunch", "pretty", "map=", "include=", "output="])
     except getopt.GetoptError as err:
         print(err.msg)
         usage()
@@ -67,6 +68,8 @@ def main():
             options.set_crunch()
         elif option in ("-p", "--pretty"):
             options.set_pretty()
+        elif option in ("-l", "--lower"):
+            options.set_lower_case()
         elif option in ("-u", "--unpack"):
             unpack = True
 

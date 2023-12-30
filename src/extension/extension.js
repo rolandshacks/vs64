@@ -256,7 +256,7 @@ class Extension {
 
         // register disassembler editors / views
         {
-            const editorProvider = new DisassemblerView(extensionContext);
+            const editorProvider = new DisassemblerView(extensionContext, this._settings);
             subscriptions.push(vscode.window.registerCustomEditorProvider(
                 "vs64.prg",
                 editorProvider,

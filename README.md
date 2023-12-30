@@ -111,18 +111,40 @@ To enable this feature, just set the build mode in the project file to "release"
 ```
 
 
-### Upper/Lower Case Characters
+### Upper/Lower Case Character Set
 
-In order to use the upper/lower case character set in BASIC programs, remapping between ASCII and PETSCII character codes is needed. This is automatically done by putting strings in single quotes:
+In order to properly use the different ROM character sets in BASIC programs, remapping of upper/lower case character codes is needed. This can be achieved in two different ways:
 
-For example:
+- opening the settings and specify the default charset the for the BASIC compiler and de-compiler to be either `big/graphics` for the character set 1 (default), or `small/big` for the character set 2.
+- adding the build flag `--lower` to toggle between upper and lower case characters, which will override the default settings.
+- using the preprocessor directives `#lowercase` (aliases are `#lower` and `#cset1`) or `#uppercase` (aliases are `#upper` and `#cset0`), which will override both project settings as well as workspace settings.
+
+> **Info**: Use `POKE 53272,23` or `PRINT "{lower}"` to actually switch to the upper/lower case charset, and use `POKE 53272,21` or `PRINT "{upper}"` to switch back to the default charset.
+
+Example of properly using the upper/lower case character set in source code:
 
 ```
-10 PRINT 'Hello'
+#lowercase
+10 print "{lower}"
+20 rem "* AaBbZz *"
+30 print "AaBbZz"
 ```
-instead of
+
+Example of BASIC compiler flags in the project file instead of the `#lowercase` preprocessor directive:
+
 ```
-10 PRINT "HELLO"
+"args": ["--lower"]
+```
+
+#### Raw Strings
+
+In order to use characters without upper/lower case conversion, use single quoted raw strings:
+
+```
+#uppercase
+10 PRINT "{upper}"
+20 PRINT "HELLO"
+30 PRINT 'Hello'
 ```
 
 #### Auto-Numbering
@@ -136,7 +158,6 @@ For example:
 PRINT A$
 50 B$="WORLD"
 PRINT B$
-
 ```
 
 Will be compiled to:
@@ -146,7 +167,6 @@ Will be compiled to:
 11 PRINT A$
 50 B$="WORLD"
 51 PRINT B$
-
 ```
 
 #### Use of Labels
@@ -172,7 +192,7 @@ Will be compiled to:
 
 #### PETSCII Control Characters
 
-The usage of **PETSCII control characters** is supported via the extended string control character syntax:
+The usage of PETSCII control characters is supported via the extended string control character syntax:
 
 ```
 PRINT "{clr}HELLO, {green}WORLD{$21}{lightblue}"
@@ -183,12 +203,12 @@ A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex
 > **The following mnemonics are available**:
 {space}, {return}, {shift-return}, {clr}, {clear}, {home}, {del}, {inst}, {run/stop},
 {cursor right}, {crsr right}, {cursor left}, {crsr left}, {cursor down}, {crsr down}, {cursor up}, {crsr dup},
+{uppercase}, {upper}, {cset1}, {lowercase}, {lower}, {cset0},
 {black}, {blk}, {white}, {wht}, {red}, {cyan}, {cyn}, {purple}, {pur}, {green}, {grn}, {blue}, {blu}, {yellow}, {yel}, {orange}, {brown}, {pink}, {light-red}, {gray1}, {darkgrey}, {grey}, {lightgreen}, {lightblue}, {grey3}, {lightgrey}, {rvs on}, {rvs off},
 {f1}, {f3}, {f5}, {f7}, {f2}, {f4}, {f6}, {f8},
 {ctrl-c}, {ctrl-e}, {ctrl-h}, {ctrl-i}, {ctrl-m}, {ctrl-n}, {ctrl-r}, {ctrl-s}, {ctrl-t}, {ctrl-q},
 {ctrl-1}, {ctrl-2}, {ctrl-3}, {ctrl-4}, {ctrl-5}, {ctrl-6}, {ctrl-7}, {ctrl-8}, {ctrl-9}, {ctrl-0}, {ctrl-/},
 {c=1}, {c=2}, {c=3}, {c=4}, {c=5}, {c=6}, {c=7}, {c=8}
-
 
 ### Resource Compilation
 
@@ -293,7 +313,7 @@ A project file for CC65 could like like this:
 }
 ```
 
-To specify resource compiler flags and options, add a section "resources" to
+To specify resource compiler flags and options, add a section `"resources"` to
 the project file using the following syntax:
 
 ```
@@ -317,7 +337,8 @@ A project file for a BASIC program could look like this:
     "toolkit": "basic",
     "sources": [
         "src/main.bas"
-    ]
+    ],
+    "args": ["--lower"]
     ""
 }
 ```
@@ -336,17 +357,17 @@ Defines all used source and resource files. The build system will keep track of 
 
 > toolkit
 
-Specifies which build toolkit is used. Currently supported are "acme", "kick", "cc65", "llvm" and "basic".
+Specifies which build toolkit is used. Currently supported are `"acme"`, `"kick"`, `"cc65"`, `"llvm"` and `"basic"`.
 
 > machine
 
 Specifies the target system which the binaries should be generated for. Default is the C64, possible settings are dependent on the used toolkit.
 
-- For ACME, this is equivalent to the "--cpu" command line setting. Currently available are: 6502, nmos6502, 6510, 65c02, r65c02, w65c02, 65816, 65ce02, 4502, m65, c64dtv2.
+- For ACME, this is equivalent to the `"--cpu"` command line setting. Currently available are: 6502, nmos6502, 6510, 65c02, r65c02, w65c02, 65816, 65ce02, 4502, m65, c64dtv2.
 
 - For LLVM, this is used to specify the configuration file. For example: machine "c64" would result in the command line flags "--config mos-c64.cfg". Currently available are: atari2600-4k, atari2600-3e, atari8, atari8-stdcart, c128, c64, vic20, cx16, pet, mega65, cpm65, nes, nes-action53, nes-cnrom, nes-gtrom, nes-mmc1, nes-mmc3, nes-nrom, nes-unrom, nes-unrom-512, osi-c1p, dodo, eater, pce, pce-cd, rpc8e, sim,
 
-- For CC65, this is equivalent to the "-t" command line setting. Currently available are: apple2, apple2enh, atari, atarixl, atmos, c16, c64, c128, cbm510, cbm610, geos-apple, geos-cbm, lunix, lynx, nes, osic1p, pet, plus4, sim6502, sim65c02, supervision, telestrat, vic20
+- For CC65, this is equivalent to the `"-t"` command line setting. Currently available are: apple2, apple2enh, atari, atarixl, atmos, c16, c64, c128, cbm510, cbm610, geos-apple, geos-cbm, lunix, lynx, nes, osic1p, pet, plus4, sim6502, sim65c02, supervision, telestrat, vic20
 
 - For BASIC, this setting is ignored.
 
@@ -356,7 +377,7 @@ Can be used instead of 'sources' in simple projects. Defines the main source fil
 
 > build
 
-Defines either a "release" or "debug" build. Debug builds are the default if not specified.
+Defines either a `"release"` or `"debug"` build. Debug builds are the default if not specified.
 
 > definitions
 
@@ -419,8 +440,7 @@ Example:
 
 >rcFlags
 
-Optional arguments to be added to the resource compiler command. Use this to force the resource compiler to produce
-a specific output format, where format can be 'cpp', 'cc', 'acme' or 'kick'.
+Optional arguments to be added to the resource compiler command. Use this to force the resource compiler to produce a specific output format, where format can be `'cpp'`, `'cc'`, `'acme'` or `'kick'`.
 
 ```
 {
@@ -432,7 +452,7 @@ a specific output format, where format can be 'cpp', 'cc', 'acme' or 'kick'.
 ### Disassembler and BASIC De-Compiler
 
 VS64 supports on-the-fly disassembly of .prg files containing either machine code or BASIC programs.
-In order to use it, just open a .prg file in the Visual Studio Code editor.
+In order to use it, just open a `.prg` file in the Visual Studio Code editor.
 
 ### IntelliSense Support
 
@@ -481,7 +501,7 @@ Debugging support for the BASIC Toolkit:
 - Resolving variables (integers, real, strings) and arrays
 - BASIC interpreter states, registers and counters
 
-> **Please notice:** Debugging with a release build can be quite challenging. In order to enable correct behavior, use a "debug" build for debugging sessions (by setting the flag in the project configuration).
+> **Please notice:** Debugging with a release build can be quite challenging. In order to enable correct behavior, use a `"debug"` build for debugging sessions (by setting the flag in the project configuration).
 
 ### Debugger Launch Configuration
 
@@ -642,6 +662,10 @@ Additional emulator command line options.
 > VS64: Log Level
 
 Set console output verbosity level (error, warn, info, debug, trace).
+
+> VS64: BASIC Charset
+
+Set default charset for the BASIC compiler and disassembler ("big/graphics" for character set 1, or "small/big" for character set 2).
 
 > VS64: Recursive Label Parsing
 

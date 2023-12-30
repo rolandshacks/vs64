@@ -42,12 +42,13 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/test/data",
             "args": [
+                "--verbose",
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
                 "--include", "${workspaceFolder}/test/data",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
                 //"${workspaceFolder}/test/temp/build/out.bas"
-                "${workspaceFolder}/test/data/src/main.bas"
+                "${workspaceFolder}/test/data/main.bas"
             ]
         },
         {

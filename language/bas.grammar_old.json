@@ -1,0 +1,231 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Commodore BASIC V2",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#strings_single"
+		},
+		{
+			"include": "#labels"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#numbers"
+		},
+		{
+			"include": "#variables"
+		},
+		{
+			"include": "#extended"
+		}
+	],
+
+	"repository": {
+
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.rem",
+					"begin": "(?i)\\s*REM",
+					"end": "$",
+					"comment": "Single line comment"
+				},
+				{
+					"name": "meta.preprocessor",
+					"begin": "#include",
+					"end": "$",
+					"comment": "Include statement"
+				},
+				{
+					"name": "comment.line",
+					"begin": "#",
+					"end": "$",
+					"comment": "Single line comment"
+				}
+			]
+		},
+
+		"labels": {
+			"patterns": [
+				{
+					"name": "emphasis",
+					"match": "(?i)^\\s*(\\d+)",
+					"comment": "line number"
+				},
+				{
+					"name": "emphasis",
+					"match": "(?i)^\\s*([A-Z|_]\\w*)\\:",
+					"comment": "label"
+				},
+				{
+					"comment": "exception for THEN expression with variable assignment",
+					"match": "\\s*(tH|(?i)THEN)\\s*((?i)IF)?\\s*([A-Z|a-z|_]\\w*[$%]?)\\s*[=<>\\!]",
+					"captures": {
+						"1": {
+							"name": "keyword.control"
+						},
+						"2": {
+							"name": "keyword.control"
+						},
+						"3": {
+							"name": "variable.other"
+						}
+					 }
+				},
+				{
+					"match": "\\s*(gO|goS|tH|(?i)GOSUB|GOTO|THEN|GO\\s+TO)\\s*((?i)IF)?\\s*([A-Z|a-z|_]\\w*)",
+					"captures": {
+						"1": {
+							"name": "keyword.control"
+						},
+						"2": {
+							"name": "keyword.control"
+						},
+						"3": {
+							"name": "emphasis"
+						}
+					 }
+				},
+				{
+					"match": "\\s*(gO|goS|tH|(?i)GOSUB|GOTO|THEN|GO\\s+TO)\\s*((?i)IF)?\\s*(\\d+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control"
+						},
+						"2": {
+							"name": "keyword.control"
+						},
+						"3": {
+							"name": "emphasis"
+						}
+					 }
+				}
+			]
+		},
+
+		"keywords": {
+			"patterns": [
+				{
+					"name": "support.function.numeric",
+					"match": "(?i)\\s*\\b(AND|OR|NOT)\\b"
+				},
+				{
+					"name": "keyword.instructions.general",
+					"match": "(?i)\\s*(RESTORE|INPUT#|PRINT#|VERIFY|CLOSE|INPUT|PRINT|SAVE|CONT|OPEN|STOP|POKE|STEP|DATA|READ|LIST|LOAD|WAIT|GET#|RUN|CLR|CMD|SYS|DEF|DIM|LET|GET|NEW|SUB|TO|ON|FN)"
+				},
+				{
+					"name": "keyword.instructions.general.tcb",
+					"match": "(?i)\\s*(ENVELOPE|END\\sPROC|END\\sLOOP|ON\\sERROR|NO\\sERROR|GRAPHICS|RENUMBER|MOB\\sSET|DISABLE|RETRACE|RLOCMOB|BCKGNDS|LOW\\sCOL|DISPLAY|HI\\sCOL|RIGHTB|RIGHTW|COLOUR|BFLASH|REPEAT|CENTRE|GLOBAL|ON\\sKEY|RESUME|SECURE|DISAPA|CIRCLE|OPTION|INSERT|DESIGN|HRDCPY|DETECT|HIRES|BLOCK|PLACE|LEFTW|LEFTB|DOWNB|DOWNW|MULTI|MUSIC|FLASH|CGOTO|FETCH|UNTIL|RESET|DELAY|LOCAL|RCOMP|TRACE|INKEY|SOUND|PAUSE|SCRSV|SCRLD|PAINT|MERGE|CHECK|ERROR|PLOT|LINE|FCHR|FCOL|FILL|DRAW|CHAR|MOVE|MMOB|PLAY|WAVE|PROC|CALL|EXEC|EXIT|LOOP|ELSE|PAGE|DUMP|FIND|AUTO|INST|TEST|PENX|PENY|CMOB|ANGL|COLD|TEXT|CSET|DISK|COPY|REC|ROT|INV|UPB|UPW|USE|CLS|MAP|DIR|OLD|JOY|DUP|LIN|POT|NRM|MOB|OFF|ARC|VOL|KEY|MEM|OUT|DO|AT|X!|D!)"
+				},
+				{
+					"name": "keyword.instructions.general.abbr",
+					"match": "\\s*(cL|cM|cO|dA|dE|dI|gE|iN|lE|lI|lO|oP|pO|pR|rE|reS|rU|sA|sT|sU|sY|tO|vE|wA|\\?)"
+				},
+				{
+					"name": "keyword.control",
+					"match": "(?i)\\s*(RETURN|GOSUB|GOTO|GO\\s+TO|THEN|NEXT|STEP|END|FOR|IF)"
+				},
+				{
+					"name": "keyword.control.abbr",
+					"match": "\\s*(rE|reS|gO|goS|eN|tH|fO|nE|stE)"
+				},
+				{
+					"name": "support.function.numeric",
+					"match": "(?i)\\s*(ABS|PEEK|ASC|POS|ATN|RND|COS|SGN|EXP|SIN|SQR|FRE|TAN|INT|USR|LEN|VAL|LOG)\\b"
+				},
+				{
+					"name": "support.function.numeric.tcb",
+					"match": "(?i)\\s*(EXOR|DIV|MOD|FRAC)\\b"
+				},
+				{
+					"name": "support.function.string",
+					"match": "(?i)\\s*(CHR\\$|LEFT\\$|MID\\$|RIGHT\\$|STR\\$)"
+				},
+				{
+					"name": "support.function.string",
+					"match": "(?i)\\s*(\\$\\$|%%|NRM)"
+				},
+				{
+					"name": "support.function.output",
+					"match": "(?i)\\s*(SPC|TAB)\\("
+				},
+				{
+					"name": "support.variables",
+					"match": "(?i)\\s*(ST|TI|TI\\$)\\b"
+				}
+			]
+		},
+
+		"variables": {
+			"patterns": [
+				{
+					"name": "variable.other",
+					"match": "(?i)\\s*([A-Z]+[$%]?)\\b"
+				}
+			]
+		},
+
+		"strings": {
+			"name": "string.quoted.double",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "string.regexp",
+					"match": "(?i){([A-Z]+)}"
+				},
+				{
+					"name": "string.regexp",
+					"match": "(?i){(\\d+)}"
+				}
+			]
+		},
+
+		"strings_single": {
+			"name": "string.quoted.single",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "string.regexp",
+					"match": "(?i){([A-Z]+)}"
+				},
+				{
+					"name": "string.regexp",
+					"match": "(?i){(\\d+)}"
+				}
+			]
+		},
+
+		"numbers": {
+			"patterns": [
+				{
+					"name": "constant.numeric",
+					"match": "(\\d+|\\$[0-9a-fA-F]+|%[01])",
+					"comment": "constant.numeric"
+				}
+			]
+		},
+
+		"extended": {
+			"patterns": [
+				{
+					"name": "string.unquoted",
+					"match": "(\\@([.A-Da-d]{24}|[.A-Da-d]{12}|[.A-Da-d]{8}|[.A-Da-d]{4}))",
+					"comment": "design bitmask for TSB"
+				}
+			]
+		}
+
+
+	},
+	"scopeName": "source.bas"
+}

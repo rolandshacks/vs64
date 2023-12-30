@@ -40,9 +40,9 @@
 				},
 				{
 					"name": "meta.preprocessor",
-					"begin": "#include",
+					"begin": "#\\s*(include|lowercase|lower|uppercase|upper|cset0|cset1)\\b",
 					"end": "$",
-					"comment": "Include statement"
+					"comment": "preprocessor directives"
 				},
 				{
 					"name": "comment.line",
@@ -64,49 +64,6 @@
 					"name": "emphasis",
 					"match": "(?i)^\\s*([A-Z|_]\\w*)\\:",
 					"comment": "label"
-				},
-				{
-					"comment": "exception for THEN expression with variable assignment",
-					"match": "\\s*(tH|(?i)THEN)\\s*((?i)IF)?\\s*([A-Z|a-z|_]\\w*[$%]?)\\s*[=<>\\!]",
-					"captures": {
-						"1": {
-							"name": "keyword.control"
-						},
-						"2": {
-							"name": "keyword.control"
-						},
-						"3": {
-							"name": "variable.other"
-						}
-					 }
-				},
-				{
-					"match": "\\s*(gO|goS|tH|(?i)GOSUB|GOTO|THEN|GO\\s+TO)\\s*((?i)IF)?\\s*([A-Z|a-z|_]\\w*)",
-					"captures": {
-						"1": {
-							"name": "keyword.control"
-						},
-						"2": {
-							"name": "keyword.control"
-						},
-						"3": {
-							"name": "emphasis"
-						}
-					 }
-				},
-				{
-					"match": "\\s*(gO|goS|tH|(?i)GOSUB|GOTO|THEN|GO\\s+TO)\\s*((?i)IF)?\\s*(\\d+)",
-					"captures": {
-						"1": {
-							"name": "keyword.control"
-						},
-						"2": {
-							"name": "keyword.control"
-						},
-						"3": {
-							"name": "emphasis"
-						}
-					 }
 				}
 			]
 		},
@@ -114,52 +71,28 @@
 		"keywords": {
 			"patterns": [
 				{
-					"name": "support.function.numeric",
-					"match": "(?i)\\s*\\b(AND|OR|NOT)\\b"
-				},
-				{
-					"name": "keyword.instructions.general",
-					"match": "(?i)\\s*(RESTORE|INPUT#|PRINT#|VERIFY|CLOSE|INPUT|PRINT|SAVE|CONT|OPEN|STOP|POKE|STEP|DATA|READ|LIST|LOAD|WAIT|GET#|RUN|CLR|CMD|SYS|DEF|DIM|LET|GET|NEW|SUB|TO|ON|FN)"
-				},
-				{
-					"name": "keyword.instructions.general.tcb",
-					"match": "(?i)\\s*(ENVELOPE|END\\sPROC|END\\sLOOP|ON\\sERROR|NO\\sERROR|GRAPHICS|RENUMBER|MOB\\sSET|DISABLE|RETRACE|RLOCMOB|BCKGNDS|LOW\\sCOL|DISPLAY|HI\\sCOL|RIGHTB|RIGHTW|COLOUR|BFLASH|REPEAT|CENTRE|GLOBAL|ON\\sKEY|RESUME|SECURE|DISAPA|CIRCLE|OPTION|INSERT|DESIGN|HRDCPY|DETECT|HIRES|BLOCK|PLACE|LEFTW|LEFTB|DOWNB|DOWNW|MULTI|MUSIC|FLASH|CGOTO|FETCH|UNTIL|RESET|DELAY|LOCAL|RCOMP|TRACE|INKEY|SOUND|PAUSE|SCRSV|SCRLD|PAINT|MERGE|CHECK|ERROR|PLOT|LINE|FCHR|FCOL|FILL|DRAW|CHAR|MOVE|MMOB|PLAY|WAVE|PROC|CALL|EXEC|EXIT|LOOP|ELSE|PAGE|DUMP|FIND|AUTO|INST|TEST|PENX|PENY|CMOB|ANGL|COLD|TEXT|CSET|DISK|COPY|REC|ROT|INV|UPB|UPW|USE|CLS|MAP|DIR|OLD|JOY|DUP|LIN|POT|NRM|MOB|OFF|ARC|VOL|KEY|MEM|OUT|DO|AT|X!|D!)"
-				},
-				{
 					"name": "keyword.instructions.general.abbr",
 					"match": "\\s*(cL|cM|cO|dA|dE|dI|gE|iN|lE|lI|lO|oP|pO|pR|rE|reS|rU|sA|sT|sU|sY|tO|vE|wA|\\?)"
-				},
-				{
-					"name": "keyword.control",
-					"match": "(?i)\\s*(RETURN|GOSUB|GOTO|GO\\s+TO|THEN|NEXT|STEP|END|FOR|IF)"
 				},
 				{
 					"name": "keyword.control.abbr",
 					"match": "\\s*(rE|reS|gO|goS|eN|tH|fO|nE|stE)"
 				},
 				{
-					"name": "support.function.numeric",
-					"match": "(?i)\\s*(ABS|PEEK|ASC|POS|ATN|RND|COS|SGN|EXP|SIN|SQR|FRE|TAN|INT|USR|LEN|VAL|LOG)\\b"
-				},
-				{
-					"name": "support.function.numeric.tcb",
-					"match": "(?i)\\s*(EXOR|DIV|MOD|FRAC)\\b"
-				},
-				{
 					"name": "support.function.string",
-					"match": "(?i)\\s*(CHR\\$|LEFT\\$|MID\\$|RIGHT\\$|STR\\$)"
-				},
-				{
-					"name": "support.function.string",
-					"match": "(?i)\\s*(\\$\\$|%%|NRM)"
-				},
-				{
-					"name": "support.function.output",
-					"match": "(?i)\\s*(SPC|TAB)\\("
+					"match": "(?i)\\s*(RIGHT\\$|LEFT\\$|MID\\$|STR\\$|CHR\\$|\\$\\$|%%|NRM)"
 				},
 				{
 					"name": "support.variables",
 					"match": "(?i)\\s*(ST|TI|TI\\$)\\b"
+				},
+				{
+					"name": "keyword.control",
+					"match": "(?i)\\s*(END\\sPROC|END\\sLOOP|REPEAT|RESUME|RETURN|CGOTO|UNTIL|GOSUB|PROC|CALL|EXEC|EXIT|LOOP|ELSE|CONT|STEP|GOTO|GO\\s+TO|THEN|NEXT|STEP|RUN|CLR|SYS|SUB|END|FOR|DO|IF)"
+				},
+				{
+					"name": "keyword.instructions.general",
+					"match": "(?i)\\s*(ENVELOPE|END\\sPROC|END\\sLOOP|ON\\sERROR|NO\\sERROR|GRAPHICS|RENUMBER|MOB\\sSET|DISABLE|RETRACE|RLOCMOB|BCKGNDS|LOW\\sCOL|DISPLAY|RESTORE|HI\\sCOL|RIGHTB|RIGHTW|COLOUR|BFLASH|REPEAT|CENTRE|GLOBAL|ON\\sKEY|RESUME|SECURE|DISAPA|CIRCLE|OPTION|INSERT|DESIGN|HRDCPY|DETECT|INPUT#|PRINT#|VERIFY|RETURN|RIGHT\\$|HIRES|BLOCK|PLACE|LEFTW|LEFTB|DOWNB|DOWNW|MULTI|MUSIC|FLASH|CGOTO|FETCH|UNTIL|RESET|DELAY|LOCAL|RCOMP|TRACE|INKEY|SOUND|PAUSE|SCRSV|SCRLD|PAINT|MERGE|CHECK|ERROR|CLOSE|INPUT|PRINT|GOSUB|LEFT\\$|PLOT|LINE|FCHR|FCOL|FILL|DRAW|CHAR|MOVE|MMOB|PLAY|WAVE|PROC|CALL|EXEC|EXIT|LOOP|ELSE|PAGE|DUMP|FIND|AUTO|INST|TEST|PENX|PENY|CMOB|ANGL|COLD|TEXT|CSET|DISK|COPY|SAVE|CONT|OPEN|STOP|POKE|STEP|DATA|READ|LIST|LOAD|WAIT|PEEK|GET#|GOTO|GO\\s+TO|THEN|NEXT|STEP|EXOR|FRAC|CHR\\$|MID\\$|STR\\$|REC|ROT|INV|UPB|UPW|USE|CLS|MAP|DIR|OLD|JOY|DUP|LIN|POT|MOB|OFF|ARC|VOL|KEY|MEM|OUT|RUN|CLR|CMD|SYS|DEF|DIM|LET|GET|NEW|SUB|AND|NOT|ABS|ASC|POS|ATN|RND|COS|SGN|EXP|SIN|SQR|FRE|TAN|INT|USR|LEN|VAL|LOG|END|FOR|DIV|MOD|DO|AT|X!|D!|OR|TO|ON|FN|IF)"
 				}
 			]
 		},
@@ -168,7 +101,7 @@
 			"patterns": [
 				{
 					"name": "variable.other",
-					"match": "(?i)\\s*([A-Z]+[$%]?)\\b"
+					"match": "(?i)\\s*([A-Z][0-9]*[$%]?)"
 				}
 			]
 		},

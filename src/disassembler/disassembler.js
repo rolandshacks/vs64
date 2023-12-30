@@ -8,7 +8,7 @@ const path = require("path");
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { OpcodeTable, JumpInstructions, InstructionNames, AddressMode, BasicTokens, TsbBasicTokens } = require('./opcodes');
+const { OpcodeTable, JumpInstructions, InstructionNames, AddressMode, BasicTokens, TsbBasicTokens, PetsciiControlCodes } = require('./opcodes');
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
@@ -23,6 +23,7 @@ const SPACES = "                                                                
 const LABEL_SUFFIX = (PROFILE == PROFILE_GNU) ? ":" : "";
 
 let OpcodeMap = null;
+let PetsciiCodeMap = null;
 
 const _FileType_ = {
     Unknown: -1,
@@ -41,14 +42,40 @@ function charFromBytes(dataByte) {
     return String.fromCharCode(int8FromBytes(dataByte));
 }
 
+function nameFromPetsciiBytes(dataByte) {
+
+    if (null == PetsciiCodeMap) {
+        // create hash map singleton
+        PetsciiCodeMap = new Map();
+        for (const item of PetsciiControlCodes) {
+            if (!PetsciiCodeMap.has(item[1])) {
+                PetsciiCodeMap.set(item[1], item[0]);
+            }
+        }
+    }
+
+    const b = int8FromBytes(dataByte);
+
+    const s = PetsciiCodeMap.get(b);
+    if (s != null) {
+        return "{" + s.toUpperCase() + "}";
+    }
+    
+    return "{$" + b.toString(16) + "}";
+}
+
 function charFromPetsciiBytes(dataByte, lower_case) {
 
     let b = int8FromBytes(dataByte);
 
     if (lower_case && b >= 65 && b <= 90)
         b += 32;
+    else if (lower_case && b >= 97 && b <= 122)
+        b -= 32;
     else if (b >= 193 && b <= 218)
         b -= 128;
+    else if (b < 32 || b >= 128)
+        return nameFromPetsciiBytes(dataByte)
 
     return String.fromCharCode(b);
 }
@@ -317,7 +344,7 @@ function _comment_(txt) {
     };
 }
 
-function process(binary, write) {
+function process(binary, write, options) {
 
     OpcodeMap = new Map();
     for (const opcode_info of OpcodeTable) {
@@ -352,7 +379,7 @@ function process(binary, write) {
     if (load_address == 0x0801) {
         // load address is BASIC start
 
-        const lower_case = true;
+        const lower_case = options && options.lower_case;
 
         const specialChars = [100, 34, 58, 40, 41];
         const operatorChars = [170, 171, 172, 173, 174, 177, 178, 179];
@@ -774,11 +801,12 @@ Html.SPACES = '&nbsp;'.repeat(80);
 //-----------------------------------------------------------------------------------------------//
 
 class Disassembler {
-    constructor() {
+    constructor(options) {
+        this._options = options;
         this._outputBuffer = null;
     }
 
-    disassembleFile(filename, options) {
+    disassembleFile(filename) {
 
         const ext = path.extname(filename).toLowerCase();
         if (ext != ".prg") {
@@ -791,7 +819,7 @@ class Disassembler {
 
         const binary = fs.readFileSync(filename);
 
-        return this.disassemble(binary, options);
+        return this.disassemble(binary);
     }
 
     disassemble(binary) {
@@ -801,6 +829,7 @@ class Disassembler {
         }
 
         const instance = this;
+        const options = this._options;
 
         const Formatter = Html;
 
@@ -808,7 +837,7 @@ class Disassembler {
 
         process(binary, (type, statement) => {
             instance.#write(Formatter, type, statement);
-        });
+        }, options);
 
         const result = this._outputBuffer;
 

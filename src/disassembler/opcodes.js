@@ -612,6 +612,112 @@ const TsbBasicTokens = [
     ["OUT", 127]
 ];
 
+
+//-----------------------------------------------------------------------------------------------//
+// TSB Tuned Simons Basic Tokens
+//-----------------------------------------------------------------------------------------------//
+
+const PetsciiControlCodes = [
+    ["null", 0],
+    ["nul", 0],
+    ["space", 32],
+    ["return", 13],
+    ["shift-return", 141],
+    ["clr", 147],
+    ["clear", 147],
+    ["home", 19],
+    ["del", 20],
+    ["inst", 148],
+    ["run/stop", 3],
+
+    ["upper", 142],
+    ["uppercase", 142],
+    ["cset0", 142],
+    ["lower", 14],
+    ["lowercase", 14],
+    ["cset1", 14],
+
+    ["cursor right", 29],
+    ["crsr right", 29],
+    ["cursor left", 157],
+    ["crsr left", 157],
+    ["cursor down", 17],
+    ["crsr down", 17],
+    ["cursor up", 145],
+    ["crsr up", 145],
+
+    ["black", 144],
+    ["blk", 144],
+    ["white", 5],
+    ["wht", 5],
+    ["red", 28],
+    ["cyan", 159],
+    ["cyn", 159],
+    ["purple", 156],
+    ["pur", 156],
+    ["green", 30],
+    ["grn", 30],
+    ["blue", 31],
+    ["blu", 31],
+    ["yellow", 158],
+    ["yel", 158],
+    ["orange", 129],
+    ["brown", 149],
+    ["pink", 150],
+    ["light-red", 150],
+    ["gray1", 151],
+    ["darkgrey", 151],
+    ["grey", 152],
+    ["lightgreen", 153],
+    ["lightblue", 154],
+    ["grey3", 155],
+    ["lightgrey", 155],
+
+    ["rvs on", 18],
+    ["rvs off", 146],
+
+    ["f1", 133],
+    ["f3", 134],
+    ["f5", 135],
+    ["f7", 136],
+    ["f2", 137],
+    ["f4", 138],
+    ["f6", 139],
+    ["f8", 140],
+
+    ["ctrl-c", 3],
+    ["ctrl-e", 5],
+    ["ctrl-h", 8],
+    ["ctrl-i", 9],
+    ["ctrl-m", 13],
+    ["ctrl-n", 14],
+    ["ctrl-r", 18],
+    ["ctrl-s", 19],
+    ["ctrl-t", 20],
+    ["ctrl-q", 17],
+
+    ["ctrl-1", 144],
+    ["ctrl-2", 5],
+    ["ctrl-3", 28],
+    ["ctrl-4", 159],
+    ["ctrl-5", 156],
+    ["ctrl-6", 30],
+    ["ctrl-7", 31],
+    ["ctrl-8", 158],
+    ["ctrl-9", 18],
+    ["ctrl-0", 146],
+    ["ctrl-/", 142],
+
+    ["c=1", 129],
+    ["c=2", 149],
+    ["c=3", 150],
+    ["c=4", 151],
+    ["c=5", 152],
+    ["c=6", 153],
+    ["c=7", 154],
+    ["c=8", 155]
+];
+
 //-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
@@ -622,5 +728,6 @@ module.exports = {
     JumpInstructions: JumpInstructions,
     OpcodeTable: OpcodeTable,
     BasicTokens: BasicTokens,
-    TsbBasicTokens: TsbBasicTokens
+    TsbBasicTokens: TsbBasicTokens,
+    PetsciiControlCodes: PetsciiControlCodes
 };

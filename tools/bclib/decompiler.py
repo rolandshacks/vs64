@@ -210,6 +210,8 @@ class BasicDecompiler:
         """Convert PETSCII to text."""
         if c >= 65 and c <= 90 and lower_case:
             c += 32
+        elif c >= 97 and c <= 122 and lower_case:
+            c -= 32
         elif c >= 193 and c <= 218:
             c -= 128
         return chr(c)

@@ -37,13 +37,14 @@ function getNonce() {
 
 class DisassemblyDocument {
 
-	static async create(uri) {
-		return new DisassemblyDocument(uri);
+	static async create(uri, settings) {
+		return new DisassemblyDocument(uri, settings);
 	}
 
-	constructor(uri) {
+	constructor(uri, settings) {
 		logger.debug("create disassembly document");
 		this._uri = uri;
+		this._settings = settings;
 		this._html = null;
         this._listeners = new Map();
 
@@ -69,7 +70,13 @@ class DisassemblyDocument {
 		}
 
 		const binary = new Uint8Array(await vscode.workspace.fs.readFile(uri));
-		const disassembler = new Disassembler();
+		const settings = this._settings;
+
+		const options = {
+			lower_case: (settings.basicCharset == 2)
+		};
+
+		const disassembler = new Disassembler(options);
 		this._html = disassembler.disassemble(binary);
     }
 
@@ -110,15 +117,16 @@ class DisassemblyDocument {
 //-----------------------------------------------------------------------------------------------//
 
 class DisassemblerView {
-    constructor(context) {
+    constructor(context, settings) {
 		logger.trace("create instance");
         this._context = context;
+		this._settings = settings;
 		this._webviewPanel = null;
     }
 
     async openCustomDocument(uri, _openContext_, _cancellationToken_) {
 		logger.trace("open custom document");
-		const document = await DisassemblyDocument.create(uri);
+		const document = await DisassemblyDocument.create(uri, this._settings);
         await document.load();
 		return document;
     }

@@ -6,5 +6,5 @@ REM *
 
 SETLOCAL
 call npm install
-vsce package --no-yarn --dependencies
+call npm run vsix
 ENDLOCAL

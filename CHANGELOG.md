@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.2 Minor Update
+
+- Bug-fixes and minor improvements
+
 ## 2.5.1 Minor Update
 
 - Many bug-fixes and improvements for the BASIC toolkit

@@ -220,6 +220,8 @@ class Constants:
     }
 
     CONTROL_TOKENS = {
+        "null": 0,
+        "nul": 0,
         "space": 32,
         "return": 13,
         "shift-return": 141,
@@ -229,6 +231,13 @@ class Constants:
         "del": 20,
         "inst": 148,
         "run/stop": 3,
+
+        "upper": 142,
+        "uppercase": 142,
+        "cset0": 142,
+        "lower": 14,
+        "lowercase": 14,
+        "cset1": 14,
 
         "cursor right": 29,
         "crsr right": 29,
