@@ -147,7 +147,8 @@ class BasicDecompiler:
                         ofs += 1
                         count -= 1
 
-                        if b2 == 179: b2 = 60 # patch for CLS (??)
+                        # map BASIC extension tokens (3c<-b3, 3d<-b2, 3e<-b1)
+                        if b2 >= 0xb1 and b2 <= 0xb3: b2 ^= 0x8f
                         token = tcb_tokens[b2-1]
 
                         if pretty and last_char_type == char_type_none:

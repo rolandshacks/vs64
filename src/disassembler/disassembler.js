@@ -60,7 +60,7 @@ function nameFromPetsciiBytes(dataByte) {
     if (s != null) {
         return "{" + s.toUpperCase() + "}";
     }
-    
+
     return "{$" + b.toString(16) + "}";
 }
 
@@ -450,8 +450,8 @@ function process(binary, write, options) {
                         let b2 = int8FromBytes(binary[ofs]);
                         ofs++;
 
-                        if (b2 == 179) b2 = 60; // patch for CLS (??)
-                        else if (b2 == 177) b2 = 62; // patch for MAP (??)
+                        // map BASIC extension tokens (3c<-b3, 3d<-b2, 3e<-b1)
+                        if (b2 >= 0xb1 && b2 <= 0xb3) b2 ^= 0x8f;
 
                         const token = (b2 <= tcb_tokens.length) ? tcb_tokens[b2-1] : "{UNKNOWN TOKEN:" + b2 + "}";
 

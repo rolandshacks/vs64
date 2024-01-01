@@ -12,11 +12,8 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 
 global._sourcebase = path.resolve(__dirname, "..");
-global.BIND = function(_module) {
-    _module.paths.push(global._sourcebase);
-};
-
-// eslint-disable-next-line
+const BIND = function(_module) { _module.paths.push(global._sourcebase); };
+global.BIND = BIND
 BIND(module);
 
 //-----------------------------------------------------------------------------------------------//
@@ -817,39 +814,9 @@ class Extension {
 }
 
 //-----------------------------------------------------------------------------------------------//
-// Extension Entry Point
-//-----------------------------------------------------------------------------------------------//
-
-let extensionInstance = null;
-
-/**
- * @param {vscode.ExtensionContext} context
- */
-function activate(context) {
-    return new Promise(function(resolve /*, reject*/) {
-        if (null == extensionInstance) {
-            extensionInstance = new Extension(context);
-            extensionInstance.activate();
-        }
-        resolve();
-    });
-}
-
-function deactivate() {
-    return new Promise(function(resolve /*, reject*/) {
-        if (null == extensionInstance) {
-            extensionInstance.deactivate();
-            extensionInstance = null;
-        }
-        resolve();
-    });
-}
-
-//-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    activate: activate,
-    deactivate: deactivate
+	Extension : Extension
 };

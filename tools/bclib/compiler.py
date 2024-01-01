@@ -708,6 +708,10 @@ class BasicCompiler:
                             # but BASIC interpreter generates one automatically
                             basic_line.store_byte(0x64)
                         else:
+                            # map extension tokens: (3c->b3, 3d->b2, 3e->b1)
+                            if token_id >= 0x643c and token_id <= 0x643e:
+                                token_id = token_id ^ 0x8f
+
                             # 2-byte token (SB/TSB)
                             basic_line.store_word_be(token_id)
                     else:

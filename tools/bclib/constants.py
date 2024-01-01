@@ -149,9 +149,9 @@ class Constants:
         "RESUME": 57,
         "LOOP": 58,
         "DELAY": 59,
-        "CLS": 60,
-        "X!": 61,
-        "MAP": 62,
+        "CLS": 60,          # extension token 0x3c, will be mapped to 0xb3
+        "X!": 61,           # extension token 0x3d, will be mapped to 0xb2
+        "MAP": 62,          # extension token 0x3e, will be mapped to 0xb1
         ">": 63,
         "SECURE": 64,
         "DISAPA": 65,

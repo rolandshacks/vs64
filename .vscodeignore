@@ -2,8 +2,11 @@
 .vscode-test/**
 test/**
 .gitignore
+build/**
+build*.*
 vsc-extension-quickstart.md
 **/jsconfig.json
 **/*.map
 **/.eslintrc.json
 **/.jshintrc
+**/pylintrc
