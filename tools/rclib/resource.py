@@ -237,7 +237,7 @@ class Resource:
             return None
         value = ""
         for i in range(max_bytes):
-            c = self.input[self.input_ofs+i]
+            c = self.input[self.input_ofs]
             self.input_ofs += 1
             self.input_avail -= 1
             if c == 0:
