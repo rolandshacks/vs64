@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.4 Minor Update
+
+- Preliminary support for the Commander X16 emulator
+- Support for charpad file version 9
+- Bug-fixes and minor improvements
+
 ## 2.5.3 Minor Update
 
 - Bug-fixes and minor improvements

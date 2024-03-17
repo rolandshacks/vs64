@@ -571,10 +571,18 @@ class Project {
         return compilerPath;
     }
 
+    getCompilerIncludes() {
+        const toolkit = this.toolkit;
+        const settings = this._settings;
+
+        if (null == toolkit || null == settings) return null;
+
+        return settings.getCompilerIncludes(toolkit, this.machine);
+    }
+
     #declareCompileCommand(filename, includes, defines, args) {
 
         const toolkit = this.toolkit;
-        const settings = this._settings;
         const workingDirectory = this._basedir;
 
         const compilerPath = this.#getCompilerExecutable(filename);
@@ -608,13 +616,7 @@ class Project {
             }
         }
 
-        let compilerIncludes = null;
-        if (toolkit.isLLVM) {
-            compilerIncludes = settings.llvmIncludes;
-        } else if (toolkit.isCC65) {
-            compilerIncludes = settings.cc65Includes;
-        }
-
+        let compilerIncludes = this.getCompilerIncludes();
         if (compilerIncludes) {
             for (const include of compilerIncludes) {
                 command.arguments.push("-I" + include);
@@ -850,6 +852,11 @@ class Project {
 
         this.updateBuildTree();
 
+        if (toolkit.isCpp) {
+            this.#writeCompileCommands();
+            this.#writeCppProperties();
+        }
+
         const buildFile = this.buildfile;
 
         if (!forcedOverwrite) {
@@ -875,7 +882,7 @@ class Project {
 
             script.push("ninja_required_version = 1.3");
             script.push(Ninja.keyValue("toolkit", toolkit.name));
-            script.push(Ninja.keyValue("machine", toolkit.machine||""));
+            script.push(Ninja.keyValue("machine", project.machine||""));
             script.push(Ninja.keyValue("basedir", project.basedir));
             script.push(Ninja.keyValue("builddir", project.builddir));
             script.push("");

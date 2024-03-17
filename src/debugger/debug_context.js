@@ -99,6 +99,7 @@ class DebugContext {
 
         this._6502DebugConfigProvider = null;
         this._ViceDebugConfigProvider = null;
+        this._X16DebugConfigProvider = null;
     }
 
     // start debugger
@@ -120,6 +121,10 @@ class DebugContext {
         this._ViceDebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerTypeVice, this);
         vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeVice, this._ViceDebugConfigProvider);
         this._context.subscriptions.push(this._ViceDebugConfigProvider);
+
+        this._X16DebugConfigProvider = new DebugConfigurationProvider(Constants.DebuggerTypeX16, this);
+        vscode.debug.registerDebugConfigurationProvider(Constants.DebuggerTypeX16, this._X16DebugConfigProvider);
+        this._context.subscriptions.push(this._X16DebugConfigProvider);
     }
 
     // stop debugger

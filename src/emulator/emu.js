@@ -14,7 +14,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { DebugRunner, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
+const { DebugInterface, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 const CPU6502 = require('./cpu');
 
 const ENABLE_6510_MODE = true;
@@ -38,14 +38,12 @@ const EmulatorConstants = {
 // Emulator
 //-----------------------------------------------------------------------------------------------//
 
-class Emulator extends DebugRunner {
+class Emulator extends DebugInterface {
 
     constructor(session) {
-
-        super();
+        super(session);
 
         const instance = this;
-        this._session = session;
 
         this._memory = new Uint8Array(65536);
 

@@ -32,6 +32,7 @@ const Constants = {
     BasicLanguageId: "bas",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
+    DebuggerTypeX16: "x16",
     CppStandard: "c++20",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
@@ -140,12 +141,14 @@ class Settings {
         this.buildDefines = null;
         this.buildIncludePaths = null;
         this.buildArgs = null;
-        this.emulatorExecutable = null;
-        this.emulatorPort = Constants.BinaryMonitorPort;
+        this.viceExecutable = null;
+        this.vicePort = Constants.BinaryMonitorPort;
+        this.viceArgs = null;
+        this.x16Executable = null;
+        this.x16Args = null;
         this.pythonExecutable = null;
         this.javaExecutable = null;
         this.ninjaExecutable = null;
-        this.emulatorArgs = null;
         this.autoBuild = false;
         this.showWelcome = true;
         this.resourceCompiler = null;
@@ -191,6 +194,7 @@ class Settings {
         this.setupCC65(workspaceConfig);
         this.setupLLVM(workspaceConfig);
         this.setupVice(workspaceConfig);
+        this.setupX16(workspaceConfig);
 
         this.show();
     }
@@ -282,10 +286,18 @@ class Settings {
         const installDir = this.#getAbsDir(workspaceConfig.get("vs64.llvmInstallDir"));
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
+
             this.llvmIncludes = [
                 path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
                 path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
                 path.resolve(llvmIncludesDir, "mos-platform", "c64", "include"),
+                path.resolve(llvmIncludesDir, "lib", "clang", "16", "include")
+            ];
+
+            this.llvmIncludesX16 = [
+                path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "cx16", "include"),
                 path.resolve(llvmIncludesDir, "lib", "clang", "16", "include")
             ];
 
@@ -299,20 +311,68 @@ class Settings {
 
         } else {
             this.llvmIncludes = null;
+            this.llvmIncludesX16 = null;
             this.clangExecutable = "mos-clang++";
             this.clangcExecutable = "mos-clang";
         }
     }
 
-    setupVice(workspaceConfig) {
-        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.emulatorExecutable"));
-        if (executablePath) {
-            this.emulatorExecutable = Utils.normalizeExecutableName(executablePath);
-        } else {
-            this.emulatorExecutable = "x64sc";
+    getCompilerIncludes(toolkit, machine) {
+        if (null == toolkit) return null;
+
+        let compilerIncludes = null;
+
+        if (toolkit.isLLVM) {
+            if (machine == "x16" || machine == "cx16") {
+                compilerIncludes = this.llvmIncludesX16;
+            } else {
+                compilerIncludes = this.llvmIncludes;
+            }
+        } else if (toolkit.isCC65) {
+            compilerIncludes = this.cc65Includes;
         }
-        this.emulatorPort = workspaceConfig.get("vs64.emulatorPort")||Constants.BinaryMonitorPort;
-        this.emulatorArgs = workspaceConfig.get("vs64.emulatorArgs")||"";
+
+        return compilerIncludes;
+
+    }
+
+    #migrateConfig(workspaceConfig, oldProperty, newProperty, deleteOld) {
+        const newValue = workspaceConfig.get(newProperty);
+        const oldValue = workspaceConfig.get(oldProperty);
+
+        if ((null == newValue || newValue == "") && null != oldValue && oldValue != "") {
+            workspaceConfig.update(newProperty, oldValue, true);
+            if (deleteOld) {
+                workspaceConfig.update(oldProperty, undefined, true);
+                workspaceConfig.update(oldProperty, undefined);
+            }
+        }
+    }
+
+    setupVice(workspaceConfig) {
+
+        this.#migrateConfig(workspaceConfig, "vs64.emulatorExecutable", "vs64.viceExecutable")
+        this.#migrateConfig(workspaceConfig, "vs64.emulatorPort", "vs64.vicePort")
+        this.#migrateConfig(workspaceConfig, "vs64.emulatorArgs", "vs64.viceArgs")
+
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.viceExecutable")||workspaceConfig.get("vs64.emulatorExecutable")||"x64sc");
+        if (executablePath) {
+            this.viceExecutable = Utils.normalizeExecutableName(executablePath);
+        } else {
+            this.viceExecutable = "x64sc";
+        }
+        this.vicePort = workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort")||Constants.BinaryMonitorPort;
+        this.viceArgs = workspaceConfig.get("vs64.viceArgs")||workspaceConfig.get("vs64.emulatorArgs")||"";
+    }
+
+    setupX16(workspaceConfig) {
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.x16Executable"));
+        if (executablePath) {
+            this.x16Executable = Utils.normalizeExecutableName(executablePath);
+        } else {
+            this.x16Executable = "x16emu";
+        }
+        this.x16Args = workspaceConfig.get("vs64.x16Args")||"";
     }
 
     setupPython(workspaceConfig) {
@@ -368,7 +428,7 @@ class Settings {
         logger.debug("cc65 executable: " + settings.cc65Executable);
         logger.debug("ca65 executable: " + settings.ca65Executable);
         logger.debug("ld65 executable: " + settings.ld65Executable);
-        logger.debug("vice executable: " + settings.emulatorExecutable);
+        logger.debug("vice executable: " + settings.viceExecutable);
         logger.debug("ninja executable: " + settings.ninjaExecutable);
         logger.debug("python executable: " + settings.pythonExecutable);
         logger.debug("java executable: " + settings.javaExecutable);

@@ -150,34 +150,54 @@ class CharPadResource(CharsetResource):
             return CompileError(self, "invalid charpad file")
 
         format_version = self.read_byte()
-        if format_version < 7 or format_version > 8:
-            return CompileError(self, "unsupported charpad file format version")
+        if format_version < 7 or format_version > 9:
+            return CompileError(self, "{version} is unsupported charpad file format version".format(version = format_version))
 
-        if format_version >= 8:
-            self.display_mode = self.read_byte()
-            self.col_method = self.read_byte()
-            flags = self.read_byte()
+        match format_version:
+            case 9:
+                self.display_mode = self.read_byte()
+                self.col_method = self.read_byte()
+                flags = self.read_byte()
 
-            self.col_background = self.read_byte() & 0xf
-            self.col_multi1 = self.read_byte() & 0xf
-            self.col_multi2 = self.read_byte() & 0xf
-            self.col_foreground = self.read_byte() & 0xf
+                FGRID_WID_LO = self.read_byte()
+                FGRID_WID_HI = self.read_byte()
+                FGRID_HEI_LO = self.read_byte()
+                FGRID_HEI_HI = self.read_byte()
+                FGRID_CONFIG = self.read_byte()
 
-            col_matrixbase0 = self.read_byte() & 0xf
-            col_matrixbase1 = self.read_byte() & 0xf
-            col_matrixbase2 = self.read_byte() & 0xf
+                self.col_background = self.read_byte() & 0xf
+                self.col_multi1 = self.read_byte() & 0xf
+                self.col_multi2 = self.read_byte() & 0xf
+                self.col_foreground = self.read_byte() & 0xf
 
-        else:
+                col_matrixbase0 = self.read_byte() & 0xf
+                col_matrixbase1 = self.read_byte() & 0xf
+                col_matrixbase2 = self.read_byte() & 0xf
 
-            self.col_background = self.read_byte() & 0xf
-            self.col_multi1 = self.read_byte() & 0xf
-            self.col_multi2 = self.read_byte() & 0xf
-            self.col_foreground = self.read_byte() & 0xf
-            col_globalcolor = self.read_byte() & 0xf
+            case 8:
+                self.display_mode = self.read_byte()
+                self.col_method = self.read_byte()
+                flags = self.read_byte()
 
-            self.col_method = self.read_byte()
-            self.display_mode = self.read_byte()
-            flags = self.read_byte()
+                self.col_background = self.read_byte() & 0xf
+                self.col_multi1 = self.read_byte() & 0xf
+                self.col_multi2 = self.read_byte() & 0xf
+                self.col_foreground = self.read_byte() & 0xf
+
+                col_matrixbase0 = self.read_byte() & 0xf
+                col_matrixbase1 = self.read_byte() & 0xf
+                col_matrixbase2 = self.read_byte() & 0xf
+
+            case _:
+                self.col_background = self.read_byte() & 0xf
+                self.col_multi1 = self.read_byte() & 0xf
+                self.col_multi2 = self.read_byte() & 0xf
+                self.col_foreground = self.read_byte() & 0xf
+                col_globalcolor = self.read_byte() & 0xf
+
+                self.col_method = self.read_byte()
+                self.display_mode = self.read_byte()
+                flags = self.read_byte()
 
         tiles_used = has_bit(flags, 0)
 
@@ -262,9 +282,10 @@ class CharPadResource(CharsetResource):
             block_idx = self.next_block()
             if block_idx is None: return None
 
+            self.tileset_names = []
+
             for i in range(0, tile_quantity):
                 tile_name = self.read_cstr(32)
-                if self.tileset_names is None: self.tileset_names = []
                 self.tileset_names.append(tile_name)
 
         #### block

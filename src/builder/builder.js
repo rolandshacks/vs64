@@ -144,6 +144,7 @@ class Build {
         }
 
         project.createBuildFile();
+
         this.createDependencyFiles();
 
         try {

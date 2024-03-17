@@ -8,6 +8,7 @@
 // eslint-disable-next-line
 BIND(module);
 
+const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
 const { DebugAddressInfo } = require('debugger/debug_info');
 const { Profiler } = require('debugger/profiler');
@@ -792,19 +793,26 @@ class Breakpoints {
 }
 
 //-----------------------------------------------------------------------------------------------//
-// Debug Runner
+// Debug Interface
 //-----------------------------------------------------------------------------------------------//
 
-class DebugRunner {
-    constructor() {
-        this.init();
+class DebugInterface {
+    constructor(session) {
+        this._session = session;
+        this._settings = session._settings;
+        this._basicMode = session._isBasic;
         this._eventMap = null;
         this._profiler = new Profiler(this);
+        this.init();
     }
 
     init() {
         this._running = false;
         this._prg = null;
+    }
+
+    unregisterAllListeners() {
+        this._eventMap = null;
     }
 
     on(eventName, eventFunction) {
@@ -908,12 +916,114 @@ const DebugInterruptReason = {
 };
 
 //-----------------------------------------------------------------------------------------------//
+// DebugProcess
+//-----------------------------------------------------------------------------------------------//
+
+class DebugProcess {
+    constructor() {
+        this._proc = null;
+        this._supportsRelaunch = false;
+    }
+
+    disableEvents() {
+        if (this._proc) {
+            // turn off event handling
+            this._proc.options.onexit = undefined;
+            this._proc.options.onstdout = undefined;
+            this._proc.options.onstderr = undefined;
+        }
+    }
+
+    get supportsRelaunch() {
+        return this._supportsRelaunch;
+    }
+
+    createDebugInterface(_session_) {
+        return null;
+    }
+
+    get alive() {
+        return (this._proc && !this._proc.exited);
+    }
+
+    stdout(data) {
+        if (!data) return;
+        logger.debug(data);
+    }
+
+    stderr(data) {
+        if (!data) return;
+        logger.debug(data);
+    }
+
+    async spawn_exec(executable, args, options) {
+
+        if (this.alive) {
+            this.kill();
+        }
+
+        args ||= [];
+
+        const instance = this;
+
+        let proc = null;
+
+        try {
+            proc = await Utils.exec(
+                executable,
+                args,
+                {
+                    sync: false,
+                    onexit:
+                        (proc) => {
+                            if (options && options.onexit) options.onexit(proc)
+                        },
+                    onstdout:
+                        (data) => {
+                            instance.stdout(data);
+                            if (options && options.onstdout) options.onstdout(data);
+                        },
+                    onstderr:
+                        (data) => {
+                            instance.stderr(data);
+                            if (options && options.onstderr) options.onstderr(data);
+                        }
+                }
+            );
+        } catch (procInfo) {
+            //const txt = (err.code == "ENOENT") ?
+            //"executable not found: '" + executable + "'" :
+            //"failed to spawn process '" + executable + ": " + err.code;
+
+            throw("failed to create emulator process \"" + executable + "\"" + (procInfo.errorInfo ? " (" + procInfo.errorInfo.code + ")" : ""));
+        }
+
+        if (proc && !proc.exited) {
+            proc.options = options;
+            this._proc = proc;
+        }
+    }
+
+    kill() {
+        if (this._proc) {
+            const procInfo = this._proc;
+            this._proc = null;
+            if (procInfo.process) {
+                procInfo.process.kill();
+            }
+        }
+
+    }
+}
+
+//-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
+    DebugProcess: DebugProcess,
     DebugStepType: DebugStepType,
-    DebugRunner: DebugRunner,
+    DebugInterface: DebugInterface,
     DebugInterruptReason: DebugInterruptReason,
     CpuRegisters: CpuRegisters,
     CpuFlags: CpuFlags,

@@ -24,7 +24,8 @@ const { Expression } = require('utilities/expression');
 const { Logger } = require('utilities/logger');
 const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType } = require('debugger/debug');
 const { Emulator } = require('emulator/emu');
-const { ViceConnector, ViceProcess } = require('connector/connector');
+const { ViceProcess } = require('debugger/debug_vice');
+const { X16Process } = require('debugger/debug_x16');
 const { DebugInfo } = require('debugger/debug_info');
 const { DebugStateProvider } = require('debugger/debug_state');
 const { DebugVariablesProvider } = require('debugger/debug_variables');
@@ -60,6 +61,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._server = null;
         this._port = 0;
         this._configurationDone = new Subject();
+        this._debuggerSessionInfo = null;
         this._debugInfo = null;
         this._breakpoints = new Breakpoints();
         this._breakpointsDirty = true;
@@ -176,7 +178,15 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     }
 
+    #debuggerProcessExitHandler(_proc_) {
+        this._emulatorProcess = null;
+        this.sendEvent(new DebugAdapter.TerminatedEvent());
+    }
+
     async #createEmulatorProcess() {
+
+        const options = this._debuggerSessionInfo;
+        const debuggerType = options.type;
 
         if (this._emulatorProcess && this._emulatorProcess.alive) {
             this._emulatorProcess.kill();
@@ -185,30 +195,51 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const settings = this._settings;
         const instance = this;
 
-        this._emulatorProcess = new ViceProcess();
+        const processExitHandler = (proc) => {
+            instance.#debuggerProcessExitHandler(proc);
+        }
 
-        const emulatorCommand = settings.emulatorExecutable + " " + settings.emulatorArgs;
-        logger.trace(`launch emulator: ${emulatorCommand}`)
+        if (debuggerType == Constants.DebuggerTypeVice) {
+            this._emulatorProcess = new ViceProcess();
 
-        try {
-            await this._emulatorProcess.spawn(
-                settings.emulatorExecutable,
-                settings.emulatorPort,
-                settings.emulatorArgs,
-                {
-                    onexit:
-                        (/*proc*/) => {
-                            instance._emulatorProcess = null;
-                            instance.sendEvent(new DebugAdapter.TerminatedEvent());
-                        }
-                }
-            );
-        } catch (err) {
-            throw(err);
+            const args = settings.viceArgs + (options.args ? (" " + options.args) : "");
+            const emulatorCommand = settings.viceExecutable + " " + args;
+            logger.trace(`launch VICE emulator: ${emulatorCommand}`)
+
+            try {
+                await this._emulatorProcess.spawn(
+                    settings.viceExecutable,
+                    settings.vicePort,
+                    args,
+                    { onexit: processExitHandler }
+                );
+            } catch (err) {
+                throw(err);
+            }
+        } else if (debuggerType == Constants.DebuggerTypeX16) {
+            this._emulatorProcess = new X16Process();
+
+            const args = settings.x16Args + (options.args ? (" " + options.args) : "");
+            const emulatorCommand = settings.x16Executable + " " + args;
+            logger.trace(`launch X16 emulator: ${emulatorCommand}`)
+
+            try {
+                await this._emulatorProcess.spawn(
+                    settings.x16Executable,
+                    args,
+                    options.prg,
+                    { onexit: processExitHandler }
+                );
+            } catch (err) {
+                throw(err);
+            }
+
+
+        } else {
+            return null;
         }
 
         return this._emulatorProcess;
-
     }
 
     #destroyEmulatorProcess() {
@@ -219,9 +250,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
     }
 
-    async #createEmulatorInstance(debugConfigType, attachToProcess, hostname, port) {
+    async #createEmulatorInstance(attachToProcess, restartEmulatorProcess) {
 
-        this.#destroyEmulatorInstance();
+        this.#destroyEmulatorInstance(restartEmulatorProcess);
+
+        const options = this._debuggerSessionInfo;
 
         let thisInstance = this;
 
@@ -229,11 +262,13 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         let emu = null;
 
-        if (debugConfigType == Constants.DebuggerType6502) {
+        const debuggerType = options.type;
+
+        if (debuggerType == Constants.DebuggerType6502) {
 
             emu = new Emulator(this);
 
-        } else if (debugConfigType == Constants.DebuggerTypeVice) {
+        } else if (debuggerType == Constants.DebuggerTypeVice) {
 
             try {
                 if (!attachToProcess) {
@@ -242,8 +277,24 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     }
                 }
 
-                emu = new ViceConnector(this);
-                await emu.connect(hostname, port);
+                emu = this._emulatorProcess.createDebugInterface(this);
+                await emu.connect(options.hostname, options.port);
+            } catch (err) {
+                logger.error("debug error: " + err);
+                throw(err);
+            }
+
+        } else if (debuggerType == Constants.DebuggerTypeX16) {
+
+            try {
+                if (!attachToProcess) {
+                    if (!this._emulatorProcess || !this._emulatorProcess.alive) {
+                        await this.#createEmulatorProcess();
+                    }
+                }
+
+                emu = this._emulatorProcess.createDebugInterface(this);
+
             } catch (err) {
                 logger.error("debug error: " + err);
                 throw(err);
@@ -253,44 +304,57 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             throw("invalid debugger type");
         }
 
-        emu.on('error', (err) => {
-            thisInstance.onDebugError(err);
-        });
+        if (null != emu) {
+            emu.on('error', (err) => {
+                thisInstance.onDebugError(err);
+            });
 
-        emu.on('started', () => {
-            thisInstance.onDebugStarted();
-        });
+            emu.on('started', () => {
+                thisInstance.onDebugStarted();
+            });
 
-        emu.on('stopped', (reason) => {
-            thisInstance.onDebugStopped(reason);
-        });
+            emu.on('stopped', (reason) => {
+                thisInstance.onDebugStopped(reason);
+            });
 
-        emu.on('breakpoint', (breakpoint) => {
-            thisInstance.onDebugBreakpoint(breakpoint);
-        });
+            emu.on('breakpoint', (breakpoint) => {
+                thisInstance.onDebugBreakpoint(breakpoint);
+            });
 
-        emu.on('break', (pc) => {
-            thisInstance.onDebugBreak(pc);
-        });
+            emu.on('break', (pc) => {
+                thisInstance.onDebugBreak(pc);
+            });
 
-        emu.on('logpoint', (breakpoint) => {
-            thisInstance.onDebugLogpoint(breakpoint);
-        });
+            emu.on('logpoint', (breakpoint) => {
+                thisInstance.onDebugLogpoint(breakpoint);
+            });
+        }
 
         this._emulator = emu;
 
         return emu;
     }
 
-    #destroyEmulatorInstance() {
+    #destroyEmulatorInstance(restartEmulatorProcess) {
 
         const emu = this._emulator;
         this._emulator = null;
 
-        if (emu) {
+        const emuProcess = this._emulatorProcess;
+        this._emulatorProcess = null;
+
+        if (emu && !restartEmulatorProcess) {
             emu.stop();
             if (emu.disconnect) emu.disconnect();
         }
+
+        if (emuProcess && !emuProcess.supportsRelaunch) {
+            if (restartEmulatorProcess) {
+                emuProcess.disableEvents();
+            }
+            if (emuProcess.alive) emuProcess.kill();
+        }
+
     }
 
     async #launchOrAttachRequest(response, args) {
@@ -301,7 +365,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const attachToProcess = (debuggerCommand == "attach");
 
         if (debuggerType != Constants.DebuggerType6502 &&
-            debuggerType != Constants.DebuggerTypeVice) {
+            debuggerType != Constants.DebuggerTypeVice &&
+            debuggerType != Constants.DebuggerTypeX16) {
             response.success = false;
             response.message ="invalid debugger type " + args.type;
             this.sendResponse(response);
@@ -317,6 +382,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         const project = this._project;
         if (!project) return null;
+
         const toolkit = project.toolkit;
         if (toolkit) {
             this._isBasic = toolkit.isBasic;
@@ -330,13 +396,24 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._launchBinary = null;
         this._launchPC = null;
 
-        const emuHostname = args.hostname||"localhost";
-        const emuPort = attachToProcess ? (args.port||settings.emulatorPort) : settings.emulatorPort;
+        const options = {
+            type: debuggerType,
+            args: args.args
+        };
+
+        if (debuggerType == Constants.DebuggerTypeVice) {
+            options.hostname = args.hostname||"localhost";
+            options.port = attachToProcess ? (args.port||settings.vicePort) : settings.vicePort;
+        } else if (debuggerType == Constants.DebuggerTypeX16) {
+            options.prg = binaryPath;
+        }
+
+        this._debuggerSessionInfo = options;
 
         let emu = null;
 
         try {
-            emu = await this.#createEmulatorInstance(args.type, attachToProcess, emuHostname, emuPort);
+            emu = await this.#createEmulatorInstance(attachToProcess);
         } catch (err) {
             response.success = false;
             response.message ="Failed to start emulator. Please check your settings.\nError: " + err;
@@ -345,10 +422,14 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         try {
+
             this.#loadDebugInfo();
             await this.#syncBreakpoints();
 
-            await emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
+            if (debuggerType != Constants.DebuggerTypeX16) {
+                // X16 does not support injection of binary
+                await emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
+            }
 
             this._launchBinary = binaryPath;
             this._launchPC = forcedStartAddress;
@@ -737,19 +818,33 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     }
 
-    async restartRequest(response, _args_) {
+    async restartRequest(response, args) {
+
+        if (this._debuggerSessionInfo && args && args.arguments) {
+            // update launch arguments
+            this._debuggerSessionInfo.args = args.arguments.args;
+        }
 
         let emu = this._emulator;
+        if (null != this._debuggerSessionInfo && null != this._emulatorProcess && !this._emulatorProcess.supportsRelaunch) {
+            if (null != emu) {
+                emu.unregisterAllListeners();
+            }
+            emu = await this.#createEmulatorInstance(false, true);
+        }
 
         await this.#syncBreakpoints();
 
-        try {
-            await emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection, this._launchPC);
-        } catch (err) {
-            response.success = false;
-            response.message = err.toString();
-            this.sendResponse(response);
-            return;
+        if (this._debuggerSessionInfo.type != Constants.DebuggerTypeX16) {
+            // X16 does not support injection of binary
+            try {
+                await emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection, this._launchPC);
+            } catch (err) {
+                response.success = false;
+                response.message = err.toString();
+                this.sendResponse(response);
+                return;
+            }
         }
 
         emu.start();

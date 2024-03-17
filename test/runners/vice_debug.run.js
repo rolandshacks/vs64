@@ -21,7 +21,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { ViceConnector, ViceProcess } = require('connector/connector');
+const { ViceProcess } = require('debugger/debug_vice');
 const { Breakpoint, Breakpoints, DebugInterruptReason } = require('debugger/debug');
 
 const logger = new Logger("ViceDebug");
@@ -64,9 +64,9 @@ class Application {
         this._emulator = null;
 
         this._settings = {
-            emulatorExecutable : "C:/tools/c64/vice/bin/x64sc.exe",
-            emulatorPort: 6502,
-            emulatorArgs : ""
+            viceExecutable : "C:/tools/c64/vice/bin/x64sc.exe",
+            vicePort: 6502,
+            viceArgs : ""
         };
 
         this._breakpoints = new Breakpoints();
@@ -84,9 +84,9 @@ class Application {
 
         this._emulatorProcess = new ViceProcess();
         await this._emulatorProcess.spawn(
-            settings.emulatorExecutable,
-            settings.emulatorPort,
-            settings.emulatorArgs,
+            settings.viceExecutable,
+            settings.vicePort,
+            settings.viceArgs,
             { onexit: (_proc_) => {
                 // exit function
                 instance._emulatorProcess = null;
@@ -122,12 +122,14 @@ class Application {
 
         logger.info("create emulator process");
 
+        let emuProcess = null;
+
         if (!attachToRunningEmulator) {
-            await this.#createEmulatorProcess();
+            emuProcess = await this.#createEmulatorProcess();
         }
 
-        const emu = new ViceConnector(this);
-        await emu.connect("127.0.0.1", settings.emulatorPort);
+        const emu = emuProcess.createDebugInterface(this);
+        await emu.connect("127.0.0.1", settings.vicePort);
 
         emu.on('error', (err) => {
             logger.error(err);

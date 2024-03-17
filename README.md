@@ -24,7 +24,8 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * BASIC to PRG compiler and debugger (original BASIC V2 and Tuned Simons Basic NEO "TSBneo")
 * Syntax highlighting for assembler and BASIC files
 * Debugging and launch support for integrated 6502 emulation
-* Debugging and launch support for VICE emulator using the binary monitor protocol
+* Debugging and launch support for the VICE emulator using the binary monitor protocol
+* Launch support for the X16 emulator
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
 * On-the-fly disassembly of C64 program files for assembly and BASIC code
@@ -231,9 +232,18 @@ In addition to the internal 6502 cpu emulator, VS64 also supports debugging usin
 * Manual installation: Download and install from https://vice-emu.sourceforge.io
 * Use a package management system, for example on Ubuntu/Debian: `sudo apt install vice`
 
-In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct VICE executable.
+In case you did a manual or custom installation, please make sure you update the VS64 settings with the correct VICE executable.
 
 > **Please notice:** It is recommended to use or upgrade to version 3.7 of VICE as with this version, the binary monitor interface has been declared stable.
+
+### Commander X16 Emulator
+
+VS64 provides launch integration for the Commander X16 emulator.
+
+* Manual installation: Download and install from https://github.com/X16Community/x16-emulator
+
+Please make sure you update the VS64 settings with the correct x16emu executable.
+
 
 ## General Usage
 
@@ -339,7 +349,27 @@ A project file for a BASIC program could look like this:
         "src/main.bas"
     ],
     "args": ["--lower"]
-    ""
+    ...
+}
+```
+
+Example project file to use C++ for the Commander X16:
+
+```
+{
+    "name": "x16",
+    "description": "Project x16",
+    "toolkit": "llvm",
+    "sources": [
+        "src/main.cpp"
+    ],
+    "build": "debug",
+    "definitions": [],
+    "includes": [],
+    "args": [],
+    "compiler": "",
+    "machine": "cx16"
+    ...
 }
 ```
 
@@ -530,14 +560,21 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
             "hostname": "localhost",
             "port": 6502,
             "preLaunchTask": "${defaultBuildTask}"
-        }
+        },
+        {
+            "type": "x16",
+            "request": "launch",
+            "name": "Launch X16",
+            "preLaunchTask": "${defaultBuildTask}"
+        },
     ]
 }
 ```
 
 > `type`: Launch type
 
-Can be either "6502" to run the integrated 6502 cpu emulator or "vice" to run a VICE emulator based debugging session.
+Can be either "6502" to run the integrated 6502 cpu emulator, "vice" to run a VICE emulator based debugging session or "x16"
+to launch the Commander X16 emulator.
 
 > `request`: Request type
 
@@ -649,13 +686,25 @@ Enable auto build before running or debugging.
 
 ### Emulator Settings
 
-> VS64: Emulator Executable
+> VS64: VICE Executable
 
 Path to Vice emulator executable. Example: `C:\Tools\c64\vice\bin\x64sc.exe`.
 
-> VS64: Emulator Arguments
+> VS64: VICE Arguments
 
-Additional emulator command line options.
+Additional VICE emulator command line options.
+
+> VS64: VICE Port
+
+Port number to use to connect to the VICE emulator debug interface (6502 is the default).
+
+> VS64: X16 Executable
+
+Path to X16 emulator executable. Example: `C:\Tools\x16emu\x16emu.exe`.
+
+> VS64: X16 Arguments
+
+Additional X16 emulator command line options.
 
 ### Misc Settings
 
@@ -700,3 +749,4 @@ This package includes open source from other developers and I would like to than
 * CharPad C64 Pro: https://subchristsoftware.itch.io/charpad-c64-pro
 * SpriteMate: https://www.spritemate.com
 * GoatTracker2: https://sourceforge.net/projects/goattracker2
+* Commander X16 Emulator: https://github.com/X16Community/x16-emulator

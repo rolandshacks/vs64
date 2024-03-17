@@ -1,5 +1,5 @@
 //
-// Vice Binary Monitor Connector
+// Vice Debugger / Binary Monitor Connector
 //
 
 const net = require('net');
@@ -15,9 +15,9 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { DebugRunner, CpuState, Breakpoint, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
+const { DebugProcess, DebugInterface, CpuState, Breakpoint, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 
-const logger = new Logger("ViceConnector");
+const logger = new Logger("ViceDebug");
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
@@ -1079,13 +1079,14 @@ class ViceMonitorClient {
 // Vice Process
 //-----------------------------------------------------------------------------------------------//
 
-class ViceProcess {
+class ViceProcess extends DebugProcess {
     constructor() {
-        this._proc = null;
+        super();
+        this._supportsRelaunch = true;
     }
 
-    get alive() {
-        return (this._proc && !this._proc.exited);
+    createDebugInterface(session) {
+        return new ViceConnector(session);
     }
 
     stdout(data) {
@@ -1094,19 +1095,11 @@ class ViceProcess {
             logger.trace(data);
             return;
         }
-        logger.debug(data);
-    }
 
-    stderr(data) {
-        if (!data) return;
-        logger.debug(data);
+        super.stdout(data);
     }
 
     async spawn(executable, port, params, options) {
-
-        if (this.alive) {
-            this.kill();
-        }
 
         const args = [];
         args.push("+remotemonitor");
@@ -1122,53 +1115,7 @@ class ViceProcess {
             args.push(...Utils.splitQuotedString(params));
         }
 
-        const instance = this;
-
-        let proc = null;
-
-        try {
-            proc = await Utils.exec(
-                executable,
-                args,
-                {
-                    sync: false,
-                    onexit:
-                        (proc) => {
-                            if (options && options.onexit) options.onexit(proc)
-                        },
-                    onstdout:
-                        (data) => {
-                            instance.stdout(data);
-                            if (options && options.onstdout) options.onstdout(data);
-                        },
-                    onstderr:
-                        (data) => {
-                            instance.stderr(data);
-                            if (options && options.onstderr) options.onstderr(data);
-                        }
-                }
-            );
-        } catch (procInfo) {
-            //const txt = (err.code == "ENOENT") ?
-            //"executable not found: '" + executable + "'" :
-            //"failed to spawn process '" + executable + ": " + err.code;
-
-            throw("failed to create emulator process \"" + executable + "\"" + (procInfo.errorInfo ? " (" + procInfo.errorInfo.code + ")" : ""));
-        }
-
-        if (proc && !proc.exited) {
-            this._proc = proc;
-        }
-    }
-
-    kill() {
-        if (this._proc) {
-            const procInfo = this._proc;
-            this._proc = null;
-            if (procInfo.process) {
-                procInfo.process.kill();
-            }
-        }
+        await super.spawn_exec(executable, args, options);
 
     }
 }
@@ -1177,12 +1124,9 @@ class ViceProcess {
 // Vice Connector
 //-----------------------------------------------------------------------------------------------//
 
-class ViceConnector extends DebugRunner {
+class ViceConnector extends DebugInterface {
     constructor(session) {
-        super();
-        this._session = session;
-        this._settings = session._settings;
-        this._basicMode = session._isBasic;
+        super(session);
         this._vice = null;
         this._initialized = false;
         this._stopped = false;
@@ -1670,6 +1614,5 @@ class ViceConnector extends DebugRunner {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ViceConnector: ViceConnector,
     ViceProcess: ViceProcess
 }

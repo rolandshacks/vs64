@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.3",
+	"version": "2.5.4",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -63,6 +63,7 @@
 		"6502",
 		"6510",
 		"vice",
+        "x16",
 		"emulator",
 		"debugger",
 		"build"
@@ -199,7 +200,7 @@
 							"markdown": "resources/walkthroughs/vice.md"
 						},
 						"completionEvents": [
-							"onSettingChanged:vs64.emulatorExecutable"
+							"onSettingChanged:vs64.viceExecutable"
 						]
 					},
 					{
@@ -410,20 +411,30 @@
 				"title": "Emulator",
 				"order": 11,
 				"properties": {
-					"vs64.emulatorExecutable": {
-						"type": "string",
-						"default": "x64sc",
-						"description": "Path to emulator executable"
-					},
-					"vs64.emulatorPort": {
-						"type": "string",
-						"default": "6502",
-						"description": "Port of emulator binary monitor interface. Leave empty to use the default port 6502."
-					},
-					"vs64.emulatorArgs": {
+					"vs64.viceExecutable": {
 						"type": "string",
 						"default": "",
-						"description": "Additional emulator command line options"
+						"description": "Path to the VICE emulator executable"
+					},
+					"vs64.vicePort": {
+						"type": "string",
+						"default": "",
+						"description": "Port of VICE emulator binary monitor interface. Leave empty to use the default port 6502."
+					},
+					"vs64.viceArgs": {
+						"type": "string",
+						"default": "",
+						"description": "Additional VICE emulator command line options"
+					},
+					"vs64.x16Executable": {
+						"type": "string",
+						"default": "x16emu",
+						"description": "Path to the X16 emulator executable"
+					},
+					"vs64.x16Args": {
+						"type": "string",
+						"default": "",
+						"description": "Additional X16 emulator command line options"
 					}
 				}
 			},
@@ -473,6 +484,31 @@
 						"type": "boolean",
 						"default": true,
 						"description": "Recursively scan for definitions and references"
+					}
+				}
+			},
+			{
+				"id": "deprecated",
+				"title": "Deprecated",
+				"order": 99,
+				"properties": {
+					"vs64.emulatorExecutable": {
+						"type": "string",
+						"default": "",
+						"description": "Path to the VICE emulator executable",
+						"deprecationMessage": "Deprecated: Please use vs64.viceExecutable instead."
+					},
+					"vs64.emulatorPort": {
+						"type": "string",
+						"default": "",
+						"description": "Port of VICE emulator binary monitor interface. Leave empty to use the default port 6502.",
+						"deprecationMessage": "Deprecated: Please use vs64.vicePort instead."
+					},
+					"vs64.emulatorArgs": {
+						"type": "string",
+						"default": "",
+						"description": "Additional VICE emulator command line options",
+						"deprecationMessage": "Deprecated: Please use vs64.viceArgs instead."
 					}
 				}
 			}
@@ -560,6 +596,11 @@
 								"type": "number",
 								"description": "Port of VICE host process",
 								"default": "6502"
+							},
+							"args": {
+								"type": "string",
+								"description": "Custom launch command line options",
+								"default": ""
 							}
 						}
 					},
@@ -580,6 +621,11 @@
 								"type": "number",
 								"description": "Port of VICE host process",
 								"default": "6502"
+							},
+							"args": {
+								"type": "string",
+								"description": "Custom launch command line options",
+								"default": ""
 							}
 						}
 					}
@@ -605,6 +651,42 @@
 							"request": "attach",
 							"hostname": "localhost",
 							"port": 6502,
+							"preLaunchTask": "${defaultBuildTask}"
+						}
+					}
+				],
+				"variables": {}
+			},
+            {
+				"type": "x16",
+				"label": "Debugger for X16 Emulator",
+				"runtime": "node",
+				"configurationAttributes": {
+					"launch": {
+						"required": [],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "Path to executable program",
+								"default": ""
+							},
+							"args": {
+								"type": "string",
+								"description": "Custom launch command line options",
+								"default": ""
+							}
+						}
+					}
+				},
+				"initialConfigurations": [],
+				"configurationSnippets": [
+					{
+						"label": "VS64: Launch in X16 Emulator",
+						"description": "A new configuration for the X16 debugger.",
+						"body": {
+							"type": "x16",
+							"name": "Launch X16",
+							"request": "launch",
 							"preLaunchTask": "${defaultBuildTask}"
 						}
 					}

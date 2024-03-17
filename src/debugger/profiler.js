@@ -50,18 +50,15 @@ class Profiler {
 
     reset() {
         const cpuState = this._runner.getCpuState();
-        this._cycles = cpuState.cpuInfo.cycles;
+        this._cycles = cpuState ? cpuState.cpuInfo.cycles : 0;
         this._cyclesDelta = 0;
     }
 
     update() {
-        const cpuState = this._runner.getCpuState();
-
         const lastCycles = this._cycles;
-
-        this._cycles = cpuState.cpuInfo.cycles;
+        const cpuState = this._runner.getCpuState();
+        this._cycles = cpuState ? cpuState.cpuInfo.cycles : 0;
         this._cyclesDelta = this._cycles - lastCycles;
-
     }
 }
 

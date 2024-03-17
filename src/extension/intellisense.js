@@ -53,15 +53,7 @@ class IntellisenseConfigurationProvider {
 
     getCompilerIncludes() {
         const project = this._project;
-        const settings = this._settings;
-        const toolkit = project.toolkit;
-
-        let compilerIncludes = null;
-        if (toolkit.isLLVM) {
-            compilerIncludes = settings.llvmIncludes;
-        } else if (toolkit.isCC65) {
-            compilerIncludes = settings.cc65Includes;
-        }
+        let compilerIncludes = (null != project) ? project.getCompilerIncludes() : null;;
 
         return compilerIncludes;
     }
