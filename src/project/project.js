@@ -354,7 +354,7 @@ class Project {
             } else {
                 if (rcFormat == "cc") this._resourceOutputType = "c";
                 else if (rcFormat == "cpp") this._resourceOutputType = "cpp";
-                else if (rcFormat == "basic") this._resourceOutputType = "basic";
+                else if (rcFormat == "basic") this._resourceOutputType = "bas";
             }
         }
 
@@ -756,7 +756,7 @@ class Project {
         const genFiles = TranslationList.createEmpty();
         const depFiles = TranslationList.createEmpty();
 
-        const resourceOutputType = toolkit.isCpp ? this._resourceOutputType : "asm";
+        const resourceOutputType = (toolkit.isCpp || toolkit.isBasic) ? this._resourceOutputType : "asm";
 
         resFiles.forEach((input) => {
             const output = this.#getBuildPath(input, resourceOutputType);
@@ -765,6 +765,7 @@ class Project {
 
             if (!doNotResolveResources) {
                 if (resourceOutputType == "asm" || toolkit.isAssembler) asmFiles.add(output, input);
+                else if (resourceOutputType == "basic" || toolkit.isBasic) basFiles.add(output, input);
                 else cppFiles.add(output, input);
             }
 

@@ -277,7 +277,7 @@ class Resource:
         return self.meta and len(self.meta) > 0
 
     def meta_to_string(self, formatter: BaseFormatter):
-        if not self.meta or len(self.meta) == 0: return ""
+        if not self.meta or len(self.meta) == 0 or not formatter.output_meta_info: return ""
 
         s = ""
 
@@ -298,7 +298,7 @@ class Resource:
         s += formatter.comment_line() + "\n"
         s += formatter.comment("Type:         Binary Data\n")
         s += formatter.comment(f"Name:         {self.identifier}\n")
-        s += formatter.comment(f"Data size:    {self.input_size} bytes (0x{self.input_size:04x})\n")
+        s += formatter.comment(f"Data size:    {self.input_size} bytes ({formatter.format_hexnumber(self.input_size)})\n")
         s += formatter.comment_line() + "\n"
 
         s += formatter.byte_array(self.identifier, self.input, ofs, sz)
@@ -406,7 +406,8 @@ class ResourcePackage:
         lines.append(formatter.comment_line())
         lines.append(formatter.comment("Resource Data"))
         lines.append(formatter.comment(f"generated {timestr} - DO NOT EDIT"))
-        lines.append(formatter.comment("clang-format off"))
+        if formatter.clang_format_pragma:
+            lines.append(formatter.comment("clang-format off"))
         lines.append(formatter.comment_line())
         lines.append("\n")
 

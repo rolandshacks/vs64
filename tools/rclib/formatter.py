@@ -16,6 +16,7 @@ class OutputFormat(Enum):
     CPP = 1
     C = 2
     ASM = 3
+    BASIC = 4
 
 class OutputFormatVariant(Enum):
     """Output format variant identifiers."""
@@ -37,6 +38,7 @@ class BaseFormatter:
         self.comment_begin: str = ''
         self.comment_end: str = ''
         self.commentline_char: str = '*'
+        self.hex_prefix: str = '0x'
         self.byte_prefix: str = '0x'
         self.binary_prefix: str = '0b'
         self.bytearray_begin: str = '{0}[1] = {{\n'
@@ -48,6 +50,10 @@ class BaseFormatter:
         self.label_fmt = '{0}'
         self.type_name_byte = ''
         self.type_name_word = ''
+        self.max_line_length = Constants.MAX_LINE_LENGTH
+        self.output_meta_info = True
+        self.clang_format_pragma = False
+        self.uppercase = False
 
     def begin_namespace(self, _name_: str):
         """Return namespace opening."""
@@ -63,7 +69,7 @@ class BaseFormatter:
         s += self.comment_begin
         if len(s) > 0 and len(comment) > 0:
             s += " "
-        s += comment
+        s += comment if not self.uppercase else comment.upper()
         if len(comment) > 0 and len(self.comment_end) > 0: s += " "
         s += self.comment_end
         return s
@@ -74,7 +80,7 @@ class BaseFormatter:
 
     def comment_line(self):
         """Create comment line."""
-        rep = Constants.MAX_LINE_LENGTH - (len(self.comment_begin) + len(self.comment_end))
+        rep = self.max_line_length - (len(self.comment_begin) + len(self.comment_end))
         return self.comment_begin + (self.commentline_char * rep) + self.comment_end
 
     def format_byte(self, value: int):
@@ -84,6 +90,9 @@ class BaseFormatter:
     def format_binary(self, value: int):
         """Format integer value as binary string."""
         return self.binary_prefix + f"{value:08b}"
+
+    def format_hexnumber(self, value: int, digits: int = 4):
+        return self.hex_prefix + (f"{value:02x}" if digits == 2 else f"{value:04x}")
 
     def format_binary_str(self, value: int, step_size: Optional[int], scale: Optional[int]):
         """Format integer value as character token."""
@@ -183,7 +192,7 @@ class BaseFormatter:
             linebreak = False
 
             if (elements_per_line and element_count >= elements_per_line) or \
-                (len(self.bytearray_linebegin) + len(line) + len(element) > Constants.MAX_LINE_LENGTH - 2):
+                (len(self.bytearray_linebegin) + len(line) + len(element) > self.max_line_length - 2):
                 linebreak = True
 
             if not linebreak or not self.bytearray_singlelinemode:
@@ -223,6 +232,7 @@ class CppFormatter(BaseFormatter):
         self.constant_value = 'extern const {2} {0} = {1};\n'
         self.type_name_byte = 'unsigned char'
         self.type_name_word = 'unsigned short'
+        self.clang_format_pragma = True
 
 class CFormatter(BaseFormatter):
     """C formatter."""
@@ -238,6 +248,7 @@ class CFormatter(BaseFormatter):
         self.constant_value = 'const {2} {0} = {1};\n'
         self.type_name_byte = 'unsigned char'
         self.type_name_word = 'unsigned short'
+        self.clang_format_pragma = True
 
 class AsmFormatter(BaseFormatter):
     """Assembler formatter."""
@@ -270,6 +281,32 @@ class AsmFormatter(BaseFormatter):
             self.type_name_byte = '.byte'
             self.type_name_word = '.word'
 
+class BasicFormatter(BaseFormatter):
+    """BASIC formatter."""
+
+    def __init__(self, format_variant):
+        super().__init__(format_variant)
+        self.format = OutputFormat.BASIC
+        self.comment_begin = '#'
+        self.commentline_char = '#'
+        self.hex_prefix = '$'
+        self.byte_prefix = ""
+        self.bytearray_begin = ''
+        self.bytearray_end = ''
+        self.bytearray_linebegin = 'DATA '
+        self.bytearray_size = ''
+        self.constant_value = '# {2} {0} = {1};\n'
+        self.type_name_byte = ''
+        self.type_name_word = ''
+        self.bytearray_singlelinemode = True
+        self.max_line_length = 78
+        self.output_meta_info = False
+
+    def format_byte(self, value: int):
+        """Format integer value as hex string."""
+        return str(value)
+
+
 class FormatterFactory:
     """Formatter factory."""
 
@@ -282,6 +319,8 @@ class FormatterFactory:
             formatter = CppFormatter(OutputFormatVariant.NONE)
         elif format_str == "cc":
             formatter = CFormatter(OutputFormatVariant.NONE)
+        elif format_str == "basic":
+            formatter = BasicFormatter(OutputFormatVariant.NONE)
         elif format_str == "acme":
             formatter = AsmFormatter(OutputFormatVariant.ACME)
         elif format_str == "kick":

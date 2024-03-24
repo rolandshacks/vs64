@@ -260,7 +260,7 @@ class WaveResource(Resource):
         s += formatter.comment(f"Name:             {self.identifier}\n")
         s += formatter.comment(f"Bits per sample:  {self.sample_bits}\n")
         s += formatter.comment(f"Sample rate:      {self.sample_rate}\n")
-        s += formatter.comment(f"Data size:        {self.sample_count} bytes (0x{self.sample_count:04x})\n")
+        s += formatter.comment(f"Data size:        {self.sample_count} bytes ({formatter.format_hexnumber(self.sample_count)})\n")
         s += formatter.comment_line() + "\n"
 
         s += formatter.byte_array(self.identifier, self.sample_data, 0, self.sample_count)

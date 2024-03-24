@@ -27,12 +27,30 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "args": [
-                "--format", "cpp",
+                "--format", "basic",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "--output", "${workspaceFolder}/test/temp/build/out.cpp",
-                "${workspaceFolder}/test/data/koala.kla"
+                "--output", "${workspaceFolder}/test/temp/build/out.bas",
+                "${workspaceFolder}/test/data/test.res"
             ]
         },
+        {
+            "name": "Basic Compiler Project",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/bc.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "d:\\Work\\c64\\basic\\bitmap_demo_basic",
+            "args": [
+                "--verbose",
+                "--crunch",
+                "--map", "d:\\Work\\c64\\basic\\bitmap_demo_basic\\build\\bitmap_demo_basic.bmap",
+                "-I", "d:\\Work\\c64\\basic\\bitmap_demo_basic\\build",
+                "-o", "d:\\Work\\c64\\basic\\bitmap_demo_basic\\build\\bitmap_demo_basic.prg",
+                "d:\\Work\\c64\\basic\\bitmap_demo_basic\\src\\main.bas"
+            ]
+        },
+
         {
             "name": "Run Basic Compiler",
             "type": "python",
@@ -43,6 +61,7 @@
             "cwd": "${workspaceFolder}/test/data",
             "args": [
                 "--verbose",
+                "--crunch",
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
                 "--include", "${workspaceFolder}/test/data",
                 "-I", "${workspaceFolder}/test/temp",
@@ -63,9 +82,9 @@
                 "--unpack",
                 "--verbose",
                 "--output", "${workspaceFolder}/test/temp/build/out.bas",
-                "D:/Temp/tsb/disc/loadkoa2reu.dmo"
+                //"D:/Temp/tsb/disc/loadkoa2reu.dmo"
                 //"D:/Temp/tsb/examples/sokoban 1.1.prg"
-                //"${workspaceFolder}/test/temp/build/out.prg"
+                "${workspaceFolder}/test/temp/build/out.prg"
             ]
         },
         {

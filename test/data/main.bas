@@ -2,6 +2,8 @@
 
 rem "* Hello, World!"
 
+#include "includes/helper.bas"
+
 start:
     print "{CLR}{LOWER}"
     a$ = "{YELLOW}Hello, {GREEN}world!{WHITE}"

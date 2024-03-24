@@ -513,9 +513,9 @@ class BitmapResource(Resource):
         s += formatter.comment(f"Height:           {self.height} px\n")
         s += formatter.comment("Depth:            2 bits per pixel, 4 bits per color\n")
         s += formatter.comment(f"Background color: {self.background_color}\n")
-        s += formatter.comment(f"Bitmap data size: {len(self.bitmap)} bytes (0x{ len(self.bitmap):04x})\n")
-        s += formatter.comment(f"Screen data size: {len(self.screen)} bytes (0x{ len(self.screen):04x})\n")
-        s += formatter.comment(f"Color data size:  { len(self.colors)} bytes (0x{ len(self.colors):04x})\n")
+        s += formatter.comment(f"Bitmap data size: {len(self.bitmap)} bytes ({formatter.format_hexnumber(len(self.bitmap))})\n")
+        s += formatter.comment(f"Screen data size: {len(self.screen)} bytes ({formatter.format_hexnumber(len(self.screen))})\n")
+        s += formatter.comment(f"Color data size:  {len(self.colors)} bytes ({formatter.format_hexnumber(len(self.colors))})\n")
         s += formatter.comment_line() + "\n"
 
         s +=  formatter.byte_array(self.identifier + "_pixels", self.bitmap, 0, len(self.bitmap))

@@ -12,7 +12,6 @@ from .common import CompileError, CompileOptions, CompileBuffer, CompileHelper
 # Basic Module
 #############################################################################
 
-
 class BasicModule:
     """Basic module."""
 
@@ -35,7 +34,6 @@ class BasicModule:
 #############################################################################
 # Basic Line
 #############################################################################
-
 
 class BasicLine:
     """Basic line."""
@@ -152,7 +150,6 @@ class BasicLine:
 # SourceMap
 #############################################################################
 
-
 class SourceMap:
     """Debug information."""
 
@@ -176,7 +173,6 @@ class SourceMap:
 #############################################################################
 # Basic Program
 #############################################################################
-
 
 class BasicProgram:
     """Basic program."""
@@ -325,7 +321,6 @@ class BasicProgram:
 # Basic Compiler
 #############################################################################
 
-
 class BasicCompiler:
     """Basic compiler."""
 
@@ -338,8 +333,8 @@ class BasicCompiler:
         self.token_map = None
         self.line_number_map = None
         self.last_line = 0
+        self.max_line_number = 0
         self.new_labels = []
-        self.include_path = []
         self.labels = {}
         self.modules = None
 
@@ -377,6 +372,14 @@ class BasicCompiler:
         if err:
             return err
 
+        # there was a label at the end without following BASIC statement
+        need_ending_line = False
+        if len(self.new_labels) > 0:
+            need_ending_line = True
+            for new_label in self.new_labels:
+                self.labels[new_label] = self.max_line_number+1
+            self.new_labels = []
+
         # restore initial options
         options.lower_case = initial_lower_case_settings
 
@@ -385,6 +388,14 @@ class BasicCompiler:
             err = self.compile_module(module)
             if err:
                 return err
+
+        # add REM statement at the end in case there was a label at the end
+        if need_ending_line and len(self.modules) > 0:
+            (ending_line, err) = self.compile_line(self.modules[-1], "rem", -1)
+            if ending_line:
+                ending_line.set_source_line("rem")
+                ending_line.set_index(-1)
+                self.program.add_line(ending_line)
 
         # resolve program addresses
         self.program.resolve()
@@ -422,6 +433,7 @@ class BasicCompiler:
             if err:
                 return err
             self.modules.append(module)
+        self.max_line_number = max(self.last_line, self.max_line_number)
         self.last_line = 0
 
         return None
@@ -658,7 +670,15 @@ class BasicCompiler:
                         c = line[ofs]
 
                 if last_was_jump == 0xCB and label.lower() == "sub":
-                    # turn 'go sub' into gosub
+                    # turn 'GO SUB' into GOSUB
+                    basic_line.store_byte(0x8D, label)
+                    last_was_jump = 0x8D
+                elif last_was_jump == 0xA7 and label.lower() == "goto":
+                    # handle THEN GOTO
+                    basic_line.store_byte(0x89, label)
+                    last_was_jump = 0x89
+                elif last_was_jump == 0xA7 and label.lower() == "gosub":
+                    # handle THEN GOSUB
                     basic_line.store_byte(0x8D, label)
                     last_was_jump = 0x8D
                 else:
@@ -669,7 +689,6 @@ class BasicCompiler:
                         basic_line.store_string(str(label_line_number))
                     else:
                         return (
-                            0,
                             None,
                             CompileError(
                                 module.filename,
@@ -722,7 +741,7 @@ class BasicCompiler:
                             token_skipped = True
 
                     # GOTO or GOSUB ?
-                    last_was_jump = token_id if token_id in [0x89, 0x8D, 0xCB] else 0x0
+                    last_was_jump = token_id if token_id in [0x89, 0x8D, 0xCB, 0xA7] else 0x0
 
                     ofs += token_len
                     if not token_skipped:
@@ -806,7 +825,7 @@ class BasicCompiler:
                     self.new_labels.append(label.lower())
                 ofs = len(result[0]) + 1
                 if ofs >= len(line):
-                    if verbose:
+                    if verbose and preprocess:
                         print(f"{label}:")
                     return (0, None, None)  # just label line, no BASIC code
 
@@ -853,7 +872,7 @@ class BasicCompiler:
         if os.path.exists(f):
             return f
 
-        for path_entry in self.include_path:
+        for path_entry in self.options.include_path:
             f = os.path.abspath(os.path.join(path_entry, filename))
             if os.path.exists(f):
                 return f

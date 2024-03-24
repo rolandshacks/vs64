@@ -190,6 +190,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (this._emulatorProcess && this._emulatorProcess.alive) {
             this._emulatorProcess.kill();
+            this._emulatorProcess = null;
         }
 
         const settings = this._settings;
@@ -340,15 +341,14 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const emu = this._emulator;
         this._emulator = null;
 
-        const emuProcess = this._emulatorProcess;
-        this._emulatorProcess = null;
-
         if (emu && !restartEmulatorProcess) {
             emu.stop();
             if (emu.disconnect) emu.disconnect();
         }
 
+        const emuProcess = this._emulatorProcess;
         if (emuProcess && !emuProcess.supportsRelaunch) {
+            this._emulatorProcess = null;
             if (restartEmulatorProcess) {
                 emuProcess.disableEvents();
             }
@@ -384,15 +384,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (!project) return null;
 
         const toolkit = project.toolkit;
-        if (toolkit) {
-            this._isBasic = toolkit.isBasic;
-        } else {
-            this._isBasic = false;
-        }
-
-        let binaryPath = args.program;
-        let forcedStartAddress = DebugHelper.parseAddressString(args.pc);
-
+        this._isBasic = toolkit ? toolkit.isBasic : false;
         this._launchBinary = null;
         this._launchPC = null;
 
@@ -400,6 +392,9 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             type: debuggerType,
             args: args.args
         };
+
+        let binaryPath = args.program;
+        let forcedStartAddress = DebugHelper.parseAddressString(args.pc);
 
         if (debuggerType == Constants.DebuggerTypeVice) {
             options.hostname = args.hostname||"localhost";

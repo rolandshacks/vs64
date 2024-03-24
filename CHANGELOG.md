@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.5 Minor Update
+
+- Removed some glitches in BASIC compiler/disassembler
+- Added support for BASIC data output to resource compiler
+- Bug-fixes and minor improvements
+
 ## 2.5.4 Minor Update
 
 - Preliminary support for the Commander X16 emulator

@@ -64,7 +64,7 @@ function nameFromPetsciiBytes(dataByte) {
     return "{$" + b.toString(16) + "}";
 }
 
-function charFromPetsciiBytes(dataByte, lower_case) {
+function charFromPetsciiBytes(dataByte, lower_case, expand_html) {
 
     let b = int8FromBytes(dataByte);
 
@@ -74,8 +74,14 @@ function charFromPetsciiBytes(dataByte, lower_case) {
         b -= 32;
     else if (b >= 193 && b <= 218)
         b -= 128;
-    else if (b < 32 || b >= 128)
+    else if (b == 0x5b) return '[';
+    else if (b == 0x5c) return '\\';
+    else if (b == 0x5d) return ']';
+    else if (b < 32 || b >= 128 || b == 0x5e || b == 0x5f)
         return nameFromPetsciiBytes(dataByte)
+    else if (b == 32 && expand_html) {
+        return "&nbsp;"
+    }
 
     return String.fromCharCode(b);
 }
@@ -466,7 +472,8 @@ function process(binary, write, options) {
                         output_buffer += "\"";
 
                         while (ofs < binary_size && int8FromBytes(binary[ofs]) != 34 && int8FromBytes(binary[ofs]) != 0) {
-                            output_buffer += charFromPetsciiBytes(binary[ofs], lower_case);
+                            let c = charFromPetsciiBytes(binary[ofs], lower_case, true);
+                            output_buffer += c;
                             ofs++;
                         }
 
