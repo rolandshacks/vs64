@@ -813,14 +813,18 @@ class Project {
         } else if (toolkit.isKick) {
             // generate one dependency list for all compilation units
             const dependencies = [];
-            let asmMain = null;
             asmFiles.forEach((filename) => {
-                if (!asmMain) {
-                    asmMain = filename;
-                    dependencies.push(asmMain);
-                }
                 this.getFileReferences(filename, dependencies);
             });
+
+            let asmMain = null;
+            asmFiles.forEach((filename) => {
+                if (null == asmMain && dependencies.indexOf(filename) == -1) {
+                    asmMain = filename;
+                    dependencies.splice(0, 0, filename); // insert main as first item
+                }
+            });
+
             genFiles.forEach((filename) => {
                 dependencies.push(filename);
             });

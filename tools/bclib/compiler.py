@@ -572,9 +572,15 @@ class BasicCompiler:
 
         last_was_whitespace = True
 
+        command_token = None
+
         while ofs < len(line):
             c = line[ofs]
             current_char = c
+
+            token = None
+            token_id = None
+            token_len = None
 
             if c == " ":
                 # space
@@ -588,12 +594,18 @@ class BasicCompiler:
 
             elif c == ":":
                 # handle statement separator ':'
+                command_token = None
                 last_was_jump = 0x0
                 if not crunch or (
                     not basic_line.is_empty() and not basic_line.peek_last_char() == ":"
                 ):
                     basic_line.store_char(c)
 
+                ofs += 1
+
+            elif command_token == 0x83 and c in ['-', '+']:
+                # handle operator signs in data line
+                basic_line.store_char(c)
                 ofs += 1
 
             elif c == '"' or c == "'":
@@ -682,20 +694,27 @@ class BasicCompiler:
                     basic_line.store_byte(0x8D, label)
                     last_was_jump = 0x8D
                 else:
-                    # get line number from label
-                    label_line_number = self.labels.get(label.lower())
 
-                    if label_line_number:
-                        basic_line.store_string(str(label_line_number))
-                    else:
-                        return (
-                            None,
-                            CompileError(
-                                module.filename,
-                                f"undefined label '{label}'",
-                                line_index,
-                            ),
-                        )
+                    if last_was_jump == 0xA7:
+                        # handle "THEN TOKEN" instead of "THEN label"
+                        token, token_id, token_len = self.match_token(label)
+
+                    if not token:
+
+                        # get line number from label
+                        label_line_number = self.labels.get(label.lower())
+
+                        if label_line_number:
+                            basic_line.store_string(str(label_line_number))
+                        else:
+                            return (
+                                None,
+                                CompileError(
+                                    module.filename,
+                                    f"undefined label '{label}'",
+                                    line_index,
+                                ),
+                            )
 
             elif last_was_jump != 0x0 and self.is_numeric_char(c):
                 # handle line number after jump
@@ -713,54 +732,7 @@ class BasicCompiler:
 
             else:  # scan BASIC token
                 token, token_id, token_len = self.peek_token(line, ofs)
-                if token:
-                    token_skipped = False
-
-                    if token_id & 0xFF0000:
-                        # 3-byte token (TSB extensions)
-                        basic_line.store_byte((token_id & 0xFF0000) >> 16)
-                        basic_line.store_byte((token_id & 0xFF00) >> 8)
-                        basic_line.store_byte(token_id & 0xFF)
-                    elif token_id & 0xFF00:
-                        if token_id == 0x6428:
-                            # special case 'AT(' because bracket needs to follow,
-                            # but BASIC interpreter generates one automatically
-                            basic_line.store_byte(0x64)
-                        else:
-                            # map extension tokens: (3c->b3, 3d->b2, 3e->b1)
-                            if token_id >= 0x643c and token_id <= 0x643e:
-                                token_id = token_id ^ 0x8f
-
-                            # 2-byte token (SB/TSB)
-                            basic_line.store_word_be(token_id)
-                    else:
-                        # 1-byte token (BASIC V2 originals)
-                        if not crunch or token_id != 0x8F:  # ignore REM when crunching
-                            basic_line.store_byte(token_id)
-                        else:
-                            token_skipped = True
-
-                    # GOTO or GOSUB ?
-                    last_was_jump = token_id if token_id in [0x89, 0x8D, 0xCB, 0xA7] else 0x0
-
-                    ofs += token_len
-                    if not token_skipped:
-                        if Constants.DEBUG_MODE:
-                            basic_line.add_verbose(f"{{${token_id:x}:{token}}}")
-                        else:
-                            basic_line.add_verbose(token)
-
-                    # REM ?
-                    if token_id == 0x8F:
-                        # after REM, consume all characters until eol
-                        while ofs < len(line):
-                            if not crunch:
-                                c = line[ofs]
-                                if c != "\t":
-                                    basic_line.store_char(line[ofs])
-                            ofs += 1
-
-                else:
+                if not token:
                     # no token
                     if c != "," and not self.is_numeric_char(c):
                         last_was_jump = 0x0
@@ -773,6 +745,58 @@ class BasicCompiler:
 
                     basic_line.store_char(c)
                     ofs += 1
+
+            if token:
+
+                if command_token is None: command_token = token_id
+
+                token_skipped = False
+
+                if token_id & 0xFF0000:
+                    # 3-byte token (TSB extensions)
+                    basic_line.store_byte((token_id & 0xFF0000) >> 16)
+                    basic_line.store_byte((token_id & 0xFF00) >> 8)
+                    basic_line.store_byte(token_id & 0xFF)
+                elif token_id & 0xFF00:
+                    if token_id == 0x6428:
+                        # special case 'AT(' because bracket needs to follow,
+                        # but BASIC interpreter generates one automatically
+                        basic_line.store_byte(0x64)
+                    else:
+                        # map extension tokens: (3c->b3, 3d->b2, 3e->b1)
+                        if token_id >= 0x643c and token_id <= 0x643e:
+                            token_id = token_id ^ 0x8f
+
+                        # 2-byte token (SB/TSB)
+                        basic_line.store_word_be(token_id)
+                else:
+                    # 1-byte token (BASIC V2 originals)
+                    if not crunch or token_id != 0x8F:  # ignore REM when crunching
+                        basic_line.store_byte(token_id)
+                    else:
+                        token_skipped = True
+
+                # GOTO or GOSUB ?
+                last_was_jump = token_id if token_id in [0x89, 0x8D, 0xCB, 0xA7] else 0x0
+
+                ofs += token_len
+                if not token_skipped:
+                    if Constants.DEBUG_MODE:
+                        basic_line.add_verbose(f"{{${token_id:x}:{token}}}")
+                    else:
+                        basic_line.add_verbose(token)
+
+                # REM ?
+                if token_id == 0x8F:
+                    # after REM, consume all characters until eol
+                    while ofs < len(line):
+                        if not crunch:
+                            c = line[ofs]
+                            if c != "\t":
+                                basic_line.store_char(line[ofs])
+                        ofs += 1
+
+
 
             last_was_whitespace = current_char == " "
 
@@ -878,6 +902,28 @@ class BasicCompiler:
                 return f
 
         return None
+
+    def match_token(self, text):
+        """Check if text is a token."""
+
+        if text == "?":
+            return ("?", 0x99, 1)
+
+        uppercase_text = text.upper()
+
+        for k in self.sorted_token_list:
+            if len(k) >= 2:
+                abbrev = ""
+                if k in ["gosub", "left", "step", "str", "restore", "return", "close"]:
+                    abbrev = k[0].lower() + k[1].lower + k[2].upper()
+                else:
+                    abbrev = k[0].lower() + k[1].upper()
+                if text == abbrev:
+                    return (k, Constants.BASIC_TOKENS[k], len(abbrev))
+            if uppercase_text == k:
+                return (k, self.token_map[k], len(k))
+
+        return None, None, 0
 
     def peek_token(self, text, ofs):
         """Look at the next token."""

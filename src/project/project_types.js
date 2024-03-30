@@ -140,7 +140,6 @@ class TranslationList {
         this._mapping.forEach((value) => {
             if (value) fn(value.to, value.from, value.rule, number);
             number++;
-
         });
     }
 

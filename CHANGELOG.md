@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.6 Minor Update
+
+- Fixed handling DATA lines and IF/THEN tokens in BASIC compiler
+- Fixed kickass multi-file handling
+- Bug-fixes and minor improvements
+
 ## 2.5.5 Minor Update
 
 - Removed some glitches in BASIC compiler/disassembler

@@ -67,7 +67,7 @@
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
                 //"${workspaceFolder}/test/temp/build/out.bas"
-                "${workspaceFolder}/test/data/main.bas"
+                "${workspaceFolder}/test/data/main2.bas"
             ]
         },
         {
