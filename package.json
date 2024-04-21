@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.6",
+	"version": "2.5.7",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -13,9 +13,10 @@
 	"homepage": "https://github.com/rolandshacks/vs64",
 	"private": true,
 	"engines": {
-		"vscode": "^1.85.0"
+		"vscode": "^1.87.0"
 	},
 	"main": "./src/extension/main.js",
+	"xmain": "./dist/vs64.js",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/rolandshacks/vs64"
@@ -24,21 +25,23 @@
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./test/jest.config.js",
 		"coverage": "jest --coverage --runInBand --config ./test/jest.config.js",
-		"vsix": "vsce package --no-yarn --dependencies"
+		"vsix": "vsce package --no-yarn --dependencies",
+		"esbuild": "node build.js"
 	},
 	"dependencies": {
-		"@vscode/debugadapter": "1.51.0",
+		"@vscode/debugadapter": "1.65.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "^4.2.4",
+		"fast-xml-parser": "^4.4.0",
 		"vscode-cpptools": "^6.1.0"
 	},
 	"devDependencies": {
-		"@types/node": "^18.x",
-		"@types/vscode": "^1.85.0",
-		"@vscode/vsce": "^2.22.0",
-		"eslint": "^8.29.0",
-		"jest": "^29.5.0",
-		"typescript": "^5.3.3"
+		"@types/node": "^20.13.0",
+		"@types/vscode": "^1.87.0",
+		"@vscode/vsce": "^2.26.1",
+		"esbuild": "^0.21.4",
+		"eslint": "^9.4.0",
+		"jest": "^29.7.0",
+		"typescript": "^5.4.5"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -59,11 +62,12 @@
 		"llvm",
 		"c++",
 		"cc65",
+		"oscar64",
 		"basic",
 		"6502",
 		"6510",
 		"vice",
-        "x16",
+		"x16",
 		"emulator",
 		"debugger",
 		"build"
@@ -102,13 +106,18 @@
 				"category": "VS64"
 			},
 			{
+				"command": "vs64.createProjectLlvm",
+				"title": "Create LLVM-MOS C++ Project",
+				"category": "VS64"
+			},
+			{
 				"command": "vs64.createProjectCc65",
 				"title": "Create CC65 C Project",
 				"category": "VS64"
 			},
 			{
-				"command": "vs64.createProjectLlvm",
-				"title": "Create LLVM-MOS C++ Project",
+				"command": "vs64.createProjectOscar64",
+				"title": "Create Oscar64 C Project",
 				"category": "VS64"
 			},
 			{
@@ -215,7 +224,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -354,15 +363,20 @@
 						"default": "",
 						"description": "Path to KickAssembler installation"
 					},
+					"vs64.llvmInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to LLVM-MOS SDK installation"
+					},
 					"vs64.cc65InstallDir": {
 						"type": "string",
 						"default": "",
 						"description": "Path to CC65 compiler installation"
 					},
-					"vs64.llvmInstallDir": {
+					"vs64.oscar64InstallDir": {
 						"type": "string",
 						"default": "",
-						"description": "Path to LLVM-MOS SDK installation"
+						"description": "Path to Oscar64 compiler installation"
 					},
 					"vs64.buildDefines": {
 						"type": "string",
@@ -657,7 +671,7 @@
 				],
 				"variables": {}
 			},
-            {
+			{
 				"type": "x16",
 				"label": "Debugger for X16 Emulator",
 				"runtime": "node",

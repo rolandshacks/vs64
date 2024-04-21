@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.7 Minor Update
+
+- Added support for the Oscar64 C compiler
+- Added breakpoint debugger argument support for x16 emulator
+- Bug-fixes and minor improvements
+
 ## 2.5.6 Minor Update
 
 - Fixed handling DATA lines and IF/THEN tokens in BASIC compiler

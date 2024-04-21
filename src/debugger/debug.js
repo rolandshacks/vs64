@@ -10,7 +10,7 @@ BIND(module);
 
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-const { DebugAddressInfo } = require('debugger/debug_info');
+const { DebugAddressInfo } = require('debugger/debug_info_types');
 const { Profiler } = require('debugger/profiler');
 
 const logger = new Logger("Debug");

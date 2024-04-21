@@ -14,7 +14,8 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Utils, Formatter } = require('utilities/utils');
+const { Formatter } = require('utilities/utils');
+const { DebugDataType } = require('debugger/debug_info_types');
 
 //const { Logger } = require('utilities/logger');
 //const logger = new Logger("DebugVariables");
@@ -24,34 +25,25 @@ const { Utils, Formatter } = require('utilities/utils');
 //-----------------------------------------------------------------------------------------------//
 
 const DebugVariables = {
-    VARIABLES_REGISTERS: 0x10000,
-    VARIABLES_FLAGS: 0x20000,
-    VARIABLES_SYMBOLS: 0x30000,
-    VARIABLES_STACK: 0x40000,
-    VARIABLES_SYSINFO: 0x50000,
-    VARIABLES_VIC: 0x60000,
-    VARIABLES_SPRITES: 0x70000,
-    VARIABLES_SPRITE_0: 0x70001,
-    VARIABLES_SPRITE_1: 0x70002,
-    VARIABLES_SPRITE_2: 0x70003,
-    VARIABLES_SPRITE_3: 0x70004,
-    VARIABLES_SPRITE_4: 0x70005,
-    VARIABLES_SPRITE_5: 0x70006,
-    VARIABLES_SPRITE_6: 0x70007,
-    VARIABLES_SPRITE_7: 0x70008,
-    VARIABLES_CIA1: 0x80000,
-    VARIABLES_CIA2: 0x90000,
-    VARIABLES_SID: 0xA0000,
-    VARIABLES_SID_CHANNEL1: 0xA0001,
-    VARIABLES_SID_CHANNEL2: 0xA0002,
-    VARIABLES_SID_CHANNEL3: 0xA0003,
-    VARIABLES_BASIC: 0xB0000,
-    VARIABLES_BASIC_REGISTERS: 0xB0001,
-    VARIABLES_BASIC_VECTORS: 0xB0002,
-    VARIABLES_BASIC_VARIABLES: 0xB0003,
-    VARIABLES_BASIC_ARRAYS: 0xB0004,
-    VARIABLES_BASIC_ARRAYS_BEGIN: 0xE0000,
-    VARIABLES_BASIC_ARRAYS_END: 0xEFFFF
+    VARIABLES_REGISTERS: 1,
+    VARIABLES_FLAGS: 2,
+    VARIABLES_SYSINFO: 3,
+    VARIABLES_MEMORY: 4,
+    VARIABLES_SYMBOLS: 5,
+    VARIABLES_VIC: 6,
+    VARIABLES_SPRITES: 7,
+    VARIABLES_BASIC: 8,
+    VARIABLES_BASIC_REGISTERS: 9,
+    VARIABLES_BASIC_VECTORS: 10,
+
+    VARIABLES_SPRITES_BEGIN: 100,
+    VARIABLES_SPRITES_END: 107,
+
+    VARIABLES_BASIC_ARRAYS_BEGIN: 0x10000,
+    VARIABLES_BASIC_ARRAYS_END: 0x1FFFF,
+
+    VARIABLES_SYMBOLS_MEMBERS_BEGIN: 0x20000,
+    VARIABLES_SYMBOLS_MEMBERS_END: 0x2FFFF
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -74,18 +66,18 @@ class DebugVariablesProvider {
             scopes.push(
                 ["BASIC",               DebugVariables.VARIABLES_BASIC],
                 ["BASIC Registers",     DebugVariables.VARIABLES_BASIC_REGISTERS],
-                ["BASIC Vectors",     DebugVariables.VARIABLES_BASIC_VECTORS],
+                ["BASIC Vectors",       DebugVariables.VARIABLES_BASIC_VECTORS],
             );
         }
 
         scopes.push(
             ["CPU Registers",           DebugVariables.VARIABLES_REGISTERS],
             ["CPU Flags",               DebugVariables.VARIABLES_FLAGS],
-            ["Stack",                   DebugVariables.VARIABLES_STACK],
             ["Symbols",                 DebugVariables.VARIABLES_SYMBOLS],
+            ["Memory",                  DebugVariables.VARIABLES_MEMORY],
             ["Stats",                   DebugVariables.VARIABLES_SYSINFO],
             ["Video (VIC)",             DebugVariables.VARIABLES_VIC],
-            ["Sprites (VIC)",           DebugVariables.VARIABLES_SPRITES]
+            ["Sprites (VIC)",           DebugVariables.VARIABLES_SPRITES],
         );
 
         return scopes;
@@ -121,10 +113,10 @@ class DebugVariablesProvider {
                 let registers = cpuState.cpuRegisters;
 
                 variables = [
-                    { name: "(accumulator) A",      type: "register", value: Formatter.formatByte(registers.A), variablesReference: 0 },
-                    { name: "(register) X",         type: "register", value: Formatter.formatByte(registers.X), variablesReference: 0 },
-                    { name: "(register) Y",         type: "register", value: Formatter.formatByte(registers.Y), variablesReference: 0 },
-                    { name: "(stack pointer) SP",   type: "register", value: Formatter.formatByte(registers.S), variablesReference: 0 },
+                    { name: "(accumulator) A",      type: "register", value: Formatter.formatU8(registers.A), variablesReference: 0 },
+                    { name: "(register) X",         type: "register", value: Formatter.formatU8(registers.X), variablesReference: 0 },
+                    { name: "(register) Y",         type: "register", value: Formatter.formatU8(registers.Y), variablesReference: 0 },
+                    { name: "(stack pointer) SP",   type: "register", value: Formatter.formatU8(registers.S), variablesReference: 0 },
                     { name: "(program counter) PC", type: "register", value: Formatter.formatAddress(registers.PC), variablesReference: 0, memoryReference: registers.PC }
                 ];
 
@@ -142,42 +134,50 @@ class DebugVariablesProvider {
                     { name: "(carry) C",       type: "flag", value: Formatter.formatBit(flags.C), variablesReference: 0 }
                 ];
 
+            } else if (DebugVariables.VARIABLES_MEMORY == args.variablesReference) {
+
+                variables = [];
+
+                variables.push(
+                    // memory reference 0x0 does not work -- use -1 instead and clamp later
+                    { name: "Zeropage", type: "Zeropage ($00-$ff)", value: await session.formatMemory(0x0, 0x100), variablesReference: 0, memoryReference: -1 }
+                );
+
+                variables.push(
+                    { name: "Stack", type: "Stack ($100-$1ff)", value: await session.formatMemory(0x100, 0x100), variablesReference: 0, memoryReference: 0x100 }
+                );
+
+                if (null != debugInfo && null != debugInfo.hasMemBlocks) {
+
+                    for (const memblock of debugInfo.memblocks) {
+
+                        const info = await session.formatSymbol(memblock);
+                        const bytes_token = memblock.memory_size == 1 ? "byte" : "bytes";
+                        const type_info = memblock.memory_size  + " " + bytes_token + ", start: " + Formatter.formatAddress(memblock.startAddress) + ", end: " + Formatter.formatAddress(memblock.startAddress);
+
+                        variables.push(
+                            { name: info.label, type: type_info, value: info.value, variablesReference: 0, memoryReference: memblock.startAddress }
+                        );
+                    }
+                }
+
             } else if (DebugVariables.VARIABLES_SYMBOLS == args.variablesReference) {
 
                 variables = [];
 
-                if (null != debugInfo && null != debugInfo._symbols) {
+                if (null != debugInfo && null != debugInfo.hasSymbols) {
+                    let symbols = debugInfo.symbols;
+                    let unpackedSymbols = await session.unpackSymbols(symbols);
+                    if (unpackedSymbols) {
+                        for (const unpackedSymbol of unpackedSymbols) {
+                            if (null != unpackedSymbol) {
 
-                    let symbols = debugInfo._symbols.values();
-
-                    for (const symbol of symbols) {
-
-                        let info = await session.formatSymbol(symbol);
-
-                        if (symbol.isAddress) {
-                            const label = symbol.memory_size ?
-                                symbol.name + ": " + symbol.memory_size + " bytes at " + Formatter.formatAddress(symbol.value) :
-                                symbol.name + ": " + Formatter.formatAddress(symbol.value);
-
-                            variables.push(
-                                {
-                                    name: info.label,
-                                    type: label,
-                                    value: info.value,
-                                    variablesReference: 0,
-                                    memoryReference: symbol.value
+                                if (unpackedSymbol.indexedVariables > 0 && unpackedSymbol.variablesReference != null) {
+                                    unpackedSymbol.variablesReference += DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN;
                                 }
-                            );
-                        } else {
-                            variables.push(
-                                {
-                                    name: info.label,
-                                    type: (symbol.name + " = " + symbol.value),
-                                    value: info.value,
-                                    variablesReference: 0
-                                }
-                            );
 
+                                variables.push(unpackedSymbol);
+                            }
                         }
                     }
                 }
@@ -188,21 +188,21 @@ class DebugVariablesProvider {
                     { name: "Cycles Delta", type: "stat", value: cyclesDelta.toString(), variablesReference: 0 },
                     { name: "Cpu Time Delta", type: "stat", value: cpuTimeDelta, variablesReference: 0 },
                     { name: "Opcode", type: "stat", value: Formatter.formatValue(cpuState.cpuInfo.opcode), variablesReference: 0 },
-                    { name: "IRQ", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.irq), variablesReference: 0 },
-                    { name: "NMI", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.nmi), variablesReference: 0 },
+                    { name: "IRQ", type: "stat", value: Formatter.formatU8(cpuState.cpuInfo.irq), variablesReference: 0 },
+                    { name: "NMI", type: "stat", value: Formatter.formatU8(cpuState.cpuInfo.nmi), variablesReference: 0 },
                     { name: "Raster Line", type: "stat", value: Formatter.formatValue(cpuState.cpuInfo.rasterLine), variablesReference: 0 },
                     { name: "Raster Cycle", type: "stat", value: Formatter.formatValue(cpuState.cpuInfo.rasterCycle), variablesReference: 0 },
-                    { name: "Zero-$00", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.zero0), variablesReference: 0 },
-                    { name: "Zero-$01", type: "stat", value: Formatter.formatByte(cpuState.cpuInfo.zero1), variablesReference: 0 },
+                    { name: "Zero-$00", type: "stat", value: Formatter.formatU8(cpuState.cpuInfo.zero0), variablesReference: 0 },
+                    { name: "Zero-$01", type: "stat", value: Formatter.formatU8(cpuState.cpuInfo.zero1), variablesReference: 0 },
                 ];
 
-            } else if (args.variablesReference >= DebugVariables.VARIABLES_SPRITE_0 && args.variablesReference <= DebugVariables.VARIABLES_SPRITE_7) {
+            } else if (args.variablesReference >= DebugVariables.VARIABLES_SPRITES_BEGIN && args.variablesReference <= DebugVariables.VARIABLES_SPRITES_END) {
 
                 const chipState = await stateProvider.getChipState();
                 if (chipState) {
                     const vicState = chipState.vic;
                     const vicBase = vicState.baseAddress;
-                    const spriteId = (args.variablesReference - DebugVariables.VARIABLES_SPRITE_0);
+                    const spriteId = (args.variablesReference - DebugVariables.VARIABLES_SPRITES_BEGIN);
                     const s = vicState.sprites[spriteId];
 
                     variables = [
@@ -234,21 +234,21 @@ class DebugVariablesProvider {
                     const vicState = chipState.vic;
 
                     variables.push(
-                        { name: "Multi-Color 1", type: "stat", value: Formatter.formatByte(vicState.spriteColorMulti1), variablesReference: 0 },
+                        { name: "Multi-Color 1", type: "stat", value: Formatter.formatU8(vicState.spriteColorMulti1), variablesReference: 0 },
                     );
 
                     variables.push(
-                        { name: "Multi-Color 2", type: "stat", value: Formatter.formatByte(vicState.spriteColorMulti2), variablesReference: 0 },
+                        { name: "Multi-Color 2", type: "stat", value: Formatter.formatU8(vicState.spriteColorMulti2), variablesReference: 0 },
                     );
 
                     variables.push(
-                        { name: "Sprite/Background Priority", type: "stat", value: Formatter.formatByte(vicState.spriteBackgroundPriority), variablesReference: 0 }
+                        { name: "Sprite/Background Priority", type: "stat", value: Formatter.formatU8(vicState.spriteBackgroundPriority), variablesReference: 0 }
                     );
 
                     for (let i=0; i<8; i++) {
                         const s = vicState.sprites[i];
                         variables.push(
-                            { name: "Sprite " + i, type: "stat", value: s.label, variablesReference: DebugVariables.VARIABLES_SPRITE_0+i }
+                            { name: "Sprite " + i, type: "stat", value: s.label, variablesReference: DebugVariables.VARIABLES_SPRITES_BEGIN+i }
                         );
                     }
                 }
@@ -363,74 +363,23 @@ class DebugVariablesProvider {
                         { name: "Scroll-Y", type: "stat", value: vicState.scrollY.toString(), variablesReference: 0 },
                         { name: "Lightpen-X", type: "stat", value: vicState.lightPenX.toString(), variablesReference: 0 },
                         { name: "Lightpen-Y", type: "stat", value: vicState.lightPenY.toString(), variablesReference: 0 },
-                        { name: "IRQ Flags", type: "stat", value: Formatter.formatByte(vicState.irqFlags), variablesReference: 0 },
-                        { name: "IRQ Mask", type: "stat", value: Formatter.formatByte(vicState.irqMask), variablesReference: 0 },
-                        { name: "Border Color", type: "stat", value: Formatter.formatByte(vicState.borderColor), variablesReference: 0 },
-                        { name: "Background Color", type: "stat", value: Formatter.formatByte(vicState.backgroundColor), variablesReference: 0 },
-                        { name: "Background Multi-Color 1", type: "stat", value: Formatter.formatByte(vicState.backgroundColorMulti1), variablesReference: 0 },
-                        { name: "Background Multi-Color 2", type: "stat", value: Formatter.formatByte(vicState.backgroundColorMulti2), variablesReference: 0 },
-                        { name: "Background Multi-Color 3", type: "stat", value: Formatter.formatByte(vicState.backgroundColorMulti3), variablesReference: 0 },
+                        { name: "IRQ Flags", type: "stat", value: Formatter.formatU8(vicState.irqFlags), variablesReference: 0 },
+                        { name: "IRQ Mask", type: "stat", value: Formatter.formatU8(vicState.irqMask), variablesReference: 0 },
+                        { name: "Border Color", type: "stat", value: Formatter.formatU8(vicState.borderColor), variablesReference: 0 },
+                        { name: "Background Color", type: "stat", value: Formatter.formatU8(vicState.backgroundColor), variablesReference: 0 },
+                        { name: "Background Multi-Color 1", type: "stat", value: Formatter.formatU8(vicState.backgroundColorMulti1), variablesReference: 0 },
+                        { name: "Background Multi-Color 2", type: "stat", value: Formatter.formatU8(vicState.backgroundColorMulti2), variablesReference: 0 },
+                        { name: "Background Multi-Color 3", type: "stat", value: Formatter.formatU8(vicState.backgroundColorMulti3), variablesReference: 0 },
                     ];
                 } else {
                     variables = [];
                 }
-
-            } else  if (DebugVariables.VARIABLES_STACK == args.variablesReference) {
-
-                let stackUsage = 255 - cpuState.cpuRegisters.S;
-
-                variables = [
-                    {
-                        name: "Stack",
-                        type: "stack",
-                        value: "(" + (stackUsage) + ")",
-                        indexedVariables: stackUsage,
-                        variablesReference: DebugVariables.VARIABLES_STACK+1000
-                    }
-                ];
-
-                if (debugInfo.hasCStack) {
-
-                    const mem = await emu.readMemory(0x02, 0x03);
-                    const stackPointer = (mem[1] << 8) + mem[0];
-
-                    variables.push(
-                        {
-                            name: "C-Stack",
-                            type: "stack",
-                            value: Formatter.formatAddress(stackPointer),
-                            variablesReference: 0,
-                            memoryReference: stackPointer
-                        }
-                    );
-                }
-
             }
+
         } else if (args.filter == "indexed") {
-            if (DebugVariables.VARIABLES_STACK + 1000 == args.variablesReference) {
 
-                let ofs = args.start;
-                let count = args.count;
-
-                if (ofs < 0) ofs = 0;
-                if (ofs > 255) ofs = 255;
-                if (ofs+count > 255) count = 255-ofs;
-
-                variables = [];
-
-                for (let i=ofs; i<ofs+count; i++) {
-                    let addr = 0xff-i;
-                    let value = await emu.read(0x100+addr, 1);
-                    variables.push( {
-                        name: "$" + Utils.fmt(addr.toString(16), 2),
-                        type: "stack",
-                        value: Formatter.formatByte(value),
-                        variablesReference: 0
-                    });
-                }
-
-            } else if (args.variablesReference >= DebugVariables.VARIABLES_BASIC_ARRAYS_BEGIN &&
-                       args.variablesReference <= DebugVariables.VARIABLES_BASIC_ARRAYS_END) {
+            if (args.variablesReference >= DebugVariables.VARIABLES_BASIC_ARRAYS_BEGIN &&
+                args.variablesReference <= DebugVariables.VARIABLES_BASIC_ARRAYS_END) {
 
                 const arrayIdx = args.variablesReference - DebugVariables.VARIABLES_BASIC_ARRAYS_BEGIN;
                 const basicState = await stateProvider.getBasicState();
@@ -461,6 +410,56 @@ class DebugVariablesProvider {
                     }
                 } else {
                     variables = [];
+                }
+            } else if (args.variablesReference >= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN &&
+                       args.variablesReference <= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_END) {
+
+                const arrayIdx = args.variablesReference - DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN;
+
+                const symbols = debugInfo.symbols;
+                const parentSymbol = symbols[arrayIdx];
+
+                if (parentSymbol != null) {
+                    variables = [];
+
+                    variables.push({
+                        name: "length",
+                        type: parentSymbol.label,
+                        value: parentSymbol.num_children.toString(),
+                        variablesReference: 0
+                    });
+
+                    if (parentSymbol.data_type == DebugDataType.STRUCT && null != parentSymbol.children) {
+                        const key_values = await session.unpackStructureSymbol(parentSymbol);
+                        if (null != key_values) {
+                            for (const kv of key_values) {
+                                variables.push({
+                                    name: kv.name,
+                                    type: parentSymbol.label,
+                                    value: kv.value,
+                                    variablesReference: 0
+                                });
+                            }
+                        }
+
+                    } else {
+                        const values = await session.unpackArraySymbol(parentSymbol);
+
+                        if (null != values) {
+                            let idx = 0;
+                            for (const value of values) {
+                                idx++;
+                                variables.push({
+                                    name: idx.toString(),
+                                    type: parentSymbol.label,
+                                    value: value,
+                                    variablesReference: 0
+                                });
+                            }
+                        }
+
+                    }
+
                 }
             }
         }

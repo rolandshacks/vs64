@@ -487,7 +487,6 @@ class ElfDeserializer {
                 case ElfFormCodes.StrX2:
                 case ElfFormCodes.StrX3:
                 case ElfFormCodes.StrX4:
-                case ElfFormCodes.StrX4:
                     ofs = this.read(byteSize);
                     break;
 

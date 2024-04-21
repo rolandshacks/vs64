@@ -26,6 +26,7 @@ const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType } = require
 const { Emulator } = require('emulator/emu');
 const { ViceProcess } = require('debugger/debug_vice');
 const { X16Process } = require('debugger/debug_x16');
+const { DebugDataType } = require('debugger/debug_info_types');
 const { DebugInfo } = require('debugger/debug_info');
 const { DebugStateProvider } = require('debugger/debug_state');
 const { DebugVariablesProvider } = require('debugger/debug_variables');
@@ -220,14 +221,31 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else if (debuggerType == Constants.DebuggerTypeX16) {
             this._emulatorProcess = new X16Process();
 
-            const args = settings.x16Args + (options.args ? (" " + options.args) : "");
-            const emulatorCommand = settings.x16Executable + " " + args;
+            let args = []
+            if (settings.x16Args && settings.x16Args.length > 0) args.push(settings.x16Args);
+            if (options.args && options.args.length > 0) args.push(options.args);
+
+            if (!options.args || options.args.indexOf("-debug") == -1) {
+                const breakpoints = options.breakpoints;
+                if (breakpoints && !breakpoints.empty()) {
+                    const firstBreakpoint = breakpoints.at(0);
+                    if (firstBreakpoint) {
+                        args.push("-debug " + firstBreakpoint.address.toString(16));
+                    }
+                } else {
+                    args.push("-debug");
+                }
+            }
+
+            const argsLine = args.join(' ');
+            const emulatorCommand = settings.x16Executable + " " + argsLine;
+
             logger.trace(`launch X16 emulator: ${emulatorCommand}`)
 
             try {
                 await this._emulatorProcess.spawn(
                     settings.x16Executable,
-                    args,
+                    argsLine,
                     options.prg,
                     { onexit: processExitHandler }
                 );
@@ -381,16 +399,34 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         }
 
         const project = this._project;
-        if (!project) return null;
+        if (!project) {
+            response.success = false;
+            response.message ="Invalid or missing project configuration";
+            this.sendResponse(response);
+            return null;
+        }
 
         const toolkit = project.toolkit;
         this._isBasic = toolkit ? toolkit.isBasic : false;
         this._launchBinary = null;
         this._launchPC = null;
 
+        let breakpoints = null;
+
+        try {
+            this.#loadDebugInfo();
+            breakpoints = this.#loadBreakpoints();
+        } catch (err) {
+            response.success = false;
+            response.message = err.toString();
+            this.sendResponse(response);
+            return;
+        }
+
         const options = {
             type: debuggerType,
-            args: args.args
+            args: args.args,
+            breakpoints: breakpoints
         };
 
         let binaryPath = args.program;
@@ -418,8 +454,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         try {
 
-            this.#loadDebugInfo();
-            await this.#syncBreakpoints();
+            await this.#syncBreakpoints(false, breakpoints);
 
             if (debuggerType != Constants.DebuggerTypeX16) {
                 // X16 does not support injection of binary
@@ -502,18 +537,18 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
     }
 
-    async #syncBreakpoints(force) {
+    #loadBreakpoints(force, debugBreakpoints) {
+        if (null == debugBreakpoints) {
+            debugBreakpoints = this._breakpoints;
+        }
 
-        if (!this._breakpointsDirty && !force) return;
-
-        const emu = this._emulator;
+        if (!this._breakpointsDirty && !force) return debugBreakpoints;
 
         const debugInfo = this._debugInfo;
-        if (!debugInfo) return;
+        if (!debugInfo) return debugBreakpoints;
 
         const editorBreakpoints = vscode.debug.breakpoints;
 
-        const debugBreakpoints = this._breakpoints;
         debugBreakpoints.clear();
 
         if (this._isBasic) {
@@ -563,7 +598,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
                     const debugBreakpoint = new Breakpoint(
                         location.address,
-                        null,
+                        null, // using location.address_end may result in repeated hits per source line
                         location.source,
                         location.line
                     );
@@ -579,7 +614,19 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             }
         }
 
-        await emu.setBreakpoints(debugBreakpoints);
+        return debugBreakpoints;
+    }
+
+    async #syncBreakpoints(force, breakpoints) {
+
+        if (!this._breakpointsDirty && !force && null == breakpoints) return;
+
+        if (null == breakpoints) {
+            breakpoints = this.#loadBreakpoints(force);
+        }
+
+        const emu = this._emulator;
+        await emu.setBreakpoints(breakpoints);
         this._breakpointsDirty = false;
     }
 
@@ -613,6 +660,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const stateProvider = this._stateProvider;
         const cpuState = stateProvider.getCpuState();
 
+        if (debugInfo.hasFunctions) {
+            await this.getCStackTrace(response, args);
+            return;
+        }
+
         const addressInfos = [];
 
         if (this._isBasic) {
@@ -641,6 +693,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 }
 
             }
+
         } else {
             {
                 const addressInfo = debugInfo.getAddressInfo(cpuState.cpuRegisters.PC);
@@ -722,6 +775,77 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    async getCStackTrace(response, _args) {
+
+        const debugInfo = this._debugInfo;
+        const stateProvider = this._stateProvider;
+        const cpuState = stateProvider.getCpuState();
+
+        let emu = this._emulator;
+
+        const stackFrames = [];
+        const stackAddrTable = [];
+
+        let stackPointer = cpuState.cpuRegisters.S;
+
+        //await emu.read(0x0, 1);
+
+        //let ptr = 0xF4 - 2; // 0xff;
+        let ptr = 0xff - 2;
+        while (ptr >= stackPointer) {
+            let addr = await emu.read(0x100+ptr + 1, 2);
+
+            if (addr >= 2) {
+
+                const sourceAddress = addr - 2;
+                const callerOpcode = await emu.read(sourceAddress);
+                if (callerOpcode == 0x20) { // check for JSR opcode
+                    stackAddrTable.push(sourceAddress);
+                    ptr -= 2;
+                } else {
+                    ptr--;
+                }
+            } else {
+                ptr--;
+            }
+        }
+
+        stackAddrTable.push(cpuState.cpuRegisters.PC);
+
+        for (let i=stackAddrTable.length-1; i>=0; i--) {
+            const addr = stackAddrTable[i];
+            const functionInfo = debugInfo.getFunctionByAddr(addr);
+            if (functionInfo == null) continue;
+
+            const addrInfo = debugInfo.getAddressInfo(addr);
+
+            const source = (addrInfo != null) ? addrInfo.source : functionInfo.source;
+            const line = (addrInfo != null) ? addrInfo.line : functionInfo.line;
+
+            const sourceInfo = {
+                name: path.basename(source),
+                path: source,
+                presentationHint: "normal"
+            };
+
+            stackFrames.push({
+                id: 1,
+                name: functionInfo.name,
+                source: sourceInfo,
+                line: line,
+                column: 0,
+                presentationHint: "normal"
+            });
+        }
+
+        response.body = {
+            stackFrames: stackFrames
+        };
+
+        this.sendResponse(response);
+    }
+
+
     scopesRequest(response, args) {
 
         if (null != args && DebugConstants.STACKFRAME_NUMBER === args.frameId) {
@@ -772,21 +896,21 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if ("#$" == expr.substr(0, 2) && expr.length >= 5) {
             const exprValue = parseInt(expr.substr(2), 16);
-            value = "(const) " + Formatter.formatWord(exprValue);
+            value = "(const) " + Formatter.formatU16(exprValue);
         } else if ("#$" == expr.substr(0, 2) && expr.length >= 3) {
             const exprValue = parseInt(expr.substr(2), 16);
-            value = "(const) " + Formatter.formatByte(exprValue);
+            value = "(const) " + Formatter.formatU8(exprValue);
         } else if (expr.toUpperCase() == "A") {
-            value = "(accumulator A) " + Formatter.formatByte(registers.A);
+            value = "(accumulator A) " + Formatter.formatU8(registers.A);
         } else if (expr.toUpperCase() == "X") {
-            value = "(register X) " + Formatter.formatByte(registers.X);
+            value = "(register X) " + Formatter.formatU8(registers.X);
         } else if (expr.toUpperCase() == "Y") {
-            value = "(register Y) " + Formatter.formatByte(registers.Y);
+            value = "(register Y) " + Formatter.formatU8(registers.Y);
         } else if (expr.toUpperCase() == "PC") {
             value = "(program counter) " + Formatter.formatAddress(registers.PC);
             address = registers.PC;
         } else if (expr.toUpperCase() == "SP") {
-            value = "(stack pointer) " + Formatter.formatByte(registers.S);
+            value = "(stack pointer) " + Formatter.formatU8(registers.S);
         } else {
             const exprValue = await this.#getFormattedData(expr);
             if (exprValue) {
@@ -878,7 +1002,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     async readMemoryRequest(response, args) {
         //logger.trace("readMemoryRequest");
 
-        const addr = parseInt(args.memoryReference, 10)||0;
+        let addr = parseInt(args.memoryReference, 10)||0;
+        if (addr < 0) addr = 0x0;
         let offset = args.offset;
         let count = args.count;
 
@@ -1202,7 +1327,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             query.address = (mem[1] << 8) + mem[0];
         }
 
-        const prefix = query.namedValue ? ("[" + Formatter.formatWord(query.address, true) + "] ") : "";
+        const prefix = query.namedValue ? ("[" + Formatter.formatU16(query.address, true) + "] ") : "";
 
         if (query.elementCount) {
             query.result = prefix + await this.formatMemory(query.address, query.elementCount);
@@ -1214,36 +1339,279 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return query;
     }
 
+    formatSymbolBytes(symbol, mem, ofs, plain) {
+        ofs |= 0;
+
+        let s = null;
+
+        switch (symbol.data_type) {
+            case DebugDataType.UINT8: {
+                let v = mem[ofs];
+                s = Formatter.formatU8dec(v, plain);
+                break;
+            }
+            case DebugDataType.INT8: {
+                let m = mem[ofs];
+                let v = (m&0x80) ? -(0x100-m) : m;
+                s = v.toString();
+                break;
+            }
+            case DebugDataType.UINT16: {
+                let v = mem[ofs] + (mem[ofs+1] << 8);
+                s = Formatter.formatU16dec(v, plain);
+                break;
+            }
+            case DebugDataType.INT16: {
+                let m = mem[ofs] + (mem[ofs+1] << 8);
+                let v = (mem[1]&0x80) ? -(0x10000-m) : m;
+                s = v.toString();
+                break;
+            }
+            case DebugDataType.UINT32: {
+                let v = mem[ofs] + (mem[ofs+1] << 8) + (mem[ofs+2] << 16) + (mem[ofs+3] * 0x1000000);
+                s = Formatter.formatU32dec(v, plain);
+                break;
+            }
+            case DebugDataType.INT32: {
+                let m = mem[ofs] + (mem[ofs+1] << 8) + (mem[ofs+2] << 16) + (mem[ofs+3] * 0x1000000);
+                let v = mem[ofs+3] ? -(0x100000000-m) : m;
+                s = v.toString();
+                break;
+            }
+            case DebugDataType.FLOAT32: {
+                var buf = new Uint8Array([mem[ofs+3], mem[ofs+2], mem[ofs+1], mem[ofs]]).buffer;
+                var view = new DataView(buf);
+                s = view.getFloat32(0).toString();
+                break;
+            }
+            case DebugDataType.BOOL: {
+                let v = mem[ofs];
+                s = Formatter.formatBool(v);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        return s;
+    }
+
+    async unpackStructureSymbol(symbol) {
+
+        if (null == symbol || symbol.data_type != DebugDataType.STRUCT) return null;
+        if (!symbol.isAddress || !symbol.num_children || !symbol.children) return null;
+
+        const emu = this._emulator;
+        const mem = await emu.readMemory(0, 0xffff);
+
+        const key_values = [];
+
+        for (const child of symbol.children) {
+
+            const unpackedChild = this.unpackSymbol(child, mem, 0);
+            if (null == unpackedChild) continue;
+
+            const kv = {
+                name: child.name,
+                value: unpackedChild.value || ""
+            };
+
+            key_values.push(kv);
+
+        }
+
+        return key_values;
+    }
+
+    async unpackArraySymbol(symbol) {
+
+        if (!symbol.isAddress || !symbol.num_children || !symbol.data_size) return null;
+
+        const data_type = symbol.data_type;
+
+        const is_primitive = DebugDataType.is_primitive(data_type);
+
+        const emu = this._emulator;
+        const mem = await emu.readMemory(0, 0xffff);
+
+        const addr = symbol.value;
+        const sz = symbol.memory_size;
+        const data_size = symbol.data_size;
+        let ofs = addr;
+        const end_ofs = ofs + sz;
+
+        const values = [];
+        let count = 0;
+        while (ofs < end_ofs) {
+
+            if (count < 256) {
+                let ev = is_primitive ?
+                    this.formatSymbolBytes(symbol, mem, ofs, true) :
+                    "{" + Utils.formatMemory(mem, ofs, data_size, 1, ' ') + "}";
+
+                if (ev == null) break;
+                values.push(ev);
+            }
+
+            count++;
+            ofs += data_size;
+        }
+
+        return values;
+    }
+
+    unpackSymbol(symbol, mem, idx) {
+
+        let unpackedSymbol = null;
+
+        if (symbol.isAddress) {
+
+            const addr = symbol.value;
+            const addrStr = "$" + Utils.fmt(addr.toString(16), 4);
+            const label = "(" + addrStr + ") " + symbol.name;
+
+            let num_children = null;
+
+            const description = symbol.memory_size ?
+                symbol.name + ": " + symbol.memory_size + " bytes at " + Formatter.formatAddress(addr) :
+                symbol.name + ": " + Formatter.formatAddress(addr);
+
+            let value = null;
+
+            if (symbol.data_type && symbol.data_type != DebugDataType.VOID) {
+
+                if (symbol.num_children && symbol.data_size) { // ARRAY
+
+                    const sz = symbol.memory_size;
+                    let ofs = addr;
+                    const end_ofs = ofs + sz;
+                    num_children = symbol.num_children||0;
+                    const data_size = symbol.data_size||1;
+
+                    let count = 0;
+                    let v = "";
+                    while (ofs < end_ofs) {
+
+                        if (count < 256 && count < num_children) {
+                            let ev = this.formatSymbolBytes(symbol, mem, ofs, true);
+                            if (ev == null) break;
+                            if (v.length > 0) v += ", ";
+                            v += ev;
+                        }
+
+                        count++;
+                        ofs += data_size;
+                    }
+
+                    value = "(" + num_children + ") [" + v + "]";
+
+                } else if (symbol.data_type == DebugDataType.STRUCT) {
+                    let type_label = symbol.type_name ? symbol.type_name : "struct";
+                    //value = type_label + " {" + Utils.formatMemory(mem, addr, symbol.memory_size, 1, ' ') + "}";
+                    value = type_label;
+                    num_children = symbol.num_children||0;
+
+                } else {
+                    value = this.formatSymbolBytes(symbol, mem, addr);
+                }
+            }
+
+            if (null == value) {
+
+                if (symbol.memory_size) {
+                    value = Utils.formatMemory(mem, addr, symbol.memory_size, 1, ' ');
+                } else {
+                    const readSize = (symbol.data_size == 1 || addr == 0xffff) ? 1 : 2;
+                    if (readSize == 1) {
+                        value = Formatter.formatU8(mem[addr]);
+                    } else {
+                        const memValue = mem[addr] + (mem[addr+1]<<8);
+                        value = Formatter.formatU8(memValue & 255) + " / " + Formatter.formatU16(memValue);
+                    }
+                }
+            }
+
+            unpackedSymbol = {
+                name: label,
+                type: description,
+                value: value,
+                variablesReference: 0,
+                memoryReference: symbol.value
+            };
+
+            if (num_children) {
+                unpackedSymbol.indexedVariables = num_children;
+                unpackedSymbol.variablesReference = idx;
+            }
+
+        } else {
+
+            const label = symbol.name;
+            const description = symbol.name + " = " + symbol.value;
+
+            let value = null;
+
+            if (symbol.data_size == 1) {
+                value = Formatter.formatU8(symbol.value);
+            } else if (symbol.data_size == 2) {
+                value = Formatter.formatU16(symbol.value);
+            } else {
+                value = Formatter.formatValue(symbol.value);
+            }
+
+            unpackedSymbol = {
+                name: label,
+                type: description,
+                value: value,
+                variablesReference: 0
+            };
+        }
+
+        return unpackedSymbol;
+    }
+
+    async unpackSymbols(symbols) {
+        if (null == symbols || symbols.length < 1) return null;
+
+        const emu = this._emulator;
+        const mem = await emu.readMemory(0, 0xffff);
+        const unpackedSymbols = [];
+
+        let idx = 0;
+
+        for (const symbol of symbols) {
+            const unpackedSymbol = this.unpackSymbol(symbol, mem, idx);
+            if (unpackedSymbol != null) unpackedSymbols.push(unpackedSymbol);
+            idx++;
+        }
+
+        if (unpackedSymbols.length < 1) return null;
+
+        return unpackedSymbols;
+    }
+
     async formatSymbol(symbol) {
 
         const emu = this._emulator;
         const info = {};
 
-        if (symbol.isAddress) {
+        if (symbol.data_type && symbol.data_type != DebugDataType.VOID) {
 
-            let addrStr = "$" + Utils.fmt(symbol.value.toString(16), 4);
-            info.label = "(" + addrStr + ") " + symbol.name;
+            const mem = await emu.readMemory(0, 0xffff);
+            const unpackedSymbol = this.unpackSymbol(null, symbol, mem);
+            if (unpackedSymbol != null) return null;
 
-            if (symbol.memory_size) {
-                //const elementSize = symbol.data_size ? symbol.data_size / 8 : null;
-                info.value = await this.formatMemory(symbol.value, symbol.memory_size);
-            } else {
-                const readSize = (symbol.data_size == 16 && symbol.value != 0xffff) ? 2 : 1;
-                const memValue = await emu.read(symbol.value, readSize);
-                if (readSize == 1) {
-                    info.value = Formatter.formatByte(memValue);
-                } else {
-                    info.value = (symbol.data_size == 16) ? Formatter.formatWord(memValue) : Formatter.formatByte(memValue & 255) + " / " + Formatter.formatWord(memValue);
-                }
-            }
+            info.label = (unpackedSymbol != null) ? unpackedSymbol.label : symbol.name;
+            info.value = (unpackedSymbol != null) ? unpackedSymbol.label : Formatter.formatValue(symbol.value);
 
         } else {
 
             info.label = symbol.name;
-            if (symbol.data_size == 8) {
-                info.value = Formatter.formatByte(symbol.value);
-            } else if (symbol.data_size == 16) {
-                info.value = Formatter.formatWord(symbol.value);
+            if (symbol.data_size == 1) {
+                info.value = Formatter.formatU8(symbol.value);
+            } else if (symbol.data_size == 2) {
+                info.value = Formatter.formatU16(symbol.value);
             } else {
                 info.value = Formatter.formatValue(symbol.value);
             }
@@ -1258,7 +1626,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (!memorySize) memorySize = 1;
         const readSize = Math.min(256, memorySize);
         const memBuffer = await emu.readMemory(address, address + readSize - 1);
-        return Utils.formatMemory(memBuffer, readSize, elementSize, ' ');
+        return Utils.formatMemory(memBuffer, 0, readSize, elementSize, ' ');
     }
 
     #debuggerLog(message) {

@@ -102,6 +102,15 @@
             ]
         },
         {
+            "name": "Run Bundle Builder",
+            "type": "node",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/build.js",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
             "name": "Run Extension Tests",
             "type": "extensionHost",
             "request": "launch",

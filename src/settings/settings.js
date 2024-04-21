@@ -191,8 +191,9 @@ class Settings {
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
         this.setupKickAssembler(workspaceConfig);
-        this.setupCC65(workspaceConfig);
         this.setupLLVM(workspaceConfig);
+        this.setupCC65(workspaceConfig);
+        this.setupOscar64(workspaceConfig);
         this.setupVice(workspaceConfig);
         this.setupX16(workspaceConfig);
 
@@ -282,11 +283,32 @@ class Settings {
         }
     }
 
+    setupOscar64(workspaceConfig) {
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.oscar64InstallDir"));
+        if (installDir) {
+            const oscar64IncludesDir = path.resolve(installDir);
+            this.oscar64Includes = [
+                path.resolve(oscar64IncludesDir, "include"),
+                path.resolve(oscar64IncludesDir, "c64"),
+                path.resolve(oscar64IncludesDir, "c128"),
+                path.resolve(oscar64IncludesDir, "audio"),
+                path.resolve(oscar64IncludesDir, "gfx"),
+                path.resolve(oscar64IncludesDir, "opp")
+            ];
+            this.oscar64Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("oscar64"));
+        } else {
+            this.oscar64Includes = null;
+            if (fs.existsSync("/usr/share/oscar64/include")) {
+                this.cc65Includes = [ "/usr/share/oscar64/include" ];
+            }
+            this.oscar64Executable = "oscar64";
+        }
+    }
+
     setupLLVM(workspaceConfig) {
         const installDir = this.#getAbsDir(workspaceConfig.get("vs64.llvmInstallDir"));
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
-
             this.llvmIncludes = [
                 path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
                 path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
@@ -330,6 +352,8 @@ class Settings {
             }
         } else if (toolkit.isCC65) {
             compilerIncludes = this.cc65Includes;
+        } else if (toolkit.isOscar64) {
+            compilerIncludes = this.oscar64Includes;
         }
 
         return compilerIncludes;
@@ -428,6 +452,7 @@ class Settings {
         logger.debug("cc65 executable: " + settings.cc65Executable);
         logger.debug("ca65 executable: " + settings.ca65Executable);
         logger.debug("ld65 executable: " + settings.ld65Executable);
+        logger.debug("oscar64 executable: " + settings.oscar64Executable);
         logger.debug("vice executable: " + settings.viceExecutable);
         logger.debug("ninja executable: " + settings.ninjaExecutable);
         logger.debug("python executable: " + settings.pythonExecutable);

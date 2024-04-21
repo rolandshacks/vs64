@@ -90,7 +90,7 @@ let Utils = {
         return s;
     },
 
-    formatMemory: function(mem, num, elementSize, prefix, separator) {
+    formatMemory: function(mem, ofs, num, elementSize, prefix, separator) {
         if (null == mem) return;
 
         let s = "";
@@ -105,11 +105,11 @@ let Utils = {
 
             let value = 0;
             if (elementSize == 1) {
-                value = mem[pos];
+                value = mem[ofs+pos];
                 pos++;
             } else {
                 for (let i=0; i<elementSize; i++) {
-                    value = (value << 8) + mem[pos];
+                    value = (value << 8) + mem[ofs+pos];
                     pos++;
                 }
             }
@@ -628,11 +628,11 @@ let Utils = {
 
 let Formatter = {
     formatValue: function(value, plain) {
-        return Formatter.formatWord(value, plain);
+        return Formatter.formatU16(value, plain);
     },
 
     formatAddress: function(value, plain) {
-        return Formatter.formatWord(value, plain);
+        return Formatter.formatU16(value, plain);
     },
 
     formatBit: function(value, plain) {
@@ -640,14 +640,38 @@ let Formatter = {
         return (0 == value) ? "0 (unset)" : "1 (set)";
     },
 
-    formatByte: function(value, plain) {
+    formatBool: function(value) {
+        return (0 == value) ? "false" : "true";
+    },
+
+    formatU8: function(value, plain) {
         if (plain) return "$" + Utils.fmt(value.toString(16), 2);
         return "$" + Utils.fmt(value.toString(16), 2) + " (" + value.toString() + ")";
     },
 
-    formatWord: function(value, plain) {
+    formatU8dec: function(value, plain) {
+        if (plain) return value.toString();
+        return value.toString() + " ($" + Utils.fmt(value.toString(16), 2) + ")";
+    },
+
+    formatU16: function(value, plain) {
         if (plain) return "$" + Utils.fmt(value.toString(16), 4);
         return "$" + Utils.fmt(value.toString(16), 4) + " (" + value.toString() + ")";
+    },
+
+    formatU16dec: function(value, plain) {
+        if (plain) return value.toString();
+        return value.toString() + " ($" + Utils.fmt(value.toString(16), 4) + ")";
+    },
+
+    formatU32: function(value, plain) {
+        if (plain) return "$" + Utils.fmt(value.toString(16), 8);
+        return "$" + Utils.fmt(value.toString(16), 8) + " (" + value.toString() + ")";
+    },
+
+    formatU32dec: function(value, plain) {
+        if (plain) return value.toString();
+        return value.toString() + " ($" + Utils.fmt(value.toString(16), 8) + ")";
     }
 
 }

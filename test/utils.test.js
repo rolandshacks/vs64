@@ -148,27 +148,27 @@ test("formatter", () => {
     const buffer = Buffer.from(data);
 
     {
-        const s = Utils.formatMemory(buffer, 4, null, " ");
+        const s = Utils.formatMemory(buffer, 0, 4, null, " ");
         expect(s).toBe("11 22 33 44");
     }
 
     {
-        const s = Utils.formatMemory(buffer, 4, 1, " ");
+        const s = Utils.formatMemory(buffer, 0, 4, 1, " ");
         expect(s).toBe("11 22 33 44");
     }
 
     {
-        const s = Utils.formatMemory(buffer, 6, 2, " ");
+        const s = Utils.formatMemory(buffer, 0, 6, 2, " ");
         expect(s).toBe("1122 3344 5566");
     }
 
     {
-        const s = Utils.formatMemory(buffer, 8, 3, " ");
+        const s = Utils.formatMemory(buffer, 0, 8, 3, " ");
         expect(s).toBe("112233 445566");
     }
 
     {
-        const s = Utils.formatMemory(buffer, 8, 4, " ");
+        const s = Utils.formatMemory(buffer, 0, 8, 4, " ");
         expect(s).toBe("11223344 55667788");
     }
 

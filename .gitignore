@@ -6,6 +6,7 @@ node_modules
 .cache
 .project
 build
+dist
 *~
 *.vsix
 examples/**/settings.json

@@ -155,6 +155,8 @@ class Project {
             this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
         } else if (toolkit.isCC65) {
             this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
+        } else if (toolkit.isOscar64) {
+            this._outdebug = path.resolve(this._builddir, this._name + ".dbj");
         } else if (toolkit.isBasic) {
             this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
         }
@@ -180,11 +182,11 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
-        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'cc65', 'llvm' or 'basic')"); }
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic')"); }
         const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "cc65", "llvm", "basic"].indexOf(toolkitId) < 0) {
-            throw("property 'toolkit' needs to be either 'acme', 'kick', 'cc65', 'llvm' or 'basic'");
+        if (["acme", "kick", "llvm", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic'");
         }
 
         this._toolkit = Toolkit.fromName(toolkitId);
@@ -335,7 +337,7 @@ class Project {
 
             let rcFormat = null;
             if (!rcArguments.hasOption("format")) {
-                if (toolkit.isCC65) rcFormat = "cc";
+                if (toolkit.isCC65 || toolkit.isOscar64) rcFormat = "cc";
                 else if (toolkit.isLLVM) rcFormat = "cpp";
                 else rcFormat = toolkit.name;
                 rcArguments.setOption("format", rcFormat);
@@ -460,13 +462,12 @@ class Project {
         }
 
         let compilerPath = this.#getCompilerExecutable();
-        if (this.toolkit.isCC65 || !Utils.fileExists(compilerPath)) compilerPath = "";
+        if (this.toolkit.isCC65 || this.toolkit.isOscar64 || !Utils.fileExists(compilerPath)) compilerPath = "";
 
         const data = {
             configurations: [
                 {
                     name: "C64",
-                    //configurationProvider: "rosc.vs64",
                     compileCommands: "${workspaceFolder}/build/compile_commands.json",
                     compilerPath: compilerPath,
                     cppStandard: "c++20",
@@ -476,13 +477,14 @@ class Project {
             version: 4
         };
 
-        if (this.toolkit.isCC65) {
+        if (this.toolkit.isCC65 || this.toolkit.isOscar64) {
 
             const includePath = [];
 
-            if (settings && settings.cc65Includes) {
+            if (this.toolkit.isCC65 && settings && settings.cc65Includes) {
                 settings.cc65Includes.forEach((item) => { includePath.push(item); });
-
+            } else if (this.toolkit.isOscar64 && settings && settings.oscar64Includes) {
+                settings.oscar64Includes.forEach((item) => { includePath.push(item); });
             }
 
             if (includes) {
@@ -566,6 +568,8 @@ class Project {
             }
         } else if (toolkit.isCC65) {
             compilerPath = (this.compiler || settings.cc65Executable);
+        } else if (toolkit.isOscar64) {
+            compilerPath = (this.compiler || settings.oscar64Executable);
         }
 
         return compilerPath;
@@ -608,6 +612,8 @@ class Project {
         if (toolkit.isCC65) {
             command.arguments.push("-D__fastcall__=/**/");
             command.arguments.push("-D__C64__");
+        } else if (toolkit.isOscar64) {
+            // TODO: add specific compile commands
         }
 
         if (includes) {
@@ -1155,6 +1161,75 @@ class Project {
             script.push("");
 
             script.push("build $target | $dbg_out : link " + Ninja.join(buildTree.obj.array()));
+            script.push("");
+
+        } else if (toolkit.isOscar64) {
+
+            const flags = new NinjaArgs();
+            const c_flags = new NinjaArgs();
+            const asm_flags = new NinjaArgs();
+
+            flags.add("-n");
+            flags.add("-g");
+            flags.add("-tf=prg");
+
+            if (releaseBuild) {
+                c_flags.add("-O3");
+            } else {
+                c_flags.add("-O0");
+            }
+
+            flags.add(this._args);
+            asm_flags.add(this._assemblerFlags);
+            c_flags.add(this._compilerFlags);
+
+            const ln_flags = new NinjaArgs();
+            if (project.startAddress) ln_flags.add("-S", project.startAddress);
+            ln_flags.add(this._linkerFlags);
+
+            let targetName = "c64";
+            if (project.machine) {
+                targetName = (project.machine != "none") ? project.machine : null;
+            }
+
+            let defaultTargetConf = targetName ? "-tm=" + targetName : null;
+
+            if (defaultTargetConf && flags.indexOf("-tm=") == -1 && c_flags.indexOf("-tm=") == -1) c_flags.add(defaultTargetConf);
+            if (defaultTargetConf && flags.indexOf("-tm=") == -1 && asm_flags.indexOf("-tm=") == -1) asm_flags.add(defaultTargetConf);
+
+            script.push(Ninja.keyValue("cc_exe", (project.compiler || settings.oscar64Executable)));
+            script.push("");
+
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyArgs("asm_flags", asm_flags));
+            script.push(Ninja.keyArgs("c_flags", c_flags));
+            script.push(Ninja.keyArgs("ln_flags", ln_flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-i=")));
+            script.push(Ninja.keyValueRaw("defs", defines.join("-d")));
+            script.push(Ninja.keyValue("libs", ""));
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule cc");
+            script.push("    depfile = $out.d");
+            script.push("    deps = gcc");
+            script.push("    command = $cc_exe -o=$out $flags $c_flags $includes $in $libs");
+            script.push("");
+
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
+
+            buildTree.obj.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "cc"));
+            });
+            script.push("");
+
+            script.push("build $target | $dbg_out : cc " + Ninja.join(buildTree.cpp.array()));
             script.push("");
 
         } else if (toolkit.isLLVM) {

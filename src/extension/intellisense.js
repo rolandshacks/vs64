@@ -70,6 +70,8 @@ class IntellisenseConfigurationProvider {
             compilerPath = settings.clangExecutable;
         } else if (toolkit.isCC65) {
             compilerPath = settings.cc65Executable;
+        } else if (toolkit.isOscar64) {
+            compilerPath = settings.oscar64Executable;
         } else if (toolkit.isAcme) {
             compilerPath = settings.acmeExecutable;
         } else if (toolkit.isKick) {

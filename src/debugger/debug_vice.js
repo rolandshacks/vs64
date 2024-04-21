@@ -798,7 +798,7 @@ class ViceMonitorClient {
         return this._tokenMap.get(uid);
     }
 
-    onEvent(fn) {
+    setOnEvent(fn) {
         this._eventFn = fn;
     }
 
@@ -808,7 +808,7 @@ class ViceMonitorClient {
         }
     }
 
-    onError(fn) {
+    setOnError(fn) {
         this._errorFn = fn;
     }
 
@@ -1157,11 +1157,11 @@ class ViceConnector extends DebugInterface {
 
         const instance = this;
 
-        vice.onEvent((event) => {
+        vice.setOnEvent((event) => {
             instance.onEvent(event);
         });
 
-        vice.onError((err) => {
+        vice.setOnError((err) => {
             instance.onError(err);
         });
 
@@ -1204,6 +1204,7 @@ class ViceConnector extends DebugInterface {
                     const runFlags = this._runFlags;
                     const stepStartAddress = runFlags.stepStartAddress;
                     const addressInfo = debugInfo.getAddressInfo(pc);
+                    const pauseRequest = runFlags.pauseRequest;
 
                     let stopRun = false;
                     if (addressInfo) {
@@ -1214,10 +1215,12 @@ class ViceConnector extends DebugInterface {
                         } else {
                             stopRun = true;
                         }
+                    } else if (pauseRequest && !debugInfo.hasAddresses) {
+                        // if pause is requested and no address info is available, just stop
+                        stopRun = true;
                     }
 
                     if (stopRun) {
-                        const pauseRequest = runFlags.pauseRequest;
                         this._runFlags = null;
                         this._stopped = true;
                         if (pauseRequest) this.fireEvent('break', pc);
@@ -1372,6 +1375,12 @@ class ViceConnector extends DebugInterface {
     async readMemory(startAddress, endAddress, _memoryType_) {
         const memCache = await this.#getMemoryCache();
         if (!memCache) return null;
+
+        if (startAddress == 0 && endAddress + 1 == memCache.length) {
+            // no need to get a clone, directly use the cache
+            return memCache;
+        }
+
         const mem = memCache.subarray(startAddress, endAddress+1);
         return mem;
     }

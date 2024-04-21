@@ -14,8 +14,9 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 
 * ACME assembler
 * KickAssembler
-* CC65 C-compiler
 * LLVM-MOS C/C++
+* CC65 C-compiler
+* Oscar64 C-compiler
 * BASIC V2 and Tuned Simon's BASIC
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
@@ -38,7 +39,7 @@ The quickest start is by opening the command palette and run the **"VS64: Gettin
 
 If you want to do some manual steps or adjustments, these are the individual things to look at:
 
-* Install the ACME cross-assembler and/or the CC65 C-compiler and/or the LLVM-MOS C/C++ compiler
+* Install your assemblers and/or compilers
 * Install the VICE emulator
 * Adjust your VS64 settings
 * Run "VS64: Create Project" from the command palette
@@ -69,6 +70,14 @@ VS64 supports Kick Assembler.
 
 Please make sure you check the VS64 settings for the correct KickAssembler installation path.
 
+### LLVM-MOS Compiler
+
+VS64 also supports the LLVM-MOS C/C++ Compiler.
+
+* Installation: Download and install from https://github.com/llvm-mos/llvm-mos-sdk
+
+Please make sure you update the VS64 settings with the correct LLVM-MOS installation and include paths.
+
 ### CC65 Compiler
 
 VS64 also supports the CC65 6502 C Compiler.
@@ -76,15 +85,15 @@ VS64 also supports the CC65 6502 C Compiler.
 * Manual installation: Download and install from https://cc65.github.io
 * Use a package management system, for example on Ubuntu/Debian: `sudo apt install cc65`
 
-In case you did a manual or custom installation, please make sure you updated the VS64 settings with the correct CC65 installation and include paths.
+In case you did a manual or custom installation, please make sure you update the VS64 settings with the correct CC65 installation and include paths.
 
-### LLVM-MOS Compiler
+### Oscar64 Compiler
 
-VS64 also supports the LLVM-MOS C/C++ Compiler.
+VS64 also supports the Oscar64 C Compiler.
 
-* Installation: Download and install from https://github.com/llvm-mos/llvm-mos-sdk
+* Manual installation: Download and install from https://github.com/drmortalwombat/oscar64
 
-Please make sure you updated the VS64 settings with the correct LLVM-MOS installation and include paths.
+In case you did a customized installation, please make sure you update the VS64 settings with the correct Oscar65 installation and include paths.
 
 ### BASIC Compiler
 
@@ -110,7 +119,6 @@ To enable this feature, just set the build mode in the project file to "release"
 ```
 "build": "release"
 ```
-
 
 ### Upper/Lower Case Character Set
 
@@ -249,7 +257,7 @@ Please make sure you update the VS64 settings with the correct x16emu executable
 
 The VS64 extension provides a convienient editing, build and run environment. This is done by providing syntax highlighting, seamless integration to the task, build and launch system, an embedded 6502 CPU emulator for fast and precise evaluation of 6502 code and integration of the VICE C64 emulator for advanced system debugging. For further analysis, an integrated disassembler and BASIC-decompiler for C64 program files is provided.
 
-For details, please look at the provided example projects for ACME, CC65, LLVM-MOS or BASIC.
+For details, please look at the provided example projects for ACME, LLVM-MOS, CC65 or BASIC.
 
 ### Build System
 
@@ -387,7 +395,7 @@ Defines all used source and resource files. The build system will keep track of 
 
 > toolkit
 
-Specifies which build toolkit is used. Currently supported are `"acme"`, `"kick"`, `"cc65"`, `"llvm"` and `"basic"`.
+Specifies which build toolkit is used. Currently supported are `"acme"`, `"kick"`, `"llvm"`, `"cc65"`, `"oscar64"` and `"basic"`.
 
 > machine
 
@@ -740,6 +748,7 @@ This package includes open source from other developers and I would like to than
 * The Kick Assembler: http://theweb.dk/KickAssembler
 * LLVM-MOS: https://github.com/llvm-mos/llvm-mos-sdk
 * CC65 C-Compiler: https://cc65.github.io
+* Oscar64 C-Compiler: https://github.com/drmortalwombat/oscar64
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net
 * Ninja build system: https://ninja-build.org
 * Cycle-accurate 6502 emulator in Javascript: https://github.com/Torlus/6502.js

@@ -43,7 +43,6 @@ class X16Process extends DebugProcess {
     async spawn(executable, params, binary, options) {
 
         const args = [];
-        args.push("-debug");
 
         if (binary) {
             args.push("-prg");

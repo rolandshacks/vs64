@@ -58,7 +58,6 @@ class Extension {
         this._languageServer = new LanguageServer();
         this._languageFeatureProvider = null;
         this._statusBar = null;
-        //this._version = extensionContext.extension.packageJSON.version;
     }
 
     isActivated() {
@@ -218,11 +217,14 @@ class Extension {
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectKick", function() {
                 thisInstance.onCommandCreateProject("kick");
             }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectLlvm", function() {
+                thisInstance.onCommandCreateProject("llvm");
+            }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectCc65", function() {
                 thisInstance.onCommandCreateProject("cc65");
             }));
-            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectLlvm", function() {
-                thisInstance.onCommandCreateProject("llvm");
+            subscriptions.push(vscode.commands.registerCommand("vs64.createProjectOscar64", function() {
+                thisInstance.onCommandCreateProject("oscar64");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectBasic", function() {
                 thisInstance.onCommandCreateProject("basic");
