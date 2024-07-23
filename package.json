@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.9",
+	"version": "2.5.10",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -82,6 +82,11 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "vs64.mountD64FileSystem",
+				"title": "Mount",
+				"category": "VS64"
+			},
+			{
 				"command": "vs64.gettingStarted",
 				"title": "Getting Started",
 				"category": "VS64"
@@ -142,6 +147,15 @@
 				"category": "VS64"
 			}
 		],
+		"menus": {
+            "explorer/context": [
+                {
+                    "when": "resourceLangId == d64",
+                    "command": "vs64.mountD64FileSystem",
+                    "group": "navigation"
+                }
+            ]
+        },
 		"walkthroughs": [
 			{
 				"id": "vs64",
@@ -308,8 +322,18 @@
 				"extensions": [
 					".res"
 				]
-			}
-		],
+			},
+			{
+                "id": "d64",
+                "aliases": [
+                    "D64 Disk",
+                    "d64"
+                ],
+                "extensions": [
+                    ".d64"
+                ]
+            }
+					],
 		"grammars": [
 			{
 				"language": "asm",

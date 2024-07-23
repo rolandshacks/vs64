@@ -69,7 +69,16 @@ class DisassemblyDocument {
             return;
 		}
 
-		const binary = new Uint8Array(await vscode.workspace.fs.readFile(uri));
+		if (null == uri) {
+			throw new Error("unexpected internal error");
+		}
+
+		const fileData = await vscode.workspace.fs.readFile(uri);
+		if (null == fileData) {
+			throw new Error("unexpected internal error: could not read file data");
+		}
+
+		const binary = new Uint8Array(fileData);
 		const settings = this._settings;
 
 		const options = {
@@ -90,12 +99,14 @@ class DisassemblyDocument {
 	}
 
     async handleChange() {
-        await this.load();
-        const instance = this;
-        const listeners = this._listeners.values();
-        for (const listener of listeners) {
-            listener(instance);
-        }
+		const instance = this;
+
+        this.load().then(() => {
+			const listeners = instance._listeners.values();
+			for (const listener of listeners) {
+				listener(instance);
+			}
+		});
     }
 
     onChange(instance, listener) {

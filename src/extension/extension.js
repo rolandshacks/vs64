@@ -31,6 +31,7 @@ const { StatusBar, StatusBarNotifier, StatusBarButton } = require('extension/sta
 const { DisassemblerView } = require('extension/disassembler_view');
 const { LanguageServer } = require('language/language_server');
 const { LanguageFeatureProvider } = require('language/language_provider');
+const { D64FileSystemProvider } = require('disk/d64_filesystem_provider');
 
 const logger = new Logger("Extension");
 
@@ -58,6 +59,7 @@ class Extension {
         this._languageServer = new LanguageServer();
         this._languageFeatureProvider = null;
         this._statusBar = null;
+        this._d64FileSystemProvider = null;
     }
 
     isActivated() {
@@ -148,6 +150,12 @@ class Extension {
             this._languageFeatureProvider = languageFeatureProvider;
         }
 
+        { // register file system providers
+            const d64FileSystemProvider = new D64FileSystemProvider();
+            subscriptions.push(vscode.workspace.registerFileSystemProvider('d64', d64FileSystemProvider, { isCaseSensitive: true }));
+            this._d64FileSystemProvider = d64FileSystemProvider;
+        }
+
         { // create status bar items
 
             const statusBar = new StatusBar(extensionContext);
@@ -211,6 +219,9 @@ class Extension {
 
         // register "create project" commands
         {
+            subscriptions.push(vscode.commands.registerCommand("vs64.mountD64FileSystem", function(uri) {
+                thisInstance.onCommandMountD64FileSystem(uri);
+            }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAcme", function() {
                 thisInstance.onCommandCreateProject("acme");
             }));
@@ -350,6 +361,38 @@ class Extension {
     }
 
     onDidChangeActiveTextEditor(_textEditor_) {
+    }
+
+    async onCommandMountD64FileSystem(_uri) {
+        if (null == this._d64FileSystemProvider) {
+            return null;
+        }
+
+        const hash = Utils.md5(_uri.path);
+        const d64Uri = vscode.Uri.parse(`d64:/${hash}/?${_uri}`);
+
+        const ws = vscode.workspace.getWorkspaceFolder(d64Uri);
+        if (ws === undefined) {
+
+            let disk = null;
+            try {
+                disk = await this._d64FileSystemProvider.openFile(d64Uri);
+            } catch (e) {
+                logger.error("failed to mount d64 file: " + e);
+            }
+
+            if (null == disk) {
+                return null;
+            }
+
+            let name = disk.name;
+            if (name == null || name.length < 1) name = "UNNAMED";
+            const label = "D64: " + name + " (" + vscode.workspace.asRelativePath(_uri, false) + ")";
+            const index = vscode.workspace.workspaceFolders?.length || 0;
+            const workspaceFolder = { uri: d64Uri, name: label, index };
+
+            vscode.workspace.updateWorkspaceFolders(index, 0, workspaceFolder);
+        }
     }
 
     onCommandCreateProject(toolkitName, templateName) {

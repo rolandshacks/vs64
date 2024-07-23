@@ -29,6 +29,7 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * Launch support for the X16 emulator
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
+* Direct access to D64 disks as virtual workspace folders
 * On-the-fly disassembly of C64 program files for assembly and BASIC code
 
 ## Quick and Start (TL;DR)
@@ -491,6 +492,27 @@ Optional arguments to be added to the resource compiler command. Use this to for
 
 VS64 supports on-the-fly disassembly of .prg files containing either machine code or BASIC programs.
 In order to use it, just open a `.prg` file in the Visual Studio Code editor.
+
+### D64 File System Provider
+
+VS64 allows mounting D64 files as virtual folders of the Visual Studio Code workspace tree.
+
+To add a D64 file to the workspace, simply select a .d64 disk file, then right-click and select "Mount".
+In case the disk was successfully opened, there should be a new folder at the root level of the project workspace.
+
+In order to unmount a virtual D64 folder, simple select the workspace folder and choose "Remove from workspace".
+
+Supported actions:
+
+- Open and edit files
+- Copy files to and from disk
+- Delete files
+- Rename files
+
+Some additional notes:
+
+- Be careful about what you do, you will actually modify your D64 file
+- To create a new disk, just create a new .d64 file and mount it. VS64 will automatically create, format and mount the disk file.
 
 ### IntelliSense Support
 
