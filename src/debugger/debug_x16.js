@@ -58,7 +58,7 @@ class X16Process extends DebugProcess {
 
     }
 
-    createDebugInterface(session) {
+    static createDebugInterface(session) {
         return new X16Connector(session);
     }
 }

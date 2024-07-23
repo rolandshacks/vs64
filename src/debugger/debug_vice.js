@@ -1085,7 +1085,7 @@ class ViceProcess extends DebugProcess {
         this._supportsRelaunch = true;
     }
 
-    createDebugInterface(session) {
+    static createDebugInterface(session) {
         return new ViceConnector(session);
     }
 

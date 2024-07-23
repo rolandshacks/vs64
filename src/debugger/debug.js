@@ -938,10 +938,6 @@ class DebugProcess {
         return this._supportsRelaunch;
     }
 
-    createDebugInterface(_session_) {
-        return null;
-    }
-
     get alive() {
         return (this._proc && !this._proc.exited);
     }

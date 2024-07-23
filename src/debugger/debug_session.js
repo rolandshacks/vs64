@@ -296,7 +296,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     }
                 }
 
-                emu = this._emulatorProcess.createDebugInterface(this);
+                emu = ViceProcess.createDebugInterface(this);
                 await emu.connect(options.hostname, options.port);
             } catch (err) {
                 logger.error("debug error: " + err);
@@ -312,7 +312,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     }
                 }
 
-                emu = this._emulatorProcess.createDebugInterface(this);
+                emu = X16Process.createDebugInterface(this);
 
             } catch (err) {
                 logger.error("debug error: " + err);

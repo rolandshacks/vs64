@@ -128,7 +128,7 @@ class Application {
             emuProcess = await this.#createEmulatorProcess();
         }
 
-        const emu = emuProcess.createDebugInterface(this);
+        const emu = ViceProcess.createDebugInterface(this);
         await emu.connect("127.0.0.1", settings.vicePort);
 
         emu.on('error', (err) => {
