@@ -5,10 +5,9 @@
             "name": "Run Extension",
             "type": "extensionHost",
             "request": "launch",
-            //"runtimeExecutable": "${execPath}",
             "args": [
                 "--trace-deprecation",
-                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionDevelopmentPath=${workspaceFolder}"
             ]
         },
         {

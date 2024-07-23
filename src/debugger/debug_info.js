@@ -100,6 +100,8 @@ class DebugInfo {
     #load(filename, project) {
 
         const toolkit = project.toolkit;
+        if (null == toolkit) return;
+
         const debugInfoType = filename != null ? path.extname(filename).toLowerCase() : null;
 
         if (toolkit.isBasic) {

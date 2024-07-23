@@ -65,8 +65,14 @@ class DebugConfigurationProvider {
 
         if (null == debugConfig.program || debugConfig.program == "") {
 
-            if (project) {
-                debugConfig.program = project.outfile;
+            let program = null;
+
+            if (null != project && project.outfile != null) {
+                program = project.outfile;
+            }
+
+            if (null != program) {
+                debugConfig.program = program;
             } else {
                 const errMsg = "Could not launch debugger: Program file not specified.";
                 logger.error(errMsg);

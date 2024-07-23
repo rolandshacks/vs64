@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.8 Minor Update
+
+- Fixed some glitches when debugging files without project configuration,
+  as it happens when you are writing Rust programs
+- Bug-fixes and minor improvements
+
 ## 2.5.7 Minor Update
 
 - Added support for the Oscar64 C compiler

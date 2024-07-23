@@ -5,6 +5,7 @@ node_modules
 .clwb
 .cache
 .project
+.vscode/settings.json
 build
 dist
 *~
