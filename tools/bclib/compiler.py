@@ -673,13 +673,29 @@ class BasicCompiler:
             elif last_was_jump != 0x0 and self.is_label_char(c):
                 # handle label after jump
                 label = ""
-                while ofs < len(line) and (
-                    self.is_label_char(c) or self.is_numeric_char(c)
-                ):
-                    label += c
-                    ofs += 1
-                    if ofs < len(line):
-                        c = line[ofs]
+                is_variable_assignment = False
+
+                while ofs < len(line):
+                    if self.is_label_char(c) or self.is_numeric_char(c):
+                        label += c
+                        ofs += 1
+                        if ofs < len(line):
+                            c = line[ofs]
+                    else:
+                        # look ahead if there is a variable assignment after THEN
+                        ofs_old = ofs # backup position after identifier
+
+                        while ofs < len(line) and c == " ":
+                            ofs += 1
+                            if ofs < len(line):
+                                c = line[ofs]
+
+                        if c == "=":
+                            is_variable_assignment = True
+
+                        ofs = ofs_old
+
+                        break
 
                 if last_was_jump == 0xCB and label.lower() == "sub":
                     # turn 'GO SUB' into GOSUB
@@ -701,20 +717,24 @@ class BasicCompiler:
 
                     if not token:
 
-                        # get line number from label
-                        label_line_number = self.labels.get(label.lower())
-
-                        if label_line_number:
-                            basic_line.store_string(str(label_line_number))
+                        if is_variable_assignment:
+                            # store identifier for variable assignment and continue
+                            basic_line.store_string(label)
                         else:
-                            return (
-                                None,
-                                CompileError(
-                                    module.filename,
-                                    f"undefined label '{label}'",
-                                    line_index,
-                                ),
-                            )
+                            # get line number from label
+                            label_line_number = self.labels.get(label.lower())
+
+                            if label_line_number:
+                                basic_line.store_string(str(label_line_number))
+                            else:
+                                return (
+                                    None,
+                                    CompileError(
+                                        module.filename,
+                                        f"undefined label '{label}'",
+                                        line_index,
+                                    ),
+                                )
 
             elif last_was_jump != 0x0 and self.is_numeric_char(c):
                 # handle line number after jump
