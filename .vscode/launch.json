@@ -19,7 +19,7 @@
         },
         {
             "name": "Run Resource Compiler",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/tools/rc.py",
             "console": "integratedTerminal",
@@ -34,7 +34,7 @@
         },
         {
             "name": "Basic Compiler Project",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/tools/bc.py",
             "console": "integratedTerminal",
@@ -52,7 +52,7 @@
 
         {
             "name": "Run Basic Compiler",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/tools/bc.py",
             "console": "integratedTerminal",
@@ -65,13 +65,12 @@
                 "--include", "${workspaceFolder}/test/data",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
-                //"${workspaceFolder}/test/temp/build/out.bas"
-                "${workspaceFolder}/test/data/main2.bas"
+                "${workspaceFolder}/test/data/main3.bas"
             ]
         },
         {
             "name": "Run Basic Unpacker",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/tools/bc.py",
             "console": "integratedTerminal",
