@@ -673,7 +673,9 @@ class BasicCompiler:
             elif last_was_jump != 0x0 and self.is_label_char(c):
                 # handle label after jump
                 label = ""
-                is_variable_assignment = False
+                no_jump_label_after_then = False
+
+                ofs_before_label = ofs # backup position after jump/then token
 
                 while ofs < len(line):
                     if self.is_label_char(c) or self.is_numeric_char(c):
@@ -682,18 +684,25 @@ class BasicCompiler:
                         if ofs < len(line):
                             c = line[ofs]
                     else:
-                        # look ahead if there is a variable assignment after THEN
                         ofs_old = ofs # backup position after identifier
 
+                        # look ahead if there is a variable assignment after THEN
                         while ofs < len(line) and c == " ":
                             ofs += 1
                             if ofs < len(line):
                                 c = line[ofs]
 
-                        if c == "=":
-                            is_variable_assignment = True
-
-                        ofs = ofs_old
+                        # token ends either with variable type, any bracket (even special)
+                        # or assignment operator
+                        if c in "=$%([{" :
+                            no_jump_label_after_then = True
+                            ofs = ofs_old # continue after identifier
+                        elif c == '#':
+                            # example: 'THEN GET# ...'
+                            no_jump_label_after_then = True
+                            ofs = ofs_before_label # continue before identifier
+                        else:
+                            ofs = ofs_old # continue after identifier
 
                         break
 
@@ -701,23 +710,32 @@ class BasicCompiler:
                     # turn 'GO SUB' into GOSUB
                     basic_line.store_byte(0x8D, label)
                     last_was_jump = 0x8D
+                elif last_was_jump == 0xCB and label.lower() == "to":
+                    # handle 'GO TO'
+                    basic_line.store_byte(0xA4, label)
+                    last_was_jump = 0xA4
                 elif last_was_jump == 0xA7 and label.lower() == "goto":
-                    # handle THEN GOTO
+                    # handle 'THEN GOTO'
                     basic_line.store_byte(0x89, label)
                     last_was_jump = 0x89
+                elif last_was_jump == 0xA7 and label.lower() == "go":
+                    # handle 'THEN GO'
+                    basic_line.store_byte(0xCB, label)
+                    last_was_jump = 0xCB
                 elif last_was_jump == 0xA7 and label.lower() == "gosub":
-                    # handle THEN GOSUB
+                    # handle 'THEN GOSUB'
                     basic_line.store_byte(0x8D, label)
                     last_was_jump = 0x8D
                 else:
 
                     if last_was_jump == 0xA7:
-                        # handle "THEN TOKEN" instead of "THEN label"
+                        # handle 'THEN TOKEN' instead of 'THEN label'
                         token, token_id, token_len = self.match_token(label)
+                        if token: ofs = ofs_before_label # reset parsing and handling to token start
 
                     if not token:
 
-                        if is_variable_assignment:
+                        if no_jump_label_after_then:
                             # store identifier for variable assignment and continue
                             basic_line.store_string(label)
                         else:
@@ -796,7 +814,7 @@ class BasicCompiler:
                     else:
                         token_skipped = True
 
-                # GOTO or GOSUB ?
+                # GOTO or GOSUB ? ('GOTO', 'GOSUB', 'GO', 'THEN')
                 last_was_jump = token_id if token_id in [0x89, 0x8D, 0xCB, 0xA7] else 0x0
 
                 ofs += token_len
