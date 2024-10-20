@@ -678,7 +678,13 @@ class BasicCompiler:
                 ofs_before_label = ofs # backup position after jump/then token
 
                 while ofs < len(line):
-                    if self.is_label_char(c) or self.is_numeric_char(c):
+                    if last_was_jump == 0xA7 and self.is_numeric_char(c) and (label.lower() == "goto" or label.lower() == "gosub" or label.lower() == "go"):
+                        # handle THEN GOTOn or GOSUBn or GOn without whitespace after GO...
+                        break
+                    elif last_was_jump == 0xCB and self.is_numeric_char(c) and label.lower() == "to":
+                        # handle THEN GO TOn without whitespace after TO
+                        break
+                    elif self.is_label_char(c) or self.is_numeric_char(c):
                         label += c
                         ofs += 1
                         if ofs < len(line):
@@ -744,6 +750,11 @@ class BasicCompiler:
 
                             if label_line_number:
                                 basic_line.store_string(str(label_line_number))
+                            elif last_was_jump == 0xA7:
+                                # if no label was found after THEN, just expect
+                                # some token not separated with whitespace
+                                last_was_jump = 0x0
+                                ofs = ofs_before_label
                             else:
                                 return (
                                     None,
