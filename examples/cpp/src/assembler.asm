@@ -8,3 +8,4 @@ testfunc:
     pha
     lda #$aa
     pla
+    rts
