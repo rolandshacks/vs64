@@ -26,10 +26,10 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "args": [
-                "--format", "basic",
+                "--format", "kick",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "--output", "${workspaceFolder}/test/temp/build/out.bas",
-                "${workspaceFolder}/test/data/test.res"
+                "--output", "${workspaceFolder}/test/temp/build/out.asm",
+                "${workspaceFolder}/test/res/spritepad2.spd"
             ]
         },
         {
@@ -62,10 +62,10 @@
                 "--verbose",
                 "--crunch",
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
-                "--include", "${workspaceFolder}/test/data",
+                "--include", "${workspaceFolder}/test/basic",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
-                "${workspaceFolder}/test/data/main5.bas"
+                "${workspaceFolder}/test/basic/main5.bas"
             ]
         },
         {

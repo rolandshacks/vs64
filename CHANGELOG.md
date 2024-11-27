@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.14 Minor Update
+
+- Bug-fixes and minor improvements
+
 ## 2.5.13 Minor Update
 
 - Bug-fixes and minor improvements

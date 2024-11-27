@@ -268,10 +268,6 @@ class SpritePadResource(SpriteResource):
                 tile_width = self.read_byte()
                 tile_height = self.read_byte()
 
-                if format_version >= 4:
-                    sprite_overlay_distance = self.read_int(2)
-                    tile_overlay_distance = self.read_int(2)
-
             else:
                 sprite_quantity = self.read_byte() + 1
                 sprite_animation_quantity = self.read_byte() + 1
@@ -279,6 +275,11 @@ class SpritePadResource(SpriteResource):
         self.col_background = self.read_byte() & 0xf
         self.col_multi1 = self.read_byte() & 0xf
         self.col_multi2 = self.read_byte() & 0xf
+
+        if format_version >= 4:
+            sprite_overlay_distance = self.read_int(2)
+            tile_overlay_distance = self.read_int(2)
+
         self.palette = f"{self.col_background}, {self.col_multi1}, {self.col_multi2}"
 
         self.add_meta(self.identifier + "_col_background", self.col_background)
