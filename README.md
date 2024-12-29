@@ -220,6 +220,10 @@ A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex
 {ctrl-1}, {ctrl-2}, {ctrl-3}, {ctrl-4}, {ctrl-5}, {ctrl-6}, {ctrl-7}, {ctrl-8}, {ctrl-9}, {ctrl-0}, {ctrl-/},
 {c=1}, {c=2}, {c=3}, {c=4}, {c=5}, {c=6}, {c=7}, {c=8}
 
+In addition, additional control codes as seen in Compute! magazine are supported.  This includes repeating control codes of the format `{count code}`.  For example, `{12 right}`.  Compute! also supported a number of other aliases for the control codes shown above that are supported including:
+
+>{down}, {right}, {spaces}, {up}, {left}, {shift-space}, {rvs}, {off}
+
 ### Resource Compilation
 
 VS64 comes with an integrated resource compiler that turns media files into plain source code to be directly referenced by the code and compiled into the binary. Currently, the supported media formats are:

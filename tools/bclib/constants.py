@@ -318,4 +318,14 @@ class Constants:
         "c=6": 153,
         "c=7": 154,
         "c=8": 155,
-    }
+
+        # Additional Compute! codes
+        "down": 17,
+        "right": 29,
+        "spaces": 32,
+        "up": 145,
+        "left": 157,
+        "shift-space": 160,
+        "rvs": 18,
+        "off": 146,
+}
