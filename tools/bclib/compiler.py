@@ -337,6 +337,7 @@ class BasicCompiler:
         self.new_labels = []
         self.labels = {}
         self.modules = None
+        self.repeat_pattern = re.compile("(\\d+)\\s(\\w+)")
 
         if not self.options.disable_extensions:
             all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(
@@ -629,6 +630,16 @@ class BasicCompiler:
                         if ofs < len(line) and line[ofs] == "}":
                             ofs += 1
                         if len(control) > 0:
+                            repeat = 1
+
+                            # Check if this is a repeating control character
+                            # seen in Cmmpute! magazine.  For example:
+                            # {23 DOWN}
+                            repeating_match = self.repeat_pattern.match(control)
+                            if repeating_match:
+                                repeat = int(repeating_match.group(1))
+                                control = repeating_match.group(2)
+
                             try:
                                 if control.startswith("$"):
                                     control_char = int(control[1:], 16)
@@ -650,7 +661,8 @@ class BasicCompiler:
                                 if not control_char:
                                     control_char = 63  # '?' if unknown control sequence
 
-                            basic_line.store_byte(control_char, f"{{{control_char}}}")
+                            for _ in range(repeat):
+                                basic_line.store_byte(control_char, f"{{{control_char}}}")
 
                     else:
                         # store string characters
