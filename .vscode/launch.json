@@ -65,7 +65,7 @@
                 "--include", "${workspaceFolder}/test/basic",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
-                "${workspaceFolder}/test/basic/main5.bas"
+                "${workspaceFolder}/test/basic/main6.bas"
             ]
         },
         {

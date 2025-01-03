@@ -906,13 +906,14 @@ class BasicCompiler:
             if result:
                 # found label
                 label = result[0]
-                if preprocess:
-                    self.new_labels.append(label.lower())
-                ofs = len(result[0]) + 1
-                if ofs >= len(line):
-                    if verbose and preprocess:
-                        print(f"{label}:")
-                    return (0, None, None)  # just label line, no BASIC code
+                if not self.is_token(label):
+                    if preprocess:
+                        self.new_labels.append(label.lower())
+                    ofs = len(result[0]) + 1
+                    if ofs >= len(line):
+                        if verbose and preprocess:
+                            print(f"{label}:")
+                        return (0, None, None)  # just label line, no BASIC code
 
             # auto-generate next line number
             line_number = self.last_line + 1
@@ -964,8 +965,13 @@ class BasicCompiler:
 
         return None
 
-    def match_token(self, text):
+    def is_token(self, text):
         """Check if text is a token."""
+        token, _, _ = self.match_token(text)
+        return token is not None
+
+    def match_token(self, text):
+        """Get token info for text."""
 
         if text == "?":
             return ("?", 0x99, 1)

@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.16 Minor Update
+
+- Fixed BASIC label parsing
+
 ## 2.5.15 Minor Update
 
 - Added support for Compute! magazine control codes
