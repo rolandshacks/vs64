@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.17 Minor Update
+
+- Bug-fixes and minor improvements
+
 ## 2.5.16 Minor Update
 
 - Fixed BASIC label parsing

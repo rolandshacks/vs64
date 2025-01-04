@@ -61,6 +61,7 @@
             "args": [
                 "--verbose",
                 "--crunch",
+                "--noext",
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
                 "--include", "${workspaceFolder}/test/basic",
                 "-I", "${workspaceFolder}/test/temp",

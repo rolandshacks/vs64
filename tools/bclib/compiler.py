@@ -355,7 +355,7 @@ class BasicCompiler:
                     v += 0x6400
                 self.token_map[k] = v
         else:
-            self.sorted_token_list = sorted(Constants.BASIC_TOKENS.keys)
+            self.sorted_token_list = sorted(Constants.BASIC_TOKENS.keys())
             self.token_map = Constants.BASIC_TOKENS
 
     def compile(
@@ -905,8 +905,8 @@ class BasicCompiler:
             result = re.match(r"[a-zA-Z_][a-zA-Z0-9_]+(?=:)", line)
             if result:
                 # found label
-                label = result[0]
-                if not self.is_token(label):
+                if not self.is_token(result[0]):
+                    label = result[0]
                     if preprocess:
                         self.new_labels.append(label.lower())
                     ofs = len(result[0]) + 1
