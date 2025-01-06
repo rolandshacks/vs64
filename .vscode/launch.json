@@ -59,9 +59,9 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}/test/data",
             "args": [
-                "--verbose",
+                "--debug",
                 "--crunch",
-                "--noext",
+                "--tsb",
                 "--map", "${workspaceFolder}/test/temp/build/out.bmap",
                 "--include", "${workspaceFolder}/test/basic",
                 "-I", "${workspaceFolder}/test/temp",

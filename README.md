@@ -107,6 +107,17 @@ VS64 supports compiling BASIC source to binary programs.
 
 In order to use the basic compiler, just add your BASIC source files to the "sources" list of the project file.
 
+### Tuned Simon's BASIC (TSBneo)
+
+Per default, just the original BASIC V2 features are enabled, all extended features, such as the Simon's BASIC
+tokens, need to be enabled explicitly.
+
+To enable the BASIC extensions, just add the compiler argument '-t' or '--tsb' to the project configuration:
+
+```
+"args": ["--tsb"]
+```
+
 ### Crunching BASIC Code
 
 The basic compiler supports crunching of BASIC code:

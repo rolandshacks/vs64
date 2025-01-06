@@ -149,8 +149,8 @@ class CompileOptions:
     """Compile options."""
 
     def __init__(self):
-        self.verbose = False
-        self.disable_extensions = False
+        self.verbosity_level = 0
+        self.feature_tsb = False
         self.include_path = []
         self.map_file = None
         self.crunch = False
@@ -165,13 +165,13 @@ class CompileOptions:
         """Add include path."""
         self.include_path.append(include_path)
 
-    def set_disable_extensions(self):
+    def set_enable_tsb(self):
         """Disable BASIC extensions."""
-        self.disable_extensions = True
+        self.feature_tsb = True
 
-    def set_verbose(self):
+    def set_verbosity_level(self, level):
         """Enable verbose outputs."""
-        self.verbose = True
+        self.verbosity_level = level
 
     def set_lower_case(self):
         """Set lower case mode."""

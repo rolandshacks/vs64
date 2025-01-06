@@ -4,8 +4,6 @@
 class Constants:
     """Global constants."""
 
-    DEBUG_MODE = False
-
     BASIC_START_ADDR = 0x0801
 
     BASIC_TOKENS = {

@@ -339,7 +339,7 @@ class BasicCompiler:
         self.modules = None
         self.repeat_pattern = re.compile("(\\d+)\\s(\\w+)")
 
-        if not self.options.disable_extensions:
+        if self.options.feature_tsb:
             all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(
                 Constants.TSB_TOKENS.keys()
             )
@@ -355,7 +355,7 @@ class BasicCompiler:
                     v += 0x6400
                 self.token_map[k] = v
         else:
-            self.sorted_token_list = sorted(Constants.BASIC_TOKENS.keys())
+            self.sorted_token_list = sorted(Constants.BASIC_TOKENS.keys(), key=lambda x: -len(x))
             self.token_map = Constants.BASIC_TOKENS
 
     def compile(
@@ -402,7 +402,7 @@ class BasicCompiler:
         self.program.resolve()
 
         # dump generated code to stdout
-        if options.verbose:
+        if options.verbosity_level > 0:
             for basic_line in self.program.get_lines():
                 print(basic_line.to_string())
 
@@ -560,6 +560,7 @@ class BasicCompiler:
         """Compile a single basic line of source code."""
 
         crunch = self.options.crunch
+        verbosity_level = self.options.verbosity_level
 
         # parse line number or label from line
         (line_number, label, ofs) = self.fetch_line_info(module, line, False)
@@ -842,7 +843,7 @@ class BasicCompiler:
 
                 ofs += token_len
                 if not token_skipped:
-                    if Constants.DEBUG_MODE:
+                    if verbosity_level >= 2:
                         basic_line.add_verbose(f"{{${token_id:x}:{token}}}")
                     else:
                         basic_line.add_verbose(token)
@@ -878,8 +879,7 @@ class BasicCompiler:
         ofs = 0
 
         crunch = self.options.crunch
-
-        verbose = self.options.verbose
+        verbosity_level = self.options.verbosity_level
 
         result = re.match(r"\d+", line)
         if result:
@@ -911,7 +911,7 @@ class BasicCompiler:
                         self.new_labels.append(label.lower())
                     ofs = len(result[0]) + 1
                     if ofs >= len(line):
-                        if verbose and preprocess:
+                        if verbosity_level > 0 and preprocess:
                             print(f"{label}:")
                         return (0, None, None)  # just label line, no BASIC code
 

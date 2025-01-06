@@ -1,0 +1,7 @@
+{
+    "name": "tsb_example",
+    "description": "Example for Tuned Simon's Basic",
+    "toolkit": "basic",
+    "sources": ["src/main.bas"],
+    "args": ["--tsb"]
+}
