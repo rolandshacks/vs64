@@ -17,7 +17,7 @@ BIND(module);
 
 const { Logger, LogLevel } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
-const { KickAssemblerInfo } = require('debugger/debug_info');
+const { KickAssemblerInfo } = require('debugger/debug_info_kick');
 
 const logger = new Logger("Builder");
 
