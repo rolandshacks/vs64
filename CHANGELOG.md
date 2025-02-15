@@ -1,6 +1,11 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.19 Minor Update
+
+- Fixed handling of Kick Assembler debug info
+  (thanks to Nikolai Knopp!)
+
 ## 2.5.18 Minor Update
 
 - Bug-fixes and minor improvements
