@@ -35,6 +35,7 @@ const DebugVariables = {
     VARIABLES_BASIC: 8,
     VARIABLES_BASIC_REGISTERS: 9,
     VARIABLES_BASIC_VECTORS: 10,
+    VARIABLES_LOCALS: 11,
 
     VARIABLES_SPRITES_BEGIN: 100,
     VARIABLES_SPRITES_END: 107,
@@ -43,7 +44,10 @@ const DebugVariables = {
     VARIABLES_BASIC_ARRAYS_END: 0x1FFFF,
 
     VARIABLES_SYMBOLS_MEMBERS_BEGIN: 0x20000,
-    VARIABLES_SYMBOLS_MEMBERS_END: 0x2FFFF
+    VARIABLES_SYMBOLS_MEMBERS_END: 0x2FFFF,
+
+    VARIABLES_LOCALS_MEMBERS_BEGIN: 0x30000,
+    VARIABLES_LOCALS_MEMBERS_END: 0x3FFFF
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -71,6 +75,7 @@ class DebugVariablesProvider {
         }
 
         scopes.push(
+            ["Locals",                  DebugVariables.VARIABLES_LOCALS],
             ["CPU Registers",           DebugVariables.VARIABLES_REGISTERS],
             ["CPU Flags",               DebugVariables.VARIABLES_FLAGS],
             ["Symbols",                 DebugVariables.VARIABLES_SYMBOLS],
@@ -108,7 +113,31 @@ class DebugVariablesProvider {
 
         if (null == args.filter || args.filter == "named") {
 
-            if (DebugVariables.VARIABLES_REGISTERS == args.variablesReference) {
+            if (DebugVariables.VARIABLES_LOCALS == args.variablesReference) {
+
+                variables = [];
+
+                let addr = cpuState.cpuRegisters.PC;
+                let functionInfo = debugInfo.getFunctionByAddr(addr);
+
+                if (null != functionInfo && null != functionInfo.debugSymbols) {
+
+                    const symbols = functionInfo.debugSymbols;
+
+                    let unpackedSymbols = await session.unpackSymbols(symbols);
+                    if (unpackedSymbols) {
+                        for (const unpackedSymbol of unpackedSymbols) {
+                            if (null != unpackedSymbol) {
+                                if (unpackedSymbol.indexedVariables > 0 && unpackedSymbol.variablesReference != null) {
+                                    unpackedSymbol.variablesReference += DebugVariables.VARIABLES_LOCALS_MEMBERS_BEGIN;
+                                }
+                                variables.push(unpackedSymbol);
+                            }
+                        }
+                    }
+                }
+
+            } else if (DebugVariables.VARIABLES_REGISTERS == args.variablesReference) {
 
                 let registers = cpuState.cpuRegisters;
 
@@ -411,21 +440,36 @@ class DebugVariablesProvider {
                 } else {
                     variables = [];
                 }
-            } else if (args.variablesReference >= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN &&
-                       args.variablesReference <= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_END) {
+            } else if (
+                (args.variablesReference >= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN && args.variablesReference <= DebugVariables.VARIABLES_SYMBOLS_MEMBERS_END) || 
+                (args.variablesReference >= DebugVariables.VARIABLES_LOCALS_MEMBERS_BEGIN && args.variablesReference <= DebugVariables.VARIABLES_LOCALS_MEMBERS_END)) {
 
-                const arrayIdx = args.variablesReference - DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN;
+                const isLocal = (args.variablesReference >= DebugVariables.VARIABLES_LOCALS_MEMBERS_BEGIN && args.variablesReference <= DebugVariables.VARIABLES_LOCALS_MEMBERS_END);
+                const ofs = isLocal ? DebugVariables.VARIABLES_LOCALS_MEMBERS_BEGIN : DebugVariables.VARIABLES_SYMBOLS_MEMBERS_BEGIN;
+                const arrayIdx = args.variablesReference - ofs;
 
-                const symbols = debugInfo.symbols;
+                let symbols = null;
+
+                if (isLocal) {
+                    let functionInfo = debugInfo.getFunctionByAddr(cpuState.cpuRegisters.PC);
+                    if (null != functionInfo) {
+                        symbols = functionInfo.debugSymbols;
+                    }
+                } else {
+                    symbols = debugInfo.symbols;
+                }
+
                 const parentSymbol = symbols[arrayIdx];
 
                 if (parentSymbol != null) {
                     variables = [];
 
+                    const numChildren = parentSymbol.num_children || 0;
+
                     variables.push({
                         name: "length",
                         type: parentSymbol.label,
-                        value: parentSymbol.num_children.toString(),
+                        value: numChildren.toString(),
                         variablesReference: 0
                     });
 

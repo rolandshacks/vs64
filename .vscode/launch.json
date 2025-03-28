@@ -8,7 +8,9 @@
             "args": [
                 "--trace-deprecation",
                 "--extensionDevelopmentPath=${workspaceFolder}"
-            ]
+            ],
+            "preLaunchTask": "Bundle Extension",
+            "sourceMaps": true
         },
         {
             "name": "Run Modules",

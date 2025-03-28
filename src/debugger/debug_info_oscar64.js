@@ -194,6 +194,14 @@ class Oscar64DebugParser {
                     func.name
                 );
 
+                if (null != func.variables) {
+                    for (const variable of func.variables) {
+                        let debugSymbol = Oscar64DebugParser.decodeVariable(types, variable);
+                        if (null == debugSymbol) continue;
+                        funcInfo.addDebugSymbol(debugSymbol);
+                    }
+                }
+
                 functions.push(funcInfo);
 
                 if (!func.lines) continue;

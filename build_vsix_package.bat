@@ -6,5 +6,6 @@ REM *
 
 SETLOCAL
 call npm install
+call npm run esbuild
 call npm run vsix
 ENDLOCAL

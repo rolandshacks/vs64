@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.20 Minor Update
+
+- Extension is now bundled
+- Added debugging/inspection support for Oscar64 local variables
+- Fixed problem view for Oscar64
+
 ## 2.5.19 Minor Update
 
 - Fixed handling of Kick Assembler debug info

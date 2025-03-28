@@ -164,7 +164,7 @@ class TaskProvider {
         let problemMatcher = "msvc";
         const project = this._project;
         if (project && project.toolkit) {
-            if (project.toolkit.isKick) {
+            if (project.toolkit.hasProblemMatcher) {
                 problemMatcher = project.toolkit.name;
             }
         }

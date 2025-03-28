@@ -845,8 +845,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
     }
 
-
-    scopesRequest(response, args) {
+    async scopesRequest(response, args) {
 
         if (null != args && DebugConstants.STACKFRAME_NUMBER === args.frameId) {
             const scopes = this._variablesProvider.getScopes();
