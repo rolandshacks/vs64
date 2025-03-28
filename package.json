@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.19",
+	"version": "2.5.20",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -15,8 +15,8 @@
 	"engines": {
 		"vscode": "^1.87.0"
 	},
-	"main": "./src/extension/main.js",
-	"xmain": "./dist/vs64.js",
+	"xmain": "./src/extension/main.js",
+	"main": "./dist/vs64.js",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/rolandshacks/vs64"
@@ -27,7 +27,8 @@
 		"coverage": "jest --coverage --runInBand --config ./test/jest.config.js",
 		"vsix": "vsce package --no-yarn --dependencies",
 		"publish": "vsce publish",
-		"esbuild": "node build.js"
+		"esbuild": "node ./esbuild --production",
+		"esbuild-dev": "node ./esbuild --sourcemap"
 	},
 	"dependencies": {
 		"@vscode/debugadapter": "1.65.0",
@@ -39,7 +40,7 @@
 		"@types/node": "^20.13.0",
 		"@types/vscode": "^1.87.0",
 		"@vscode/vsce": "^3.2.1",
-		"esbuild": "^0.21.4",
+		"esbuild": "^0.25.2",
 		"eslint": "^9.4.0",
 		"jest": "^29.7.0",
 		"typescript": "^5.4.5"

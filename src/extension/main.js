@@ -10,7 +10,7 @@ const process = require('process');
 //-----------------------------------------------------------------------------------------------//
 
 global._sourcebase = path.resolve(__dirname, "..");
-const BIND = function(_module) { _module.paths.push(global._sourcebase); };
+const BIND = function(_module) {  if (null != _module.paths) { _module.paths.push(global._sourcebase); }};
 global.BIND = BIND;
 BIND(module);
 

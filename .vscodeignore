@@ -10,6 +10,8 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/.jshintrc
 **/pylintrc
-
-#src/**
-#node_modules/**
+dist/*.map
+examples
+esbuild.js
+src/**
+node_modules/**
