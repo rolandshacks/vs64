@@ -11,6 +11,7 @@ BIND(module);
 const { Utils } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
 const { DebugAddressInfo } = require('debugger/debug_info_types');
+const { BufferedMemory } = require('debugger/debug_memory');
 const { Profiler } = require('debugger/profiler');
 
 const logger = new Logger("Debug");
@@ -98,8 +99,27 @@ class CpuInfo {
     }
 }
 
+class ZeroPageState {
+    constructor(bufferedMemory) {
+        this._bufferedMemory = bufferedMemory;
+        this.processorPortDataDirection = 0x0;
+        this.processorPortBits = 0x0;
+    }
+
+    decode() {
+        const mem = this._bufferedMemory.toSlice(0x0, 256);
+
+        const z = this;
+        z.processorPortDataDirection = mem[0x0];
+        z.processorPortBits = mem[0x1];
+
+        return true;
+    }
+}
+
 class CiaState {
-    constructor(ciaId) {
+    constructor(bufferedMemory, ciaId) {
+        this._bufferedMemory = bufferedMemory;
         this.ciaId = ciaId;
 
         this.dataPortA = 0x0;
@@ -115,10 +135,10 @@ class CiaState {
         this.timerControlB = 0x0;
     }
 
-    decode(memorySnapshot) {
+    decode() {
         logger.debug("decode");
 
-        const mem = memorySnapshot.subarray(0xdc00 + this.ciaId * 0x100, 0xdc0f + this.ciaId * 0x100);
+        const mem = this._bufferedMemory.toSlice(0xdc00 + this.ciaId * 0x100, 16);
 
         const c = this;
 
@@ -149,6 +169,7 @@ class SpriteInfo {
         this.doubleWidth = false;
         this.doubleHeight = false;
         this.spriteCollision = false;
+        this.backgroundPriority = false;
         this.backgroundCollision = false;
         this.pointer = 0;
         this.label = "";
@@ -156,7 +177,8 @@ class SpriteInfo {
 }
 
 class VicState {
-    constructor() {
+    constructor(bufferedMemory) {
+        this._bufferedMemory = bufferedMemory;
 
         this.bankSelect = 0;
         this.baseAddress = 0x0;
@@ -186,7 +208,6 @@ class VicState {
         this.irqMask = 0x0;
 
         this.borderColor = 0x0;
-
         this.backgroundColor = 0x0;
         this.backgroundColorMulti1 = 0x0;
         this.backgroundColorMulti2 = 0x0;
@@ -205,10 +226,10 @@ class VicState {
 
     }
 
-    decode(memorySnapshot, bankSelect) {
+    decode(bankSelect) {
         logger.debug("decode");
 
-        const mem = memorySnapshot.subarray(0xd000, 0xd031);
+        const mem = this._bufferedMemory.toSlice(0xd000, 48);
 
         const v = this;
 
@@ -243,6 +264,7 @@ class VicState {
 
         v.irqFlags = mem[0x19];
         v.irqMask = mem[0x1a];
+        v.spriteBackgroundPriority = mem[0x1b];
 
         v.borderColor = mem[0x20]&0xf;
         v.backgroundColor = mem[0x21]&0xf;
@@ -251,7 +273,6 @@ class VicState {
         v.backgroundColorMulti3 = mem[0x24]&0xf;
         v.spriteColorMulti1 = mem[0x25]&0xf;
         v.spriteColorMulti2 = mem[0x26]&0xf;
-        v.spriteBackgroundPriority = mem[0x1b];
 
         const spriteAddressRegisters = v.baseAddress + v.screenAddress + 0x03f8;
 
@@ -264,13 +285,14 @@ class VicState {
             s.color = mem[0x27+i]&0xf;
 
             s.enabled = (mem[0x15]&mask) != 0;
+            s.backgroundPriority = (mem[0x1b]&mask) != 0;
             s.multicolor = (mem[0x1c]&mask) != 0;
             s.doubleWidth = (mem[0x1d]&mask) != 0;
             s.doubleHeight = (mem[0x17]&mask) != 0;
             s.spriteCollision = (mem[0x1e]&mask) != 0;
             s.backgroundCollision = (mem[0x1f]&mask) != 0;
 
-            s.pointer = memorySnapshot[spriteAddressRegisters+i];
+            s.pointer = this._bufferedMemory.getByte(spriteAddressRegisters+i);
 
             s.label = (s.enabled ? "on" : "off") + ", x=" + s.x + ", y=" + s.y + ", col=" + s.color;
         }
@@ -280,6 +302,203 @@ class VicState {
         return true;
 
     }
+
+    setRasterLine(v) {
+        this.rasterLine = v;
+        this._bufferedMemory.setByte(0xd012, v&0xff);
+        this._bufferedMemory.setBit(0xd011, 7, ((v & 0x100) != 0x0 ? 1 : 0));
+    }
+
+    setExtendedColorMode(v) {
+        this.extendedColorMode = (v ? true : false);
+        this._bufferedMemory.setBit(0xd011, 6, v);
+    }
+
+    setBitmapMode(v) {
+        this.bitmapMode = (v ? true : false);
+        this.textMode = !this.bitmapMode;
+        this._bufferedMemory.setBit(0xd011, 5, v);
+    }
+
+    setTextMode(v) {
+        this.textMode = (v ? true : false);
+        this.setBitmapMode(!this.textMode);
+    }
+
+    setMultiColorMode(v) {
+        this.multicolorMode = (v ? true : false);
+        this._bufferedMemory.setBit(0xd016, 4, v);
+    }
+
+    setScreenEnabled(v) {
+        this.screenEnabled = (v ? true : false);
+        this._bufferedMemory.setBit(0xd011, 4, v);
+    }
+
+    setNumRows(v) {
+        this.numRows = (v == 25) ? 25 : 24;
+        this._bufferedMemory.setBit(0xd011, 3, (this.numRows == 25));
+    }
+
+    setNumCols(v) {
+        this.numColumns = (v == 40) ? 40 : 38;
+        this._bufferedMemory.setBit(0xd016, 3, (this.numColumns == 40));
+    }
+
+    setLightPenX(v) {
+        this.lightPenX = v;
+        this._bufferedMemory.setByte(0xd013, v);
+    }
+
+    setLightPenY(v) {
+        this.lightPenY = v;
+        this._bufferedMemory.setByte(0xd014, v);
+    }
+
+    setScrollX(v) {
+        this.scrollX = v;
+        const b = this._bufferedMemory.getByte(0xd016) & 0xf8;
+        this._bufferedMemory.setByte(0xd016, b | (v & 0x07));
+    }
+
+    setScrollY(v) {
+        this.scrollY = v;
+        const b = this._bufferedMemory.getByte(0xd011) & 0xf8;
+        this._bufferedMemory.setByte(0xd011, b | (v & 0x07));
+    }
+
+    setBorderColor(v) {
+        this.borderColor = v;
+        this._bufferedMemory.setNibble(0xd020, false, v);
+    }
+
+    setBackgroundColor(v) {
+        this.backgroundColor = v;
+        this._bufferedMemory.setNibble(0xd021, false, v);
+    }
+
+    setBackgroundColorMulti1(v) {
+        this.backgroundColorMulti1 = v;
+        this._bufferedMemory.setNibble(0xd022, false, v);
+    }
+
+    setBackgroundColorMulti2(v) {
+        this.backgroundColorMulti2 = v;
+        this._bufferedMemory.setNibble(0xd023, false, v);
+    }
+
+    setBackgroundColorMulti3(v) {
+        this.backgroundColorMulti3 = v;
+        this._bufferedMemory.setNibble(0xd024, false, v);
+    }
+
+    setSpriteColorMulti1(v) {
+        this.spriteColorMulti1 = v;
+        this._bufferedMemory.setNibble(0xd025, false, v);
+    }
+
+    setSpriteColorMulti2(v) {
+        this.spriteColorMulti2 = v;
+        this._bufferedMemory.setNibble(0xd026, false, v);
+    }
+
+    setScreenAddress(v) {
+        this.screenAddress = v;
+        const bits = (this.screenAddress / 0x400) & 0x0f;
+        this._bufferedMemory.setNibble(0xd018, true, bits);
+    }
+
+    setCharsetAddress(v) {
+        this.charsetAddress = v;
+        const b = this._bufferedMemory.getByte(0xd018) & 0b11110001;
+        const bits = ((v / 0x800) & 0x7) << 1;
+        this._bufferedMemory.setByte(0xd018, b | bits);
+        this.bitmapAddress = ((this._bufferedMemory.getByte(0xd018) & 0x4) != 0) ? 0x2000 : 0x0;
+    }
+
+    setBitmapAddress(v) {
+        this.bitmapAddress = v;
+        const b = this._bufferedMemory.getByte(0xd018) & 0b11110001;
+        const bits = (v >= 0x2000) ? 0x4 : 0x0;
+        this._bufferedMemory.setByte(0xd018, b | bits);
+        this.charsetAddress = ((this._bufferedMemory.getByte(0xd018) & 0xe)>>1) * 0x800;
+    }
+
+    setSpriteEnabled(sprite, v) {
+        const s = this.sprites[sprite];
+        s.enabled = (v ? true : false);
+        this._bufferedMemory.setBit(0xd015, sprite, s.enabled);
+    }
+
+    setSpriteX(sprite, v) {
+        const s = this.sprites[sprite];
+        s.x = v;
+        this._bufferedMemory.setByte(0xd000 + sprite*2, v);
+        this._bufferedMemory.setBit(0xd010, sprite, (v & 0x100) != 0 ? 1 : 0);
+    }
+
+    setSpriteY(sprite, v) {
+        const s = this.sprites[sprite];
+        s.y = v;
+        this._bufferedMemory.setByte(0xd000 + sprite*2 + 1, v);
+    }
+
+    setSpriteColor(sprite, v) {
+        const s = this.sprites[sprite];
+        s.color = v;
+        this._bufferedMemory.setNibble(0xd027+sprite, false, v);
+    }
+
+    setSpriteBackgroundPriority(sprite, v) {
+        const s = this.sprites[sprite];
+        s.backgroundPriority = (v ? true : false);
+        this._bufferedMemory.setBit(0xd01b, sprite, s.backgroundPriority);
+    }
+
+    setSpriteMultiColor(sprite, v) {
+        const s = this.sprites[sprite];
+        s.multicolor = (v ? true : false);
+        this._bufferedMemory.setBit(0xd01c, sprite, s.multicolor);
+    }
+
+    setSpriteDoubleWidth(sprite, v) {
+        const s = this.sprites[sprite];
+        s.doubleWidth = (v ? true : false);
+        this._bufferedMemory.setBit(0xd01d, sprite, s.doubleWidth);
+    }
+
+    setSpriteDoubleHeight(sprite, v) {
+        const s = this.sprites[sprite];
+        s.doubleHeight = (v ? true : false);
+        this._bufferedMemory.setBit(0xd017, sprite, s.doubleHeight);
+    }
+
+    setSpriteCollision(sprite, v) {
+        const s = this.sprites[sprite];
+        s.spriteCollision = (v ? true : false);
+        this._bufferedMemory.setBit(0xd01e, sprite, s.spriteCollision);
+    }
+
+    setSpriteBackgroundCollision(sprite, v) {
+        const s = this.sprites[sprite];
+        s.backgroundCollision = (v ? true : false);
+        this._bufferedMemory.setBit(0xd01f, sprite, s.backgroundCollision);
+    }
+
+    setSpritePointer(sprite, v) {
+        const s = this.sprites[sprite];
+        s.pointer = v;
+        const spriteAddressRegisters = this.baseAddress + this.screenAddress + 0x03f8;
+        this._bufferedMemory.setByte(spriteAddressRegisters + sprite, v);
+    }
+
+    getSpriteDataAddress(sprite) {
+        const s = this.sprites[sprite];
+        const pointer = s.pointer; // pointers to 64 byte blocks
+        const addr = this.baseAddress +  pointer * 64; // blocks are relative to VIC base address
+        return addr;
+    }
+
 }
 
 class SidChannel {
@@ -291,28 +510,35 @@ class SidChannel {
         this.decay = 0;
         this.sustain = 0;
         this.release = 0;
+        this.label = "";
     }
 }
 
 class SidState {
-    constructor() {
+    constructor(bufferedMemory) {
+        this._bufferedMemory = bufferedMemory;
+
         this.channels = [
             new SidChannel(), new SidChannel(), new SidChannel()
         ];
-        this.cutoff = 0;
-        this.resonance = 0;
-        this.filter = 0;
+
+        this.filterCutOff = 0;
+        this.filterMask = 0;
+        this.filterResonance = 0;
+        this.filterSelect = 0;
         this.volume = 0;
         this.paddleX = 0;
         this.paddleY = 0;
         this.oscillator3Rand = 0;
         this.envelopeGenerator3Output = 0;
+
+        this.label = "";
     }
 
-    decode(memorySnapshot) {
+    decode() {
         logger.debug("decode");
 
-        const mem = memorySnapshot.subarray(0xd400, 0xd41c);
+        const mem = this._bufferedMemory.toSlice(0xd400, 29);
 
         const s = this;
 
@@ -322,43 +548,107 @@ class SidState {
             const c = s.channels[i];
             c.frequency = mem[ofs+0] + (mem[ofs+1] << 8);
             c.pulse = mem[ofs+2] + ((mem[ofs+3]&0xf) << 8);
-            c.wave = mem[ofs+4];
+            c.control = mem[ofs+4] & 0x0f;
+            c.wave = (mem[ofs+4] & 0xf0) >> 4;
             c.attack = (mem[ofs+5]&0xf0)>>4;
             c.decay = mem[ofs+5]&0x0f;
             c.sustain = (mem[ofs+6]&0xf0)>>4;
             c.release = mem[ofs+6]&0x0f;
+
+            c.label = "wave:" + c.wave + ", freq:" + c.frequency;
         }
 
-        s.cutoff = (mem[0x15]&0xf) + (mem[0x16]<<4);
-        s.resonance = mem[0x17];
-        s.filter = (mem[0x18]&0xf0) >> 4;
+        s.filterCutOff = (mem[0x15]&0x07) + (mem[0x16]<<3);
+        s.filterMask = mem[0x17] & 0x0f;
+        s.filterResonance = (mem[0x17]&0xf0) >> 4;
+        s.filterSelect = (mem[0x18]&0xf0) >> 4;
         s.volume = mem[0x18]&0x0f;
-
         s.paddleX = mem[0x19];
         s.paddleY = mem[0x1a];
         s.oscillator3Rand = mem[0x1b];
         s.envelopeGenerator3Output = mem[0x1c];
 
-        return true;
-    }
-}
-
-class ZeroPageState {
-    constructor() {
-        this.processorPortDataDirection = 0x0;
-        this.processorPortBits = 0x0;
-    }
-
-    decode(memorySnapshot) {
-        const mem = memorySnapshot.subarray(0x00, 0xff);
-
-        const z = this;
-        z.processorPortDataDirection = mem[0x0];
-        z.processorPortBits = mem[0x1];
+        s.label = "volume=" + s.volume;
 
         return true;
     }
 
+    setVolume(v) {
+        this.volume = v;
+        this._bufferedMemory.setNibble(0xd418, false, v);
+    }
+
+    setFilterCutOff(v) {
+        this.filterCutOff = v;
+        const b = this._bufferedMemory.getByte(0xd415) & 0b11111000;
+        this._bufferedMemory.setByte(0xd415, (b | v&0x07));
+        this._bufferedMemory.setByte(0xd416, (v>>3));
+    }
+
+    setFilterMask(v) {
+        this.filterMask = v;
+        this._bufferedMemory.setNibble(0xd417, false, v);
+    }
+
+    setFilterResonance(v) {
+        this.filterResonance = v;
+        this._bufferedMemory.setNibble(0xd417, true, v);
+    }
+
+    setFilterSelect(v) {
+        this.filterSelect = v;
+        this._bufferedMemory.setNibble(0xd418, true, v);
+    }
+
+    setChannelFrequency(channel, v) {
+        const c = this.channels[channel];
+        c.frequency = v;
+        this._bufferedMemory.setByte(0xd400 + channel*7 + 0, v & 0xff);
+        this._bufferedMemory.setByte(0xd400 + channel*7 + 1, (v>>8) & 0xff);
+    }
+
+    setChannelPulse(channel, v) {
+        const c = this.channels[channel];
+        c.pulse = v;
+        this._bufferedMemory.setByte(0xd400 + channel*7 + 2, v & 0xff);
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 3, false, (v>>8) & 0xf);
+    }
+
+    setChannelControl(channel, v) {
+        const c = this.channels[channel];
+        c.control = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 4, false, v);
+    }
+
+    setChannelWave(channel, v) {
+        const c = this.channels[channel];
+        c.wave = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 4, true, v);
+    }
+
+    setChannelAttack(channel, v) {
+        const c = this.channels[channel];
+        c.attack = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 5, true, v);
+    }
+
+    setChannelDecay(channel, v) {
+        const c = this.channels[channel];
+        c.decay = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 5, false, v);
+    }
+
+    setChannelSustain(channel, v) {
+        const c = this.channels[channel];
+        c.sustain = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 6, true, v);
+    }
+
+    setChannelRelease(channel, v) {
+        const c = this.channels[channel];
+        c.release = v;
+        this._bufferedMemory.setNibble(0xd400 + channel*7 + 6, false, v);
+    }
 }
 
 const _VARTYPE_INTEGER = 0;
@@ -367,8 +657,8 @@ const _VARTYPE_STRING = 2;
 
 class BasicState {
 
-    constructor() {
-        this._memorySnapshot = null;
+    constructor(bufferedMemory) {
+        this._bufferedMemory = bufferedMemory;
 
         this._registers = {
             programAddress : 0x0,
@@ -399,18 +689,16 @@ class BasicState {
     get registers() { return this._registers; }
     get vectors() { return this._vectors; }
 
-    static fromBytes(memorySnapshot) {
-        if (!memorySnapshot) return null;
-        const basicState = new BasicState();
-        if (false == basicState.decode(memorySnapshot)) return null;
+    static fromBuffer(bufferedMemory) {
+        if (!bufferedMemory) return null;
+        const basicState = new BasicState(bufferedMemory);
+        if (false == basicState.decode()) return null;
         return basicState;
     }
 
-    decode(memorySnapshot) {
-        this._memorySnapshot = memorySnapshot;
-
+    decode() {
         // fetch registers from zero page
-        const mem = memorySnapshot;
+        const mem = this._bufferedMemory.buffer;
 
         const regs = this._registers;
         regs.programAddress = mem[0x2b] + (mem[0x2c]<<8);
@@ -444,9 +732,9 @@ class BasicState {
 
     getVariables() {
         if (this._variables) return this._variables;
-        if (!this._memorySnapshot) return null;
+        if (null == this._bufferedMemory || this._bufferedMemory.empty) return null;
 
-        const mem = this._memorySnapshot;
+        const mem = this._bufferedMemory.buffer;
         const reg = this._registers;
 
         const variables = [];
@@ -464,9 +752,9 @@ class BasicState {
 
     getArrays() {
         if (this._arrays) return this._arrays;
-        if (!this._memorySnapshot) return null;
+        if (null == this._bufferedMemory || this._bufferedMemory.empty) return null;
 
-        const mem = this._memorySnapshot;
+        const mem = this._bufferedMemory.buffer;
         const reg = this._registers;
 
         const arraysStart = reg.arraysAddress;
@@ -643,34 +931,42 @@ BasicState.VARTYPE_FLOAT = _VARTYPE_FLOAT;
 BasicState.VARTYPE_STRING = _VARTYPE_STRING;
 
 class ChipState {
-    constructor() {
-        this.zero = new ZeroPageState();
-        this.cia1 = new CiaState(0);
-        this.cia2 = new CiaState(1);
-        this.vic = new VicState();
-        this.sid = new SidState();
+    constructor(bufferedMemory) {
+        this._bufferedMemory = bufferedMemory;
+        this.zero = new ZeroPageState(bufferedMemory);
+        this.cia1 = new CiaState(bufferedMemory, 0);
+        this.cia2 = new CiaState(bufferedMemory, 1);
+        this.vic = new VicState(bufferedMemory);
+        this.sid = new SidState(bufferedMemory);
     }
 
-    static fromBytes(memorySnapshot) {
-        if (!memorySnapshot) return null;
+    static fromBuffer(bufferedMemory) {
+        if (!bufferedMemory) return null;
 
-        const c = new ChipState();
-        if (false == c.decode(memorySnapshot)) return null;
+        const c = new ChipState(bufferedMemory);
+        if (false == c.decode()) return null;
         return c;
     }
 
-    decode(memorySnapshot) {
-        if (false == this.zero.decode(memorySnapshot)) return false;
+    decode() {
 
-        if (false == this.cia1.decode(memorySnapshot)) return false;
-        if (false == this.cia2.decode(memorySnapshot)) return false;
+        if (false == this.zero.decode()) return false;
+
+        if (false == this.cia1.decode()) return false;
+        if (false == this.cia2.decode()) return false;
 
         const bankSelect = 3 - (this.cia2.dataPortA & 0x3);
-        if (false == this.vic.decode(memorySnapshot, bankSelect)) return false;
+        if (false == this.vic.decode( bankSelect)) return false;
 
-        if (false == this.sid.decode(memorySnapshot)) return false;
+        if (false == this.sid.decode()) return false;
 
         return true;
+    }
+
+    flush() {
+        if (null != this._bufferedMemory) {
+            this._bufferedMemory.flush();
+        }
     }
 }
 
@@ -884,6 +1180,10 @@ class DebugInterface {
 
     async readMemory(_startAddress_, _endAddress_, _memoryType) {
         return null;
+    }
+
+    async getBufferedMemory(startAddress, endAddress) {
+        return await BufferedMemory.alloc(this, startAddress, endAddress);
     }
 
 }

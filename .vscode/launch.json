@@ -99,7 +99,7 @@
                 "--runInBand",
                 "--config",
                 "${workspaceFolder}/test/jest.config.js",
-                "-t", "language"
+                "-t", "debug_info_cc65"
             ]
         },
         {

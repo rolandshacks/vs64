@@ -31,7 +31,7 @@ test("disassembler", () => {
     const disassembler = new Disassembler();
 
     // eslint-disable-next-line no-undef
-    const _result_ = disassembler.disassembleFile(context.resolve("data/test.prg"));
+    const _result = disassembler.disassembleFile(__context.resolve("data/test.prg"));
 });
 
 });

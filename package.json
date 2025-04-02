@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.20",
+	"version": "2.5.21",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -15,7 +15,6 @@
 	"engines": {
 		"vscode": "^1.87.0"
 	},
-	"xmain": "./src/extension/main.js",
 	"main": "./dist/vs64.js",
 	"repository": {
 		"type": "git",
@@ -37,11 +36,13 @@
 		"vscode-cpptools": "^6.1.0"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.24.0",
 		"@types/node": "^20.13.0",
 		"@types/vscode": "^1.87.0",
 		"@vscode/vsce": "^3.2.1",
 		"esbuild": "^0.25.2",
-		"eslint": "^9.4.0",
+		"eslint": "^9.24.0",
+		"globals": "^16.0.0",
 		"jest": "^29.7.0",
 		"typescript": "^5.4.5"
 	},
@@ -307,7 +308,7 @@
 					"column": 3,
 					"message": 5
 				}
-			}			
+			}
 		],
 		"languages": [
 			{

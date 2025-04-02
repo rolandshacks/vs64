@@ -14,8 +14,8 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { SortedArray } = require('utilities/utils');
-const { DebugSymbol, DebugAddressInfo, DebugLineTypes } = require('debugger/debug_info_types');
+const { SortedArray } = require('utilities/sorted_array');
+const { DebugSymbol, DebugAddressInfo, DebugLineTypes, DebugDataType } = require('debugger/debug_info_types');
 
 class Cc65DebugInfo {
     static load(debug_info, project, filename) {
@@ -37,15 +37,6 @@ class Cc65DebugInfo {
 
         for (const addressInfo of addressInfos) {
 
-            /*
-                console.log(
-                    "$" + addressInfo.address.toString(16) +
-                    "-$" + addressInfo.address_end.toString(16) +
-                    ", " + addressInfo.source +
-                    ":" + addressInfo.line
-                );
-            */
-
             addressInfo.globalRef = debug_info._addresses.length;
             debug_info._addresses.push(addressInfo);
 
@@ -62,7 +53,18 @@ class Cc65DebugInfo {
 
         }
 
-        debug_info.setSymbols(dbg.symbols);
+        if (null != dbg.symbols) {
+            for (const sym of dbg.symbols) {
+                debug_info.storeSymbol(sym);
+            }
+        }
+
+        if (null != dbg.functions) {
+            for (const func of dbg.functions) {
+                debug_info.storeFunction(func);
+            }
+        }
+
         debug_info.setSpans(dbg.spans);
 
         debug_info._supportsScopes = true;
@@ -234,11 +236,16 @@ class Cc65DebugParser {
     static resolve(project, data) {
 
         let codeSegmentId = 0;
+        let dataSegmentId = -1;
+        let zeropageStartAddr = 0x02; // default
 
         for (const segment of data.segs) {
             if (segment.name == "CODE") {
                 codeSegmentId = segment.id;
-                break;
+            } else if (segment.name == "DATA") {
+                dataSegmentId = segment.id;
+            } else if (segment.name == "ZEROPAGE") {
+                zeropageStartAddr = parseInt(segment.start);
             }
         }
 
@@ -258,11 +265,14 @@ class Cc65DebugParser {
                 const parent = data.scopes[scope.parent];
                 if (parent) {
                     scope.parentScope = parent;
+                    scope.scopeLevel = parent.scopeLevel + 1;
                     if (!parent.childScopes) {
                         parent.childScopes = [];
                     }
                     parent.childScopes.push(scope);
                 }
+            } else {
+                scope.scopeLevel = 0;
             }
 
             if (Array.isArray(scope.span)) {
@@ -274,14 +284,6 @@ class Cc65DebugParser {
                 const span = data.spans[scope.span];
                 Cc65DebugParser.addScopeToSpan(span, scope);
                 scope.spanInfo = span;
-            }
-        }
-
-        for (const csym of data.csyms) {
-            if (csym.scope == null) continue;
-            const scope = data.scopes[csym.scope];
-            if (scope) {
-                Cc65DebugParser.addCSymToScope(csym, scope);
             }
         }
 
@@ -357,19 +359,101 @@ class Cc65DebugParser {
 
         }
 
-        const symbols = new Map();
+        const symbols = [];
+
+        {  // add stack pointer
+            symbols.push(new DebugSymbol("Stack Pointer", 0x0002, true, null, null, 2, 2, null, DebugDataType.UINT16));
+        }
+
         for (const sym of data.syms) {
-            if (sym.scope == 0 && sym.val != null && sym.type == "lab") {
-                // store label symbols (addresses)
-                const val = parseInt(sym.val);
-                symbols.set(sym.name, new DebugSymbol(sym.name, val, true));
+            // get global variables (symbols in DATA segment at module scope)
+            if (sym.scope == 0 && sym.seg == dataSegmentId && sym.val != null && sym.type == "lab") {
+                // global variable
+                // value represents the symbol start address
+                const addr = parseInt(sym.val);
+                symbols.push(new DebugSymbol(sym.name, addr, true));
             }
         }
+
+        const functions = [];
+
+        for (const csym of data.csyms) {
+            if (csym.scope == null) continue;
+            const scope = data.scopes[csym.scope];
+            if (scope == null) continue;
+
+            if (csym.sym != null) {
+                const sym = data.syms[csym.sym];
+                if (sym != null && sym.seg == codeSegmentId) {
+                    // function
+
+                    if (scope.span != null) {
+                        const seg = data.segs[sym.seg];
+                        const span = data.spans[scope.span];
+                        if (seg != null && span != null) {
+
+                            const addr = seg.start + span.start;
+                            const addr_end = addr + span.size - 1;
+                            //const size = span.size;
+
+                            const addrInfo = addresses.findKey(addr);
+
+                            const funcInfo = new DebugAddressInfo(
+                                addr,
+                                addr_end,
+                                (null != addrInfo) ? addrInfo.source : "",
+                                (null != addrInfo) ? addrInfo.line : 0,
+                                csym.name
+                            );
+
+                            functions.push(funcInfo);
+
+                            // attach function info to scope
+                            scope.function = funcInfo;
+                        }
+                    }
+
+                }
+            }
+        }
+
+        for (const csym of data.csyms) {
+            if (csym.scope == null) continue;
+            const scope = data.scopes[csym.scope];
+            if (scope == null) continue;
+            if (csym.sym != null) continue;
+
+            Cc65DebugParser.addCSymToScope(csym, scope);
+
+            if (scope.function != null) {
+                const funcInfo = scope.function;
+
+                const offset = (null != csym.offs ? parseInt(csym.offs) : 0x0);
+
+                const debugSymbol = new DebugSymbol(csym.name, offset, true);
+
+                // first two bytes of used zero page range are
+                // the address of stack pointer
+                const stackPointerAddr = zeropageStartAddr;
+                debugSymbol.setStackPointerAddress(stackPointerAddr);
+
+                funcInfo.addDebugSymbol(debugSymbol);
+
+                for (let symbol of funcInfo.debugSymbols) {
+                    if (-offset > symbol.stack_pointer_offset) {
+                        symbol.stack_pointer_offset = -offset;
+                    }
+                }
+            }
+
+        }
+
 
         const dbg = {
             spans: spans,
             addressInfos: addresses.elements,
-            symbols: symbols
+            symbols: symbols,
+            functions: functions
         };
 
         return dbg;

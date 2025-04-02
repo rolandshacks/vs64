@@ -44,7 +44,8 @@ const DebugDataType = {
     FLOAT32 :       10,
     FLOAT64 :       11,
     ARRAY :         100,
-    STRUCT :        101
+    STRUCT :        101,
+    POINTER :       102
 };
 
 DebugDataType.is_primitive = function(t) {
@@ -59,8 +60,14 @@ DebugDataType.is_struct = function(t) {
     return (t == DebugDataType.STRUCT);
 }
 
+DebugDataType.is_pointer = function(t) {
+    return (t == DebugDataType.POINTER);
+}
+
 class DebugSymbol {
     constructor(name, value, isAddress, source, line, data_size, memory_size, num_children, data_type, type_name) {
+        this.refId = null; // global (within debug-info) unique identifier
+        this.index = null;
         this.name = name;
         this.value = value;
         this.isAddress = isAddress;
@@ -72,6 +79,9 @@ class DebugSymbol {
         this.data_type = data_type||null;   // numeric value of DebugDataType
         this.type_name = type_name||null;   // descriptive name of data type
         this.children = null; // child elements
+        this.type_ref = null; // pointer type info
+        this.stack_pointer_addr = null; // zero page address for stack pointer
+        this.stack_pointer_offset = 0;
     }
 
     setChildren(children) {
@@ -79,6 +89,18 @@ class DebugSymbol {
         if (null != children) {
             this.num_children = children.length;
         }
+    }
+
+    setTypeRef(typeRef) {
+        this.type_ref = typeRef;
+    }
+
+    setStackPointerAddress(stack_pointer_addr) {
+        this.stack_pointer_addr = stack_pointer_addr;
+    }
+
+    setStackPointerOffset(stack_pointer_offset) {
+        this.stack_pointer_offset = stack_pointer_offset;
     }
 }
 
@@ -146,6 +168,21 @@ class DebugAddressInfo {
         } else {
             this.debugSymbols.push(debugSymbol);
         }
+
+        // store index as unique identifier (used for debugger variable resolution)
+        debugSymbol.index = this.debugSymbols.length - 1;
+    }
+
+    getDebugSymbol(index) {
+        if (null == this.debugSymbols) {
+            return null;
+        }
+
+        if (index == null || index < 0 || index >= this.debugSymbols.length) {
+            return null;
+        }
+
+        return this.debugSymbols[index];
     }
 
     addDebugLabel(debugLabel) {

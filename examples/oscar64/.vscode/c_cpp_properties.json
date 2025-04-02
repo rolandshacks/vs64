@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "C64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "compilerPath": "",
+            "cppStandard": "c++20",
+            "cStandard": "c99",
+            "includePath": [
+                "C:/tools/c64/oscar64/include",
+                "C:/tools/c64/oscar64/c64",
+                "C:/tools/c64/oscar64/c128",
+                "C:/tools/c64/oscar64/audio",
+                "C:/tools/c64/oscar64/gfx",
+                "C:/tools/c64/oscar64/opp",
+                "d:/Work/vs64/examples/oscar64"
+            ]
+        }
+    ],
+    "version": 4
+}

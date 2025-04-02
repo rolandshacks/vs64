@@ -2,9 +2,6 @@
 // Debug State
 //
 
-const path = require('path');
-const DebugAdapter = require('@vscode/debugadapter');
-
 //-----------------------------------------------------------------------------------------------//
 // Init module
 //-----------------------------------------------------------------------------------------------//
@@ -48,7 +45,7 @@ class DebugStateProvider {
         const variablesCache = this._variablesCache;
         if (!variablesCache.memory) {
             const emu = this._session._emulator;
-            variablesCache.memory = await emu.readMemory(0x0000, 0xffff);
+            variablesCache.memory = await emu.getBufferedMemory();
         }
 
         return variablesCache.memory;
@@ -58,12 +55,19 @@ class DebugStateProvider {
 
         const variablesCache = this._variablesCache;
 
-        if (!variablesCache.chipState) {
+        if (null == variablesCache.chipState) {
             const memorySnapshot = await this.getMemorySnapshot();
-            variablesCache.chipState = ChipState.fromBytes(memorySnapshot);
+            variablesCache.chipState = ChipState.fromBuffer(memorySnapshot);
         }
 
         return variablesCache.chipState;
+    }
+
+    async storeChipState() {
+        const variablesCache = this._variablesCache;
+        if (null != variablesCache.chipState) {
+            await variablesCache.chipState.flush();
+        }
     }
 
     async getBasicState() {
@@ -71,7 +75,7 @@ class DebugStateProvider {
 
         if (!variablesCache.basicState) {
             const memorySnapshot = await this.getMemorySnapshot();
-            variablesCache.basicState = BasicState.fromBytes(memorySnapshot);
+            variablesCache.basicState = BasicState.fromBuffer(memorySnapshot);
         }
 
         return variablesCache.basicState;
@@ -85,4 +89,4 @@ class DebugStateProvider {
 
 module.exports = {
     DebugStateProvider: DebugStateProvider
-}
+};

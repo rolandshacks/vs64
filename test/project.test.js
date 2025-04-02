@@ -22,6 +22,7 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { Utils } = require('utilities/utils');
 const { Project } = require('project/project');
+const { Settings } = require('settings/settings');
 const { Build } = require('builder/builder');
 
 //-----------------------------------------------------------------------------------------------//
@@ -32,10 +33,10 @@ function setupProject(config) {
     const projectName = config.name;
 
     // eslint-disable-next-line no-undef
-    const projectFolder = context.resolve("/temp/" + projectName);
+    const projectFolder = __context.resolve("/temp/" + projectName);
     Utils.createFolder(projectFolder);
     const configJSON = JSON.stringify(config);
-    const settings = {};
+    const settings = new Settings(null);
     const project = new Project(settings);
     project._configfile = path.resolve(projectFolder, "project-config.json");
     project.fromJson(configJSON);

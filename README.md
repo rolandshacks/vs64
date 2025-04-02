@@ -14,9 +14,9 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 
 * ACME assembler
 * KickAssembler
-* LLVM-MOS C/C++
-* CC65 C-compiler
-* Oscar64 C-compiler
+* LLVM-MOS C/C++ compiler
+* CC65 C compiler
+* Oscar64 C/C++ compiler
 * BASIC V2 and Tuned Simon's BASIC
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration

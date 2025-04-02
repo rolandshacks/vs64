@@ -3,18 +3,18 @@
      1                          ;
      2                          ; Example
      3                          ;
-     4                          
+     4
      5                          *=$0801
      6  0801 0c08b5079e203230...!byte $0c,$08,$b5,$07,$9e,$20,$32,$30,$36,$32,$00,$00,$00
      7  080e 4c1f08             jmp main
-     8                          
+     8
      9                          .hellotext
     10  0811 08050c0c0f2c2017...    !scr "hello, world!",0
     11                              !set ofs = 14
-    12                          
+    12
     13                          main
     14  081f a000                   ldy #0
-    15                          
+    15
     16                          hello
     17  0821 b91108                 lda .hellotext,y
     18  0824 f00c                   beq +

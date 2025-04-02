@@ -2,9 +2,6 @@
 // D64 Disk File Sysetem
 //
 
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
 const vscode = require('vscode');
 
 //-----------------------------------------------------------------------------------------------//
@@ -16,8 +13,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Utils } = require('utilities/utils');
-const { Logger, LogLevel } = require('utilities/logger');
+const { Logger } = require('utilities/logger');
 
 const { Disk } = require('disk/disk');
 
@@ -255,7 +251,7 @@ class D64FileSystemProvider {
         throw new Error("create directory is not implemented for D64 files");
     }
 
-    async writeFile(uri, content, options) {
+    async writeFile(uri, content, _options) {
         const filePath = this.#getDiskPath(uri);
         const filename = this.#getD64Name(filePath);
         if (null == filename || filename.length < 1) {
@@ -283,7 +279,7 @@ class D64FileSystemProvider {
 
     }
 
-    async delete(uri, options) {
+    async delete(uri, _options) {
 
         const filename = this.#getD64Name(this.#getDiskPath(uri));
         if (null == filename || filename.length < 1) {
@@ -313,7 +309,7 @@ class D64FileSystemProvider {
         await vscode.workspace.fs.writeFile(this.#getFsUri(uri), disk.image);
     }
 
-    async rename(uri, newUri, options) {
+    async rename(uri, newUri, _options) {
 
         const filename = this.#getD64Name(this.#getDiskPath(uri));
         const newFilename = this.#getD64Name(this.#getDiskPath(newUri));
@@ -347,29 +343,11 @@ class D64FileSystemProvider {
 
     }
 
-    copy(source, destination, options) {
+    copy(source, _destination, _options) {
         logger.trace("copy" + ufmt(source));
         throw new Error("copying files is not implemented for D64 files");
     }
 
-}
-
-class D64File {
-    constructor(uri) {
-        this._uri = uri;
-        this._name = "unnamed.txt";
-        this._stats = new D64Stats(false);
-        this._data = null;
-    }
-}
-
-class D64Folder {
-    constructor(uri) {
-        this._uri = uri;
-        this._name = "unnamed";
-        this._stats = new D64Stats(true);
-        this._data = null;
-    }
 }
 
 class D64Stats {

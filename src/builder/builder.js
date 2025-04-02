@@ -59,7 +59,7 @@ class Build {
                         fs.unlinkSync(outfile);
                         logger.debug("build.clean: removed output file " + outfile);
                     }
-                } catch (e) {;}
+                } catch (_e) {;}
             }
         }
 
@@ -68,7 +68,7 @@ class Build {
                 fs.rmdirSync(project.builddir);
                 logger.debug("build.clean: removed project build directory");
             }
-        } catch (e) {;}
+        } catch (_e) {;}
 
         if (cleanAll) {
             const builddir = project.builddir;
@@ -77,7 +77,7 @@ class Build {
                     fs.rmSync(builddir, { recursive: true, force: true });
                     logger.debug("build.clean: removed build directory " + builddir);
                 }
-            } catch (e) {;}
+            } catch (_e) {;}
         }
 
         this.deleteDependencyFiles();
@@ -94,7 +94,7 @@ class Build {
                 fs.mkdirSync(builddir);
                 logger.debug("build: created project build directory");
             }
-        } catch (e) {;}
+        } catch (_e) {;}
     }
 
     async rebuild() {

@@ -3,6 +3,7 @@
 //
 
 const path = require("path");
+const process = require('process');
 
 //-----------------------------------------------------------------------------------------------//
 // Test Context
@@ -45,7 +46,7 @@ class TestContext {
 
 function setup (globalConfig, projectConfig) {
     if (!projectConfig.globals) projectConfig.globals = {};
-    projectConfig.globals.context = new TestContext(globalConfig.rootDir);
+    projectConfig.globals.__context = new TestContext(globalConfig.rootDir);
 }
 
 //-----------------------------------------------------------------------------------------------//

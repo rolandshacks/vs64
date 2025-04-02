@@ -28,6 +28,38 @@ class Toolkit {
         this.isAssembler = (this.isAcme || this.isKick);
 
         this.hasProblemMatcher = (this.isOscar64 || this.isKick);
+
+        this.builtInDefines = null;
+
+        this.#init();
+    }
+
+    #init() {
+        if (null == this.name) return;
+
+        switch (this.name) {
+            case "acme":
+                this.builtInDefines = [ "__acme__"];
+                break;
+            case "kick":
+                this.builtInDefines = [ "__kick__"];
+                break;
+            case "llvm":
+                this.builtInDefines = [ "__llvm__", "__clang__"];
+                break;
+            case "cc65":
+                this.builtInDefines = [ "__cc65__"];
+                break;
+            case "oscar64":
+                this.builtInDefines = [ "__oscar64__"];
+                break;
+            case "basic":
+                this.builtInDefines = [ "__basic__"];
+                break;
+            default:
+                break;
+        }
+
     }
 
     static fromName(name) {

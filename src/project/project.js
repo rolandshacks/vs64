@@ -147,18 +147,27 @@ class Project {
 
         const toolkit = this.toolkit;
 
-        if (toolkit.isAcme) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".report");
-        } else if (toolkit.isKick) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
-        } else if (toolkit.isLLVM) {
-            this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
-        } else if (toolkit.isCC65) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
-        } else if (toolkit.isOscar64) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".dbj");
-        } else if (toolkit.isBasic) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
+        switch (toolkit.name) {
+            case "acme":
+                this._outdebug = path.resolve(this._builddir, this._name + ".report");
+                break;
+            case "kick":
+                this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
+                break;
+            case "llvm":
+                this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
+                break;
+            case "cc65":
+                this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
+                break;
+            case "oscar64":
+                this._outdebug = path.resolve(this._builddir, this._name + ".dbj");
+                break;
+            case "basic":
+                this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
+                break;
+            default:
+                break;
         }
 
         this._outputs = [
@@ -255,12 +264,19 @@ class Project {
                     definitions.push(def.trim());
                 }
             }
+
             if (data.definitions) {
                 definitions.push(...data.definitions);
             }
 
             if (!this.releaseBuild) {
                 definitions.push("DEBUG");
+            }
+
+            if (null != toolkit.builtInDefines) {
+                for (const def of  toolkit.builtInDefines) {
+                    definitions.push(def);
+                }
             }
 
             this._definitions = definitions;
@@ -640,7 +656,7 @@ class Project {
                 fs.mkdirSync(this.builddir);
                 logger.debug("build: created project build directory");
             }
-        } catch (e) {;}
+        } catch (_e) {;}
     }
 
     #getRelativePath(absPath) {
@@ -1132,13 +1148,13 @@ class Project {
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $cc_exe -o $out $flags $c_flags $includes $in");
+            script.push("    command = $cc_exe -o $out $flags $c_flags $defs $includes $in");
             script.push("");
 
             script.push("rule asm");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $asm_exe -o $out $flags $asm_flags $includes $in");
+            script.push("    command = $asm_exe -o $out $flags $asm_flags $defs $includes $in");
             script.push("");
 
             script.push("rule link");
@@ -1216,7 +1232,7 @@ class Project {
             script.push("rule cc");
             script.push("    depfile = $out.d");
             script.push("    deps = gcc");
-            script.push("    command = $cc_exe -o=$out $flags $c_flags $includes $in $libs");
+            script.push("    command = $cc_exe -o=$out $flags $c_flags $defs $includes $in $libs");
             script.push("");
 
             buildTree.gen.forEach((to, from) => {

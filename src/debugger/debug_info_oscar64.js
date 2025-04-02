@@ -14,7 +14,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-//const { Utils } = require('utilities/utils');
 const { DebugSymbol, DebugAddressInfo, DebugDataType, DebugMemory } = require('debugger/debug_info_types');
 
 class Oscar64DebugInfo {
@@ -48,6 +47,8 @@ class Oscar64DebugParser {
             data_type = DebugDataType.ARRAY;
         } else if (type == "struct") {
             data_type = DebugDataType.STRUCT;
+        } else if (type == "ptr") {
+            data_type = DebugDataType.POINTER;
         }
 
         return data_type;
@@ -62,7 +63,8 @@ class Oscar64DebugParser {
                 name: typeInfo.name || "",
                 type: typeId,
                 size: typeInfo.size || 0,
-                children: null
+                children: null,
+                type_ref: null
             }
             types.push(t);
         }
@@ -92,14 +94,26 @@ class Oscar64DebugParser {
                     count: elementCount,
                     type: elementType
                 };
+            } else if (t.type == DebugDataType.POINTER) {
+                const typeRef = types[typeInfo.eid];
+                t.name = "*(" + typeRef.name + ")";
+                t.pointer_info = {
+                    name: typeRef.name,
+                    type: typeRef
+                }
             }
         }
 
         return types;
     }
 
-    static decodeVariable(types, variable, struct_member) {
+    static decodeVariable(types, variable) {
+        return Oscar64DebugParser.decodeVariableRecursive(0, types, variable);
+    }
+
+    static decodeVariableRecursive(level, types, variable, struct_member) {
         if (!variable || !variable.name) return null;
+        if (level > 3) return null; // avoid stack overflow of nested/recursive types
 
         const name = struct_member ? struct_member.name : variable.name;
         const type_info = struct_member ?  struct_member.type : types[variable.typeid];
@@ -109,8 +123,9 @@ class Oscar64DebugParser {
 
         const is_array = DebugDataType.is_array(data_type);
         const is_struct = DebugDataType.is_struct(data_type);
+        const is_pointer = DebugDataType.is_pointer(data_type);
 
-        let addr = variable.start + (struct_member ? struct_member.offset : 0);
+        let addr = (struct_member ? struct_member.offset || variable.start : variable.start);
         let addr_end = (struct_member ? addr + type_info.size : variable.end);
 
         let type_name = null;
@@ -125,8 +140,10 @@ class Oscar64DebugParser {
             data_type = array_type.type || DebugDataType.VOID; // overwrite 'array' with actual element type
             data_size = array_type.size || 0;
             num_children = array_info.count;
-
         } else if (is_struct) {
+            type_name = type_info.name;
+            data_size = 0;
+        } else if (is_pointer) {
             type_name = type_info.name;
             data_size = 0;
         }
@@ -143,19 +160,28 @@ class Oscar64DebugParser {
             type_name
         );
 
+        if (variable.base != null) {
+            // set indirect zero-page address to stack pointer
+            debug_symbol.setStackPointerAddress(variable.base);
+        }
+
         if (type_info.struct_info) {
             const children = [];
             for (const struct_member of type_info.struct_info) {
-                const childDebugSymbol = Oscar64DebugParser.decodeVariable(types, variable, struct_member);
+                const childDebugSymbol = Oscar64DebugParser.decodeVariableRecursive(level + 1, types, variable, struct_member);
                 if (null != childDebugSymbol) {
                     children.push(childDebugSymbol);
                 }
             }
             debug_symbol.setChildren(children);
+        } else if (type_info.pointer_info) {
+            const pointerDebugSymbol = Oscar64DebugParser.decodeVariableRecursive(level + 1, types, variable, type_info.pointer_info);
+            if (null != pointerDebugSymbol) {
+                debug_symbol.setTypeRef(pointerDebugSymbol);
+            }
         }
 
         return debug_symbol;
-
     }
 
     static parse(debug_info, filename) {
@@ -179,8 +205,6 @@ class Oscar64DebugParser {
 
         const types = Oscar64DebugParser.decodeTypes(json.types);
 
-        const functions = [];
-
         if (json.functions) {
             for (const func of json.functions) {
 
@@ -202,7 +226,7 @@ class Oscar64DebugParser {
                     }
                 }
 
-                functions.push(funcInfo);
+                debug_info.storeFunction(funcInfo);
 
                 if (!func.lines) continue;
 
@@ -242,8 +266,6 @@ class Oscar64DebugParser {
             }
         }
 
-        let memblocks = [];
-
         if (json.memory) {
             for (const memblock of json.memory) {
 
@@ -257,12 +279,9 @@ class Oscar64DebugParser {
                     memblock.line
                 );
 
-                memblocks.push(memblockInfo);
+                debug_info.storeMemBlock(memblockInfo);
             }
         }
-
-        debug_info.setFunctions(functions.length > 0 ? functions : null);
-        debug_info.setMemBlocks(memblocks.length > 0 ? memblocks : null);
     }
 
 }

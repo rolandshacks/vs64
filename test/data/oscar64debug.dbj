@@ -1,0 +1,117 @@
+{	"memory": [		{"name": "ZeroStart", "xname": "ZeroStart", "start": 247, "end": 247, "type": "START", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 21 },
+		{"name": "ZeroEnd", "xname": "ZeroEnd", "start": 247, "end": 247, "type": "END", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 21 },
+		{"name": "startup", "xname": "startup", "start": 2049, "end": 2131, "type": "NATIVE_CODE", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 70 },
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2309, "type": "NATIVE_CODE", "source": "d:/Work/c64/c_project/src/main.c", "line": 28 },
+		{"name": "fn_rec", "xname": "fn_rec(i16*,i16)->void", "start": 2309, "end": 2432, "type": "NATIVE_CODE", "source": "d:/Work/c64/c_project/src/main.c", "line": 20 },
+		{"name": "spentry", "xname": "spentry", "start": 2448, "end": 2449, "type": "DATA", "source": "C:/tools/c64/oscar64/include/crt.h", "line": 4 },
+		{"name": "hello_text", "xname": "hello_text", "start": 2449, "end": 2451, "type": "DATA", "source": "d:/Work/c64/c_project/src/main.c", "line": 5 },
+		{"name": "screen", "xname": "screen", "start": 2451, "end": 2453, "type": "DATA", "source": "d:/Work/c64/c_project/src/main.c", "line": 17 },
+		{"name": "color", "xname": "color", "start": 2453, "end": 2455, "type": "DATA", "source": "d:/Work/c64/c_project/src/main.c", "line": 18 },
+		{"name": "BSSEnd", "xname": "BSSEnd", "start": 2455, "end": 2455, "type": "END", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 21 },
+		{"name": "BSSStart", "xname": "BSSStart", "start": 2455, "end": 2455, "type": "START", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 21 },
+		{"name": "StackEnd", "xname": "StackEnd", "start": 40954, "end": 40954, "type": "END", "source": "C:/tools/c64/oscar64/include/crt.c", "line": 21 },
+		{"name": "level", "xname": "level", "start": 40954, "end": 40956, "type": "BSS", "source": "d:/Work/c64/c_project/src/main.c", "line": 28 },
+		{"name": "counter", "xname": "counter", "start": 40956, "end": 40958, "type": "BSS", "source": "d:/Work/c64/c_project/src/main.c", "line": 28 },
+		{"name": "c", "xname": "c", "start": 40958, "end": 40959, "type": "BSS", "source": "d:/Work/c64/c_project/src/main.c", "line": 28 },
+		{"name": "i", "xname": "i", "start": 40959, "end": 40960, "type": "BSS", "source": "d:/Work/c64/c_project/src/main.c", "line": 28 }],
+	"variables": [
+		{"name": "spentry", "start": 2448, "end": 2449, "typeid": 0, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.h", "line": 4, "column": 13}]},
+		{"name": "BSSStart", "start": 2455, "end": 2455, "typeid": 1, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.c", "line": 21, "column": 28}]},
+		{"name": "BSSEnd", "start": 2455, "end": 2455, "typeid": 1, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.c", "line": 21, "column": 38}]},
+		{"name": "ZeroStart", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.c", "line": 21, "column": 66}]},
+		{"name": "ZeroEnd", "start": 247, "end": 247, "typeid": 1, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.c", "line": 21, "column": 77}]},
+		{"name": "StackEnd", "start": 40954, "end": 40954, "typeid": 1, "references": [
+			{"source": "C:/tools/c64/oscar64/include/crt.c", "line": 21, "column": 18}]},
+		{"name": "hello_text", "start": 2449, "end": 2451, "typeid": 2, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 5, "column": 13},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 40, "column": 21}]},
+		{"name": "screen", "start": 2451, "end": 2453, "typeid": 3, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 17, "column": 7},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 42, "column": 9}]},
+		{"name": "color", "start": 2453, "end": 2455, "typeid": 4, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 18, "column": 16},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 43, "column": 9}]}	],
+	"functions": [
+		{"name": "main", "xname": "main()->i16", "start": 2176, "end": 2309, "typeid": 5, "source": "d:/Work/c64/c_project/src/main.c", "line": 28, "lines": [
+			{"start": 2187, "end": 2192, "source": "d:/Work/c64/c_project/src/main.c", "line": 34},
+			{"start": 2192, "end": 2201, "source": "d:/Work/c64/c_project/src/main.c", "line": 35},
+			{"start": 2201, "end": 2204, "source": "d:/Work/c64/c_project/src/main.c", "line": 30},
+			{"start": 2204, "end": 2207, "source": "d:/Work/c64/c_project/src/main.c", "line": 33},
+			{"start": 2207, "end": 2210, "source": "d:/Work/c64/c_project/src/main.c", "line": 34},
+			{"start": 2210, "end": 2215, "source": "d:/Work/c64/c_project/src/main.c", "line": 33},
+			{"start": 2215, "end": 2229, "source": "d:/Work/c64/c_project/src/main.c", "line": 35},
+			{"start": 2229, "end": 2234, "source": "d:/Work/c64/c_project/src/main.c", "line": 37},
+			{"start": 2234, "end": 2237, "source": "d:/Work/c64/c_project/src/main.c", "line": 40},
+			{"start": 2240, "end": 2252, "source": "d:/Work/c64/c_project/src/main.c", "line": 42},
+			{"start": 2252, "end": 2266, "source": "d:/Work/c64/c_project/src/main.c", "line": 43},
+			{"start": 2266, "end": 2271, "source": "d:/Work/c64/c_project/src/main.c", "line": 44},
+			{"start": 2271, "end": 2289, "source": "d:/Work/c64/c_project/src/main.c", "line": 40},
+			{"start": 2289, "end": 2291, "source": "d:/Work/c64/c_project/src/main.c", "line": 41},
+			{"start": 2291, "end": 2309, "source": "d:/Work/c64/c_project/src/main.c", "line": 47}], 
+			"variables":[
+		{"name": "i", "start": 40959, "end": 40960, "enter": 30, "leave": 48, "typeid": 6, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 30, "column": 19},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 30, "column": 19},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 40, "column": 32},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 42, "column": 16},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 43, "column": 15},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 44, "column": 9}]},
+		{"name": "c", "start": 40958, "end": 40959, "enter": 31, "leave": 48, "typeid": 7, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 31, "column": 10},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 31, "column": 10},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 40, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 41, "column": 13},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 42, "column": 21}]},
+		{"name": "counter", "start": 40956, "end": 40958, "enter": 33, "leave": 48, "typeid": 8, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 33, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 33, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 35, "column": 13}]},
+		{"name": "level", "start": 40954, "end": 40956, "enter": 34, "leave": 48, "typeid": 9, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 34, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 34, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 35, "column": 22}]}], "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 28, "column": 5}]}
+,
+		{"name": "fn_rec", "xname": "fn_rec(i16*,i16)->void", "start": 2309, "end": 2432, "typeid": 10, "source": "d:/Work/c64/c_project/src/main.c", "line": 20, "lines": [
+			{"start": 2320, "end": 2349, "source": "d:/Work/c64/c_project/src/main.c", "line": 21},
+			{"start": 2349, "end": 2370, "source": "d:/Work/c64/c_project/src/main.c", "line": 22},
+			{"start": 2370, "end": 2386, "source": "d:/Work/c64/c_project/src/main.c", "line": 24},
+			{"start": 2386, "end": 2401, "source": "d:/Work/c64/c_project/src/main.c", "line": 23},
+			{"start": 2401, "end": 2420, "source": "d:/Work/c64/c_project/src/main.c", "line": 24},
+			{"start": 2420, "end": 2432, "source": "d:/Work/c64/c_project/src/main.c", "line": 25}], 
+			"variables":[
+			{"name": "fn_arg", "start": 10, "end": 12, "base": 35, "typeid": 11},
+			{"name": "fn_depth", "start": 12, "end": 14, "base": 35, "typeid": 12},
+			{"name": "num", "start": 6, "end": 8, "base": 35, "enter": 21, "leave": 25, "typeid": 13, "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 21, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 21, "column": 9},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 23, "column": 5},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 24, "column": 13}]}], "references": [
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 20, "column": 6},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 35, "column": 5},
+			{"source": "d:/Work/c64/c_project/src/main.c", "line": 24, "column": 5}]}
+	],
+	"types": [
+		{"name": "", "typeid": 0, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 1, "size": 0},
+		{"name": "", "typeid": 2, "size": 2, "type": "ptr", eid: 14},
+		{"name": "", "typeid": 3, "size": 2, "type": "ptr", eid: 15},
+		{"name": "", "typeid": 4, "size": 2, "type": "ptr", eid: 16},
+		{"name": "", "typeid": 5, "size": 0},
+		{"name": "", "typeid": 6, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 7, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 8, "size": 2, "type": "int"},
+		{"name": "", "typeid": 9, "size": 2, "type": "int"},
+		{"name": "", "typeid": 10, "size": 0},
+		{"name": "", "typeid": 11, "size": 2, "type": "ptr", eid: 17},
+		{"name": "", "typeid": 12, "size": 2, "type": "int"},
+		{"name": "", "typeid": 13, "size": 2, "type": "int"},
+		{"name": "", "typeid": 14, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 15, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 16, "size": 1, "type": "uint"},
+		{"name": "", "typeid": 17, "size": 2, "type": "int"}	]}

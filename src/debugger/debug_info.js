@@ -15,9 +15,9 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 //const { Logger } = require('utilities/logger');
-const { Utils, SortedArray } = require('utilities/utils');
-//const { start } = require('repl');
 
+const { Utils } = require('utilities/utils');
+const { SortedArray } = require('utilities/sorted_array');
 const { DebugSymbol } = require('debugger/debug_info_types');
 const { BasicDebugInfo } = require('debugger/debug_info_basic');
 const { Cc65DebugInfo } = require('debugger/debug_info_cc65');
@@ -40,6 +40,8 @@ class DebugInfo {
         this._supportsScopes = null;
         this._timestamp = null;
         this._filename = null;
+        this._functions = null;
+        this._objects = null;
 
         // using array instead of map for
         // real constant time access
@@ -65,16 +67,42 @@ class DebugInfo {
         return this._memblocks;
     }
 
-    setMemBlocks(memblocks) {
-        this._memblocks = memblocks;
+    storeMemBlock(memblock) {
+        if (null == this._memblocks) {
+            this._memblocks = [ memblock ];
+        } else {
+            this._memblocks.push(memblock);
+        }
+
+        this.storeObject(memblock);
     }
 
     get hasMemBlocks() {
         return (this._memblocks && this._memblocks.length > 0);
     }
 
-    setFunctions(functions) {
-        this._functions = functions;
+    storeObject(obj) {
+        if (null == obj) return;
+
+        if (null == this._objects) {
+            this._objects = [ obj ];
+        } else {
+            this._objects.push(obj);
+        }
+
+        obj.refId = this._objects.length - 1;
+    }
+
+    storeFunction(func) {
+        if (null == this._functions) {
+            this._functions = [ func ];
+        } else {
+            this._functions.push(func);
+        }
+
+        func.index = this._functions.length - 1;
+
+        this.storeObject(func);
     }
 
     get hasFunctions() {
@@ -133,6 +161,7 @@ class DebugInfo {
             this._symbols = [];
             for (const symbol of this._symbolMap.values()) {
                 this._symbols.push(symbol);
+                symbol.index = this._symbols.length - 1;
             }
         }
     }
@@ -162,14 +191,11 @@ class DebugInfo {
     storeSymbol(symbol) {
         if (!this._symbolMap) this._symbolMap = new Map();
         this._symbolMap.set(symbol.name, symbol);
+        this.storeObject(symbol);
     }
 
     getRefName(filename) {
         return Utils.normalizePath(filename);
-    }
-
-    setSymbols(symbols) {
-        this._symbolMap = symbols;
     }
 
     get symbols() {
@@ -180,6 +206,14 @@ class DebugInfo {
         let elements = this._symbolMap;
         if (!elements) return null;
         return elements.get(name);
+    }
+
+    getSymbolByIndex(idx) {
+        if (null == this._symbols || idx == null || idx < 0 || idx >= this._symbols.length) {
+            return null;
+        }
+
+        return this._symbols[idx];
     }
 
     getLabel(name) {

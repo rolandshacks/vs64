@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.21 Minor Update
+
+- Improving Oscar64 debugger and variable display
+- Improving CC65 debugger and variable display
+- Improved C64 custom chip variable display (VIC/SID)
+- Added support to overwrite custom chip values while debugging
+- Bug-fixes and minor improvements
+
 ## 2.5.20 Minor Update
 
 - Extension is now bundled

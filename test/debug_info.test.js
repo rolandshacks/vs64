@@ -13,7 +13,6 @@ global.BIND = function(_module) {
     _module.paths.push(global._sourcebase);
 };
 
-// eslint-disable-next-line
 BIND(module);
 
 //-----------------------------------------------------------------------------------------------//
@@ -22,6 +21,9 @@ BIND(module);
 const { Logger, LogLevel } = require('utilities/logger');
 const { DebugInfo } = require('debugger/debug_info');
 
+const { Project } = require('project/project');
+const { Settings } = require('settings/settings');
+
 //-----------------------------------------------------------------------------------------------//
 // Tests
 //-----------------------------------------------------------------------------------------------//
@@ -29,27 +31,63 @@ const { DebugInfo } = require('debugger/debug_info');
 function loggerSink(_txt_) {
 }
 
-describe('debug_info', () => {
-test("test debug info", async () => {
+describe('debug_info_acme', () => {
+test("test debug info acme", async () => {
 
     Logger.setGlobalLevel(LogLevel.Trace);
     Logger.setSink(loggerSink);
 
-    const project = {
-        getAsmSourceFiles: function() {
-            return [ "/work/testproject/main.asm" ];
-        },
+    const settings = new Settings(null);
+    const project = new Project(settings);
 
-        resolveFile: function(filename) {
-            return filename;
-        }
+    const projectConfig = {
+        name: "test",
+        toolkit: "acme",
+        sources: [ "src/main.c" ],
+        build: "debug"
     };
 
-    // eslint-disable-next-line no-undef
-    const debugInfo = new DebugInfo(context.resolve("/data/test.report"), project);
+    project.fromJson(JSON.stringify(projectConfig));
+    const debugInfo = new DebugInfo(__context.resolve("/data/acmedebug.report"), project);
+    expect(debugInfo).not.toBeNull();
 
-    const _addessInfo_ = debugInfo.getAddressInfo(2070);
+    const _addressInfo = debugInfo.getAddressInfo(2070);
 
 });
 
+}); // describe
+
+describe('debug_info_cc65', () => {
+test("test debug info cc65", async () => {
+
+    Logger.setGlobalLevel(LogLevel.Trace);
+    Logger.setSink(loggerSink);
+
+    const settings = new Settings(null);
+    const project = new Project(settings);
+
+    const projectConfig = {
+        name: "test",
+        toolkit: "cc65",
+        sources: [ "src/main.asm" ],
+        build: "debug"
+    };
+
+    project.fromJson(JSON.stringify(projectConfig));
+
+    project.isSource = function(_filename) {
+        return true;
+    }
+
+    const debugInfo = new DebugInfo(__context.resolve("/data/cc65debug.dbg"), project);
+    expect(debugInfo).not.toBeNull();
+
+    const _addressInfo = debugInfo.getAddressInfo(2070);
+
+
+
+
+
 });
+
+}); // describe

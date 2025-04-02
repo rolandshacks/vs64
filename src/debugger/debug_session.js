@@ -19,7 +19,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 const { Constants } = require('settings/settings');
-const { Utils, Formatter } = require('utilities/utils');
+const { Utils } = require('utilities/utils');
+const { Formatter } = require('utilities/formatter');
 const { Expression } = require('utilities/expression');
 const { Logger } = require('utilities/logger');
 const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType } = require('debugger/debug');
@@ -124,7 +125,6 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._port = 0;
     }
 
-
     initializeRequest(response, _args_) {
 
         response.body = response.body || {};
@@ -134,6 +134,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         response.body.supportsLogPoints = true;
         response.body.supportsReadMemoryRequest = true;
         response.body.supportsMemoryReferences = true;
+        response.body.supportsSetVariable = true;
 
 		this.sendResponse(response);
 
@@ -418,7 +419,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             breakpoints = this.#loadBreakpoints();
         } catch (err) {
             response.success = false;
-            response.message = err.toString();
+            response.message = "Failed to load debug info: " + err.toString();
             this.sendResponse(response);
             return;
         }
@@ -872,6 +873,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this.sendResponse(response);
     }
 
+    async setVariableRequest(response, args) {
+        await this._variablesProvider.setVariableRequest(response, args);
+        this.sendResponse(response);
+    }
+
     async evaluateRequest(response, args) {
 
         const debugInfo = this._debugInfo;
@@ -1024,14 +1030,14 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         const requestedEndAddress = startAddress + count - ((count > 0) ? 1 : 0);
         const endAddress = Math.min(0xffff, requestedEndAddress);
-        const memorySnapshot = await this._stateProvider.getMemorySnapshot();
-        const mem = memorySnapshot.subarray(startAddress, endAddress);
-        const bytesRead = endAddress - startAddress + 1;
+        const bufferedMemory = await this._stateProvider.getMemorySnapshot();
+        const rangeSize = endAddress - startAddress + 1;
+        const mem = bufferedMemory.toSlice(startAddress, rangeSize);
 
         response.body = {
             address: startAddress.toString(),
             data: Utils.toBase64(mem),
-            unreadableBytes: count - bytesRead
+            unreadableBytes: count - rangeSize
         };
 
 		this.sendResponse(response);
@@ -1344,6 +1350,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         let s = null;
 
         switch (symbol.data_type) {
+            case DebugDataType.POINTER: {
+                let v = mem[ofs];
+                s = Formatter.formatU16dec(v, plain);
+                break;
+            }
             case DebugDataType.UINT8: {
                 let v = mem[ofs];
                 s = Formatter.formatU8dec(v, plain);
@@ -1362,7 +1373,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             }
             case DebugDataType.INT16: {
                 let m = mem[ofs] + (mem[ofs+1] << 8);
-                let v = (mem[1]&0x80) ? -(0x10000-m) : m;
+                let v = (mem[ofs+1]&0x80) ? -(0x10000-m) : m;
                 s = v.toString();
                 break;
             }
@@ -1396,7 +1407,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return s;
     }
 
-    async unpackStructureSymbol(symbol) {
+    async unpackStructureSymbol(symbol, pointerSymbol) {
 
         if (null == symbol || symbol.data_type != DebugDataType.STRUCT) return null;
         if (!symbol.isAddress || !symbol.num_children || !symbol.children) return null;
@@ -1404,23 +1415,25 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         const emu = this._emulator;
         const mem = await emu.readMemory(0, 0xffff);
 
-        const key_values = [];
+        const items = [];
 
-        for (const child of symbol.children) {
+        let addr = symbol.value;
 
-            const unpackedChild = this.unpackSymbol(child, mem, 0);
-            if (null == unpackedChild) continue;
-
-            const kv = {
-                name: child.name,
-                value: unpackedChild.value || ""
-            };
-
-            key_values.push(kv);
-
+        if (null != pointerSymbol) {
+            const pointerAddrPos = pointerSymbol.value;
+            addr = mem[pointerAddrPos] + (mem[pointerAddrPos+1]<<8);
         }
 
-        return key_values;
+        for (const child of symbol.children) {
+            const ofs = child.value;
+            const unpackedChild = this.unpackSymbol(child, mem, 0, addr, ofs);
+            unpackedChild.name = child.name;
+            if (null != unpackedChild) {
+                items.push(unpackedChild);
+            }
+        }
+
+        return items;
     }
 
     async unpackArraySymbol(symbol) {
@@ -1460,15 +1473,41 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return values;
     }
 
-    unpackSymbol(symbol, mem, idx) {
+    unpackSymbol(symbol, mem, idx, addr, ofs) {
 
         let unpackedSymbol = null;
 
         if (symbol.isAddress) {
 
-            const addr = symbol.value;
+            if (null == addr) {
+                addr = symbol.value;
+            }
+
+            if (null != symbol.stack_pointer_addr) {
+                // stack address is stored in zero page
+                // symbol address is relative to stack
+                const stackPointer = mem[symbol.stack_pointer_addr] + (mem[symbol.stack_pointer_addr+1]<<8);
+                addr += stackPointer;
+
+                if (null != symbol.stack_pointer_offset) {
+                    addr += symbol.stack_pointer_offset;
+                }
+            }
+
+            if (symbol.data_type == DebugDataType.POINTER) {
+                // resolve pointer address
+                // (a pointer is an address pointing to another address...)
+                addr = mem[addr] + (mem[addr+1]<<8);
+            }
+
+            if (null != ofs) {
+                addr += ofs;
+            }
+
+            let mem_ref = addr;
+
             const addrStr = "$" + Utils.fmt(addr.toString(16), 4);
-            const label = "(" + addrStr + ") " + symbol.name;
+            let label = "(" + addrStr + ") " + symbol.name;
 
             let num_children = null;
 
@@ -1478,7 +1517,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
             let value = null;
 
-            if (symbol.data_type && symbol.data_type != DebugDataType.VOID) {
+            if (symbol.data_type != DebugDataType.VOID) {
 
                 if (symbol.num_children && symbol.data_size) { // ARRAY
 
@@ -1507,9 +1546,18 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
                 } else if (symbol.data_type == DebugDataType.STRUCT) {
                     let type_label = symbol.type_name ? symbol.type_name : "struct";
-                    //value = type_label + " {" + Utils.formatMemory(mem, addr, symbol.memory_size, 1, ' ') + "}";
                     value = type_label;
                     num_children = symbol.num_children||0;
+                } else if (symbol.data_type == DebugDataType.POINTER) {
+                    let type_label = symbol.type_name ? symbol.type_name : "pointer";
+                    value = type_label;
+                    if (null != symbol.type_ref) {
+                        if (symbol.type_ref.data_type == DebugDataType.STRUCT) {
+                            num_children = symbol.type_ref.num_children||0;
+                        } else {
+                            value = this.formatSymbolBytes( symbol.type_ref, mem, addr);
+                        }
+                    }
 
                 } else {
                     value = this.formatSymbolBytes(symbol, mem, addr);
@@ -1536,12 +1584,12 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 type: description,
                 value: value,
                 variablesReference: 0,
-                memoryReference: symbol.value
+                memoryReference: mem_ref
             };
 
             if (num_children) {
                 unpackedSymbol.indexedVariables = num_children;
-                unpackedSymbol.variablesReference = idx;
+                unpackedSymbol.variablesReference = (symbol.index != null) ? (symbol.index + 1) : 0;
             }
 
         } else {

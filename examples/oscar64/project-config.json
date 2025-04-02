@@ -1,0 +1,13 @@
+{
+    "name": "oscar64",
+    "description": "Project oscar64",
+    "toolkit": "oscar64",
+    "sources": [
+        "src/main.c"
+    ],
+    "build": "debug",
+    "definitions": [],
+    "includes": [],
+    "args": [],
+    "compiler": ""
+}

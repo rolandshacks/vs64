@@ -81,7 +81,7 @@ class Scanner {
 
         try {
             source = fs.readFileSync(filename, 'utf8');
-        } catch(err) {
+        } catch(_err) {
             return referenceList;
         }
 

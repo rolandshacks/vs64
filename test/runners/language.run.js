@@ -22,7 +22,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Logger, LogLevel } = require('utilities/logger');
-const { StopWatch } = require('utilities/utils');
+const { StopWatch } = require('utilities/stop_watch');
 const { Parser } = require('language/language_server');
 
 //-----------------------------------------------------------------------------------------------//

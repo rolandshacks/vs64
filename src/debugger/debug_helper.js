@@ -1,5 +1,5 @@
 //
-// Debug Session
+// Debug Helper
 //
 
 const vscode = require('vscode');
@@ -14,9 +14,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Utils, Formatter } = require('utilities/utils');
 const { Logger } = require('utilities/logger');
-
 const logger = new Logger("DebugHelper");
 
 //-----------------------------------------------------------------------------------------------//

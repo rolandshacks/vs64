@@ -5,6 +5,7 @@
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+const process = require('process');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module
@@ -136,7 +137,7 @@ const BasicKeywords = BasicV2Keywords.concat(BasicTSBKeywords).sort((a, b) => b.
 class Settings {
     constructor(extensionContext) {
         this.extensionContext = extensionContext;
-        this.extensionPath = extensionContext.extensionPath;
+        this.extensionPath = null != extensionContext ? extensionContext.extensionPath : "";
         this.logLevel = LogLevel.Info;
         this.buildDefines = null;
         this.buildIncludePaths = null;
@@ -289,11 +290,11 @@ class Settings {
             const oscar64IncludesDir = path.resolve(installDir);
             this.oscar64Includes = [
                 path.resolve(oscar64IncludesDir, "include"),
-                path.resolve(oscar64IncludesDir, "c64"),
-                path.resolve(oscar64IncludesDir, "c128"),
-                path.resolve(oscar64IncludesDir, "audio"),
-                path.resolve(oscar64IncludesDir, "gfx"),
-                path.resolve(oscar64IncludesDir, "opp")
+                path.resolve(oscar64IncludesDir, "include", "c64"),
+                path.resolve(oscar64IncludesDir, "include", "c128"),
+                path.resolve(oscar64IncludesDir, "include", "audio"),
+                path.resolve(oscar64IncludesDir, "include", "gfx"),
+                path.resolve(oscar64IncludesDir, "include", "opp")
             ];
             this.oscar64Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("oscar64"));
         } else {
