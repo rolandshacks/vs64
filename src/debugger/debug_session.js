@@ -44,6 +44,81 @@ const DebugConstants = {
     STACKFRAME_NUMBER: 1
 };
 
+
+//-----------------------------------------------------------------------------------------------//
+// Debug Query
+//-----------------------------------------------------------------------------------------------//
+class DebugQuery {
+    constructor() {
+        this.name = null;
+        this.isExpression = false;
+        this.isIndirect = false;
+        this.address = null;
+        this.dataSize = null;
+        this.elementCount = null;
+        this.dataType = DebugQuery.DATATYPE_UNKNOWN;
+    }
+
+    static fromExpr(expr) {
+        if (!expr) return null;
+
+        const query = new DebugQuery();
+
+        //let address = null;
+        //let dataSize = null;
+        //let elementCount = null;
+        //let isExpression = false;
+        //let isIndirect = false;
+
+        let pos = expr.indexOf(',');
+        query.name = pos >= 0 ? expr.substr(0, pos) : expr;
+
+        const nameRef = query.name;
+
+        for (let c of nameRef) {
+            if ("+-*/()".indexOf(c) >= 0) {
+                query.isExpression = true;
+                break;
+            }
+        }
+
+        if (!query.isExpression && "$" == nameRef.charAt(0) && nameRef.length > 1) {
+            query.address = parseInt(nameRef.substr(1), 16);
+        }
+
+        if (pos >= 0) {
+            pos++;
+
+            if (expr[pos] == 'i') {
+                query.isIndirect++;
+                pos++;
+            }
+
+            const fmt = expr.substr(pos);
+            if (fmt == 'b') {
+                query.dataSize = 8;
+                query.dataType = DebugQuery.DATATYPE_BYTE;
+            } else if (fmt == 'w') {
+                query.dataSize = 16;
+                query.dataType = DebugQuery.DATATYPE_WORD;
+            } else if (fmt == 's') {
+                query.dataSize = 8;
+                query.dataType = DebugQuery.DATATYPE_STRING;
+            } else {
+                query.elementCount = parseInt(fmt);
+            }
+        }
+
+        return query;
+    }
+
+}
+
+DebugQuery.DATATYPE_UNKNOWN = 0
+DebugQuery.DATATYPE_BYTE = 1
+DebugQuery.DATATYPE_WORD = 2
+DebugQuery.DATATYPE_STRING = 3
+
 //-----------------------------------------------------------------------------------------------//
 // Debug Session
 //-----------------------------------------------------------------------------------------------//
@@ -67,6 +142,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._debugInfo = null;
         this._breakpoints = new Breakpoints();
         this._breakpointsDirty = true;
+        this._debugInfoDirty = true;
         this._launchBinary = null;
         this._launchPC = null;
         this._emulator = null;
@@ -125,6 +201,13 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         this._port = 0;
     }
 
+    // invalidate session after (re-)building
+    invalidate() {
+        logger.debug("refreshing debug after build");
+        this._debugInfoDirty = true;
+        this._breakpointsDirty = true;
+    }
+
     initializeRequest(response, _args_) {
 
         response.body = response.body || {};
@@ -176,8 +259,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (needsReload) {
             const debugInfo = new DebugInfo(debugInfoPath, project);
             this._debugInfo = debugInfo;
+            this._breakpointsDirty = true;
         }
 
+        this._debugInfoDirty = false;
     }
 
     #debuggerProcessExitHandler(_proc_) {
@@ -298,7 +383,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 }
 
                 emu = ViceProcess.createDebugInterface(this);
-                await emu.connect(options.hostname, options.port);
+                await emu.connect(options.hostname, options.port, options.timeout);
             } catch (err) {
                 logger.error("debug error: " + err);
                 throw(err);
@@ -435,7 +520,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (debuggerType == Constants.DebuggerTypeVice) {
             options.hostname = args.hostname||"localhost";
-            options.port = attachToProcess ? (args.port||settings.vicePort) : settings.vicePort;
+            options.port = args.port||settings.vicePort;
+            options.timeout = args.timeout||settings.viceTimeout;
         } else if (debuggerType == Constants.DebuggerTypeX16) {
             options.prg = binaryPath;
         }
@@ -455,7 +541,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         try {
 
-            await this.#syncBreakpoints(false, breakpoints);
+            await this.#syncBreakpoints(true, breakpoints);
 
             if (debuggerType != Constants.DebuggerTypeX16) {
                 // X16 does not support injection of binary
@@ -949,6 +1035,18 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             this._debuggerSessionInfo.args = args.arguments.args;
         }
 
+        let breakpoints = null;
+
+        try {
+            this.#loadDebugInfo();
+            breakpoints = this.#loadBreakpoints();
+        } catch (err) {
+            response.success = false;
+            response.message = "Failed to load debug info: " + err.toString();
+            this.sendResponse(response);
+            return;
+        }
+
         let emu = this._emulator;
         if (null != this._debuggerSessionInfo && null != this._emulatorProcess && !this._emulatorProcess.supportsRelaunch) {
             if (null != emu) {
@@ -957,7 +1055,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             emu = await this.#createEmulatorInstance(false, true);
         }
 
-        await this.#syncBreakpoints();
+        await this.#syncBreakpoints(true, breakpoints);
 
         if (this._debuggerSessionInfo.type != Constants.DebuggerTypeX16) {
             // X16 does not support injection of binary
@@ -1160,6 +1258,18 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     async #doDebugStep(response, debugStepType) {
         const emu = this._emulator;
 
+        if (this._debugInfoDirty) {
+            try {
+                this.#loadDebugInfo();
+                this.#loadBreakpoints();
+            } catch (err) {
+                response.success = false;
+                response.message = "Failed to load debug info: " + err.toString();
+                this.sendResponse(response);
+                return;
+            }
+        }
+
         await this.#syncBreakpoints();
 
         const debugInfo = this._debugInfo;
@@ -1219,57 +1329,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     }
 
     #parseQuery(expr) {
-
-        if (!expr) return null;
-
-        let address = null;
-        let dataSize = null;
-        let elementCount = null;
-
-        let pos = expr.indexOf(',');
-        const reference = pos >= 0 ? expr.substr(0, pos) : expr;
-
-        let isExpression = false;
-
-        for (let c of reference) {
-            if ("+-*/()".indexOf(c) >= 0) {
-                isExpression = true;
-                break;
-            }
-        }
-
-        if (!isExpression && "$" == reference.charAt(0) && reference.length > 1) {
-            address = parseInt(reference.substr(1), 16);
-        }
-
-        let isIndirect = false;
-
-        if (pos >= 0) {
-            pos++;
-
-            if (expr[pos] == 'i') {
-                isIndirect++;
-                pos++;
-            }
-
-            const fmt = expr.substr(pos);
-            if (fmt == 'b') {
-                dataSize = 8;
-            } else if (fmt == 'w') {
-                dataSize = 16;
-            } else {
-                elementCount = parseInt(fmt);
-            }
-        }
-
-        return {
-            name: reference,
-            isExpression: isExpression,
-            isIndirect: isIndirect,
-            address: address,
-            dataSize : dataSize,
-            elementCount : elementCount
-        };
+        return DebugQuery.fromExpr(expr);
     }
 
     async #getNamedItemAddress(name) {
@@ -1334,8 +1394,10 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         const prefix = query.namedValue ? ("[" + Formatter.formatU16(query.address, true) + "] ") : "";
 
-        if (query.elementCount) {
-            query.result = prefix + await this.formatMemory(query.address, query.elementCount);
+        if (query.dataType == DebugQuery.DATATYPE_STRING) {
+            query.result = prefix + await this.formatString(query.address);
+        } else if (query.elementCount) {
+            query.result = prefix + await this.formatMemory(query.address, query.elementCount, null, query.dataType);
         } else {
             const info = await this.formatSymbol({ value: query.address, isAddress: true, data_size: query.dataSize });
             query.result = prefix + info.value;
@@ -1659,6 +1721,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 info.value = Formatter.formatU8(symbol.value);
             } else if (symbol.data_size == 2) {
                 info.value = Formatter.formatU16(symbol.value);
+            } else if (symbol.isAddress) {
+                info.value = Formatter.formatU8(await emu.read(symbol.value));
             } else {
                 info.value = Formatter.formatValue(symbol.value);
             }
@@ -1668,7 +1732,32 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return info;
     }
 
-    async formatMemory(address, memorySize, elementSize) {
+    async formatString(address) {
+        const emu = this._emulator;
+        const readSize = 32;
+        const memBuffer = await emu.readMemory(address, address + readSize - 1);
+
+        let ofs = 0;
+        let s = "\"";
+
+        while (ofs < memBuffer.length) {
+            let c = memBuffer[ofs];
+            if (c == 0) break;
+
+            if (c >= 32 && c < 128) {
+                s += String.fromCharCode(c);
+            } else {
+                s += ".";
+            }
+            ofs++;
+        }
+
+        s += "\"";
+
+        return s;
+    }
+
+    async formatMemory(address, memorySize, elementSize, dataType) {
         const emu = this._emulator;
         if (!memorySize) memorySize = 1;
         const readSize = Math.min(256, memorySize);

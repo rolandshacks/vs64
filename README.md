@@ -94,7 +94,7 @@ VS64 also supports the Oscar64 C Compiler.
 
 * Manual installation: Download and install from https://github.com/drmortalwombat/oscar64
 
-In case you did a customized installation, please make sure you update the VS64 settings with the correct Oscar65 installation and include paths.
+In case you did a customized installation, please make sure you update the VS64 settings with the correct Oscar64 installation and include paths.
 
 ### BASIC Compiler
 
@@ -222,16 +222,16 @@ PRINT "{clr}HELLO, {green}WORLD{$21}{lightblue}"
 A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex}, {%binary} or {0bbinary}.
 
 > **The following mnemonics are available**:
-{space}, {return}, {shift-return}, {clr}, {clear}, {home}, {del}, {inst}, {run/stop},
-{cursor right}, {crsr right}, {cursor left}, {crsr left}, {cursor down}, {crsr down}, {cursor up}, {crsr dup},
-{uppercase}, {upper}, {cset1}, {lowercase}, {lower}, {cset0},
-{black}, {blk}, {white}, {wht}, {red}, {cyan}, {cyn}, {purple}, {pur}, {green}, {grn}, {blue}, {blu}, {yellow}, {yel}, {orange}, {brown}, {pink}, {light-red}, {gray1}, {darkgrey}, {grey}, {lightgreen}, {lightblue}, {grey3}, {lightgrey}, {rvs on}, {rvs off},
+{space}, {return}, {shift-return}, {clr}, {clear}, {home}, {del}, {inst}, {stop}, {run/stop}, {esc},
+{cursor right}, {crsr right}, {cursor left}, {crsr left}, {down}, {cursor down}, {crsr down}, {cursor up}, {crsr dup},
+{uppercase}, {upper}, {swuc}, {cset1}, {lowercase}, {lower}, {cset0},
+{black}, {blk}, {white}, {wht}, {red}, {cyan}, {cyn}, {purple}, {pur}, {green}, {grn}, {blue}, {blu}, {yellow}, {yel}, {orange}, {brown}, {pink}, {light-red}, {gray1}, {darkgrey}, {grey}, {lightgreen}, {lgrn}, {lightblue}, {lblu}, {lightgrey}, {grey3}, {rvs on}, {rvon}, {rvs off}, {rvof}, {dish}, {ensh},
 {f1}, {f3}, {f5}, {f7}, {f2}, {f4}, {f6}, {f8},
 {ctrl-c}, {ctrl-e}, {ctrl-h}, {ctrl-i}, {ctrl-m}, {ctrl-n}, {ctrl-r}, {ctrl-s}, {ctrl-t}, {ctrl-q},
 {ctrl-1}, {ctrl-2}, {ctrl-3}, {ctrl-4}, {ctrl-5}, {ctrl-6}, {ctrl-7}, {ctrl-8}, {ctrl-9}, {ctrl-0}, {ctrl-/},
 {c=1}, {c=2}, {c=3}, {c=4}, {c=5}, {c=6}, {c=7}, {c=8}
 
-In addition, additional control codes as seen in Compute! magazine are supported.  This includes repeating control codes of the format `{count code}`.  For example, `{12 right}`.  Compute! also supported a number of other aliases for the control codes shown above that are supported including:
+For more details, please refer to the PETCAT user manual. In addition, control codes as seen in Compute! magazine are supported.  This includes repeating control codes of the format `{count code}`.  For example, `{12 right}`.  Compute! also supported a number of other aliases for the control codes shown above that are supported including:
 
 >{down}, {right}, {spaces}, {up}, {left}, {shift-space}, {rvs}, {off}
 
@@ -466,13 +466,28 @@ Example to use a specific linker configuration for cc65:
 ]
 ```
 
+> buildFlags
+
+Optional flags to influence the build process and generation of the Ninja build files itself.
+
+
+Example to use a specific linker configuration for cc65:
+
+```
+"buildFlags": "--dontBuildResources"
+```
+
+Supported flags:
+
+- **--dontBuildResources** (ACME only) : just generate source code, but do not automatically compile and link. Generated files can instead be included manually from within other source units, giving more control over embedding and memory mapping.
+
 > compiler
 
 Overrides the path to the compiler executable. The default path is specified in the settings.
 
 > resources
 
-Optional parameters for the resource compiler. Currently, the following list of parameters is supported:
+Optional parameters for resource compilation. Currently, the following list of parameters is supported:
 - **sampleFrequency** (WAV) : resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)
 - **sampleBits** (WAV) : target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)
 - **sampleLoudness** (WAV) : target RMS loudness in dB for sample output (e.g. -9.0)
@@ -604,6 +619,7 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
             "name": "Attach Vice",
             "hostname": "localhost",
             "port": 6502,
+            "timeout": 6,
             "preLaunchTask": "${defaultBuildTask}"
         },
         {
@@ -637,6 +653,10 @@ Optional name of host running a VICE emulator with enabled binary monitor. If no
 > `port`: Port number
 
 Optional port number of running a VICE emulator with enabled binary monitor. If not specified, the binary monitor default port '6502' will be used.
+
+> `timeout`: Connection timeout number
+
+Optional connection timeout in seconds for VICE emulator with enabled binary monitor. If not specified, the connection timeout is 10 seconds.
 
 > `pc`: (6502 only) Optional parameter to overwrite the start address of the C64 program. Default is taken from the first two bytes of the program file.
 
@@ -742,6 +762,10 @@ Additional VICE emulator command line options.
 > VS64: VICE Port
 
 Port number to use to connect to the VICE emulator debug interface (6502 is the default).
+
+> VS64: VICE Timeout
+
+Connection timeout in seconds for VICE emulator binary monitor interface (default is 10 seconds).
 
 > VS64: X16 Executable
 

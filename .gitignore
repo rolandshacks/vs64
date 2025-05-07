@@ -14,3 +14,4 @@ examples/**/settings.json
 examples/**/c_cpp_properties.json
 test/temp
 __pycache__
+c_cpp_properties.json

@@ -1,6 +1,14 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.5.22 Minor Update
+
+- Added some missing PETCAT control codes for the BASIC compiler (dish, ensh, etc.)
+- Now allowing hash (#) and semicolon (;) as valid BASIC line comment characters
+- New build flag 'dontBuildResources' for ACME
+- Added configurable timeout to connect to VICE binary debug monitor interface
+- Bug-fixes and minor improvements
+
 ## 2.5.21 Minor Update
 
 - Improving Oscar64 debugger and variable display

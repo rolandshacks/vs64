@@ -160,6 +160,12 @@ class DebugContext {
 
         return prg;
     }
+
+    invalidate() {
+        if (null != this._session) {
+            this._session.invalidate();
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------------------------//

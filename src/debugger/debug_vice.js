@@ -230,7 +230,7 @@ class ViceMonitorClient {
         this._errorFn = null;
     }
 
-    async connect(hostname, port) {
+    async connect(hostname, port, timeout) {
 
         this._tokenList = [];
         this._tokenMap = new Map();
@@ -273,8 +273,7 @@ class ViceMonitorClient {
             connected = true;
         })
 
-        const timeout = 5000;
-        let retryCount = timeout / 250;
+        let retryCount = (timeout * 1000) / 250;
 
         while (!connected && !fatalError) {
 
@@ -1144,11 +1143,11 @@ class ViceConnector extends DebugInterface {
         this._memoryCache = null;
     }
 
-    async connect(hostname, port) {
+    async connect(hostname, port, timeout) {
         if (this._vice) return;
 
         const vice = new ViceMonitorClient();
-        await vice.connect(hostname, port);
+        await vice.connect(hostname, port, timeout);
         this._vice = vice;
 
         this.#invalidateMemoryCache();

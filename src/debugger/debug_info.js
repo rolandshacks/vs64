@@ -322,7 +322,7 @@ class DebugInfo {
         const lineList = this._lineListByFile.get(normalizedPath);
         if (!lineList) return null;
 
-        const pos = lineList.indexOf(line);
+        const pos = lineList.indexOrNextOf(line, 1);
         if (pos < 0) return null;
 
         const foundAddr = lineList.get(pos);

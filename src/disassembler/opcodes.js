@@ -614,7 +614,7 @@ const TsbBasicTokens = [
 
 
 //-----------------------------------------------------------------------------------------------//
-// TSB Tuned Simons Basic Tokens
+// PETSCII Mnemonics
 //-----------------------------------------------------------------------------------------------//
 
 const PetsciiControlCodes = [
@@ -623,12 +623,15 @@ const PetsciiControlCodes = [
     ["space", 32],
     ["return", 13],
     ["shift-return", 141],
+    ["shift return", 141],
     ["clr", 147],
     ["clear", 147],
     ["home", 19],
     ["del", 20],
     ["inst", 148],
+    ["stop", 3],
     ["run/stop", 3],
+    ["esc", 27],
 
     ["upper", 142],
     ["uppercase", 142],
@@ -641,6 +644,8 @@ const PetsciiControlCodes = [
     ["crsr right", 29],
     ["cursor left", 157],
     ["crsr left", 157],
+    ["left", 157],
+    ["down", 17],
     ["cursor down", 17],
     ["crsr down", 17],
     ["cursor up", 145],
@@ -662,6 +667,7 @@ const PetsciiControlCodes = [
     ["yellow", 158],
     ["yel", 158],
     ["orange", 129],
+    ["orng", 129],
     ["brown", 149],
     ["pink", 150],
     ["light-red", 150],
@@ -669,12 +675,20 @@ const PetsciiControlCodes = [
     ["darkgrey", 151],
     ["grey", 152],
     ["lightgreen", 153],
+    ["lgrn", 153],
     ["lightblue", 154],
+    ["lblu", 154],
     ["grey3", 155],
     ["lightgrey", 155],
+    ["gry3", 155],
+
+    ["dish", 8],
+    ["ensh", 9],
 
     ["rvs on", 18],
+    ["rvon", 18],
     ["rvs off", 146],
+    ["rvof", 146],
 
     ["f1", 133],
     ["f3", 134],
@@ -706,6 +720,8 @@ const PetsciiControlCodes = [
     ["ctrl-8", 158],
     ["ctrl-9", 18],
     ["ctrl-0", 146],
+
+    ["swuc", 142],
     ["ctrl-/", 142],
 
     ["c=1", 129],

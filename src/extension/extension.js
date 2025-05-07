@@ -724,6 +724,12 @@ class Extension {
 
     }
 
+    onBuildTaskCompleted() {
+        if (null != this._debugContext) {
+            this._debugContext.invalidate();
+        }
+    }
+
     executeBuildTask(action, folder, terminal) {
 
         this.cancelBuild();
@@ -808,6 +814,7 @@ class Extension {
                             txt = result.description||"build succeeded";
                             statusText = "Build succeeded";
                             logger.info(txt);
+                            this.onBuildTaskCompleted();
                         } else if (error == BuildResult.NoNeedToBuild) {
                             txt = result.description||"build up-to-date";
                             statusText = "Build up-to-date";

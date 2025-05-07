@@ -455,7 +455,7 @@ class BasicCompiler:
                 # skip empty lines
                 continue
 
-            if line.startswith("#"):
+            if line.startswith("#") or line.startswith(";"):
                 # handle preprocessor line
                 err = self.preprocess_line(module, line, line_index, True)
                 if err:
@@ -539,7 +539,7 @@ class BasicCompiler:
                 # ignore empty lines
                 continue
 
-            if line.startswith("#"):
+            if line.startswith("#") or line.startswith(";"):
                 # handle preprocessor commands or comments
                 err = self.preprocess_line(module, line, line_index, False)
                 if err:

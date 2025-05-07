@@ -26,8 +26,9 @@ const logger = new Logger("Settings");
 //-----------------------------------------------------------------------------------------------//
 
 const Constants = {
-    BinaryMonitorPort: 6502,
-    ProjectConfigFile: "project-config.json",
+    ViceBinaryMonitorPort: 6502,                    // connectino port to VICE binary monitor interface
+    ViceConnectTimeoutSec: 10,                      // connection timeout (in seconds) for VICE binary monitor
+    ProjectConfigFile: "project-config.json",       // name of project config file
     SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
     AssemblerLanguageId: "asm",
     BasicLanguageId: "bas",
@@ -45,15 +46,14 @@ const Constants = {
     AsmFileFilter: "|s|asm|",
     BasicFileFilter: "|bas|",
     ObjFileFilter: "|o|obj|",
-    BasicInterpreterLoopRoutine: 0xa7e4,    // default adress of vector $308-309
-    BasicInterpreterBreakRoutine: 0xa84b,   // when END is called
+    BasicInterpreterLoopRoutine: 0xa7e4,            // default adress of vector $308-309
+    BasicInterpreterBreakRoutine: 0xa84b,           // when END is called
     BasicInterpreterErrorRoutine: 0xa437,
-    BasicInterpreterListRoutine: 0xa69c,    // when LIST is called
+    BasicInterpreterListRoutine: 0xa69c,            // when LIST is called
     TSBInterpreterLoopRoutine: 0x80e8,
-    TSBInterpreterErrorRoutine: 0x839c,     // TSC modified BASIC vector at $300/$301
-    BasicCharset1: "big/graphics",          // used in settings
-    BasicCharset2: "small/big"              // used in settings
-
+    TSBInterpreterErrorRoutine: 0x839c,             // TSC modified BASIC vector at $300/$301
+    BasicCharset1: "big/graphics",                  // used in settings
+    BasicCharset2: "small/big"                      // used in settings
 };
 
 const AnsiColors = {
@@ -143,7 +143,7 @@ class Settings {
         this.buildIncludePaths = null;
         this.buildArgs = null;
         this.viceExecutable = null;
-        this.vicePort = Constants.BinaryMonitorPort;
+        this.vicePort = Constants.ViceBinaryMonitorPort;
         this.viceArgs = null;
         this.x16Executable = null;
         this.x16Args = null;
@@ -386,8 +386,9 @@ class Settings {
         } else {
             this.viceExecutable = "x64sc";
         }
-        this.vicePort = workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort")||Constants.BinaryMonitorPort;
-        this.viceArgs = workspaceConfig.get("vs64.viceArgs")||workspaceConfig.get("vs64.emulatorArgs")||"";
+        this.vicePort = asInteger(workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort"))||Constants.ViceBinaryMonitorPort;
+        this.viceTimeout = asInteger(workspaceConfig.get("vs64.viceTimeout"))||Constants.ViceConnectTimeoutSec;
+        this.viceArgs = workspaceConfig.    get("vs64.viceArgs")||workspaceConfig.get("vs64.emulatorArgs")||"";
     }
 
     setupX16(workspaceConfig) {
@@ -460,6 +461,16 @@ class Settings {
         logger.debug("java executable: " + settings.javaExecutable);
     }
 
+}
+
+function asInteger(v) {
+    if (null == v) return v;
+
+    try {
+        return parseInt(v);
+    } catch (_e) { ; }
+
+    return null;
 }
 
 //-----------------------------------------------------------------------------------------------//

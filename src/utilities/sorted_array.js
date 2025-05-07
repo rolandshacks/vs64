@@ -107,6 +107,12 @@ class SortedArray {
         return this.#binarySearch(element_key);
     }
 
+    indexOrNextOf(element) {
+        if (null == element) return -1;
+        const element_key = this.#key(element);
+        return this.#binarySearch(element_key, 1);
+    }
+
     findKey(key) {
         const idx = this.#indexOfKey(key);
         if (-1 == idx) return null;
@@ -117,7 +123,7 @@ class SortedArray {
         return this.#binarySearch(key);
     }
 
-    #binarySearch(element_key) {
+    #binarySearch(element_key, returnNextBest) {
         // perform binary search
 
         if (null == element_key) return -1;
@@ -144,6 +150,16 @@ class SortedArray {
             } else {
                 l = m + 1;
             }
+        }
+
+        if (foundPos == -1) {
+            if (returnNextBest == -1) { // right after
+                foundPos = Math.min(l, r);
+            } else if (returnNextBest == 1) { // right before
+                foundPos = Math.max(l, r);
+            }
+
+            if (foundPos < 0 || foundPos >= len) foundPos = -1;
         }
 
         return foundPos;

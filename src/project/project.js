@@ -376,6 +376,10 @@ class Project {
             }
         }
 
+        { // settings to influence the build process and created ninja build file
+            this._buildArgs = Arguments.fromString(data.buildFlags);
+        }
+
     }
 
     hasSources() {
@@ -898,6 +902,11 @@ class Project {
         const defines = new ArgumentList(project.definitions);
         const includes = new NinjaArgs(project.includes, project.builddir);
 
+        const buildArguments = project._buildArgs
+        const dontBuildResources = buildArguments.hasOption("dontBuildResources");
+        const hasResources = !buildTree.gen.empty();
+
+        const phonyTargets = [ "$target" ];
         const script = [];
 
         { // header information
@@ -936,6 +945,10 @@ class Project {
                 rcFlags.add("--config", "\"$config\"");
             }
             script.push(Ninja.keyArgs("rc_flags", rcFlags));
+
+            // general build flags
+            let buildFlags = new NinjaArgs(buildArguments.argv);
+            script.push(Ninja.keyArgs("build_flags", buildFlags));
         }
 
         if (toolkit.isBasic) {
@@ -1081,12 +1094,35 @@ class Project {
             script.push("    command = $asm_exe $flags $includes -r \"$dbg_out\" -o $out $in");
             script.push("");
 
-            buildTree.gen.forEach((to, from) => {
-                script.push(Ninja.build(to, from, "res"));
-            });
-            script.push("");
+            if (hasResources) {
+                buildTree.gen.forEach((to, from) => {
+                    script.push(Ninja.build(to, from, "res"));
+                });
+                script.push("");
+                script.push("build resources: phony " + Ninja.join(buildTree.gen.array()));
+                script.push("");
+            }
 
-            script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()))
+            if (!hasResources || !dontBuildResources) {
+                script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()));
+            } else {
+                const sources = [];
+                const resources = [];
+
+                buildTree.asm.forEach((itemTo, itemFrom, _itemRule, _itemIdx) => {
+                    if (null == itemFrom) {
+                        // just add source items, no generated ones
+                        sources.push(itemTo);
+                    } else {
+                        resources.push(itemTo);
+                    }
+                });
+
+                phonyTargets.unshift("resources"); // insert at start
+
+                script.push("build $target | $dbg_out : asm " + Ninja.join(sources));
+            }
+
             script.push("");
 
         } else if (toolkit.isCC65) {
@@ -1341,10 +1377,9 @@ class Project {
 
             script.push("build $target | $dbg_out : link " + Ninja.join(buildTree.obj.array()));
             script.push("");
-
         }
 
-        script.push("build all: phony $target");
+        script.push("build all: phony " + phonyTargets.join(" "));
         script.push("default all");
         script.push("");
 

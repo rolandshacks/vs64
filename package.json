@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.21",
+	"version": "2.5.22",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -30,16 +30,16 @@
 		"esbuild-dev": "node ./esbuild --sourcemap"
 	},
 	"dependencies": {
-		"@vscode/debugadapter": "1.65.0",
+		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "^4.4.0",
+		"fast-xml-parser": "5.2.4",
 		"vscode-cpptools": "^6.1.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.24.0",
-		"@types/node": "^20.13.0",
+		"@types/node": "22.15.30",
 		"@types/vscode": "^1.87.0",
-		"@vscode/vsce": "^3.2.1",
+		"@vscode/vsce": "3.5.0",
 		"esbuild": "^0.25.2",
 		"eslint": "^9.24.0",
 		"globals": "^16.0.0",
@@ -471,12 +471,17 @@
 					"vs64.viceExecutable": {
 						"type": "string",
 						"default": "",
-						"description": "Path to the VICE emulator executable"
+						"description": "Path to the VICE emulator executable."
 					},
 					"vs64.vicePort": {
 						"type": "string",
 						"default": "",
 						"description": "Port of VICE emulator binary monitor interface. Leave empty to use the default port 6502."
+					},
+					"vs64.viceTimeout": {
+						"type": "string",
+						"default": "",
+						"description": "Connection timeout in seconds for VICE emulator binary monitor interface. Leave empty to use the default timeout of 10 seconds."
 					},
 					"vs64.viceArgs": {
 						"type": "string",
@@ -654,6 +659,11 @@
 								"description": "Port of VICE host process",
 								"default": "6502"
 							},
+							"timeout": {
+								"type": "number",
+								"description": "Connection timeout to VICE host process, in seconds",
+								"default": "10"
+							},
 							"args": {
 								"type": "string",
 								"description": "Custom launch command line options",
@@ -678,6 +688,11 @@
 								"type": "number",
 								"description": "Port of VICE host process",
 								"default": "6502"
+							},
+							"timeout": {
+								"type": "number",
+								"description": "Connection timeout to VICE host process, in seconds",
+								"default": "10"
 							},
 							"args": {
 								"type": "string",
@@ -707,7 +722,6 @@
 							"name": "Attach Vice",
 							"request": "attach",
 							"hostname": "localhost",
-							"port": 6502,
 							"preLaunchTask": "${defaultBuildTask}"
 						}
 					}

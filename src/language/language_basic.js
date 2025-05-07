@@ -224,7 +224,7 @@ class BasicParser extends ParserBase {
                 range.inc(); it.next();
                 tokens.push(new Token(TokenType.LineBreak, src, range));
                 lastWasJump = false;
-            } else if (c == CharCode.NumberSign) { // line comment
+            } else if (c == CharCode.NumberSign || c == CharCode.Semicolon) { // line comment
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
                 while (it.ofs < len && ParserHelper.isSymbolChar(src.charCodeAt(it.ofs))) {
