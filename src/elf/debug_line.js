@@ -1,5 +1,5 @@
 //
-// Debug Line Info
+// Dwarf Debug Line Info
 //
 
 const path = require('path');
@@ -16,26 +16,13 @@ BIND(module);
 
 const { Utils } = require('utilities/utils');
 const { ElfSection } = require('elf/section');
-const { ElfLineInfoAttributes } = require('elf/types');
+const { DwarfTypeCodes } = require('elf/types');
 
 //-----------------------------------------------------------------------------------------------//
-// Elf Debug Line Info
+// Debug Line Section
 //-----------------------------------------------------------------------------------------------//
 
-class ElfDebugLineEntry {
-    constructor(address, address_end, source, line) {
-        this.address = address;
-        this.address_end = address_end ? address_end : address;
-        this.source = source;
-        this.line = line;
-    }
-}
-
-//-----------------------------------------------------------------------------------------------//
-// Elf Debug Line Section
-//-----------------------------------------------------------------------------------------------//
-
-class ElfDebugLineSection extends ElfSection {
+class DwarfDebugLineSection extends ElfSection {
     constructor(sectionHeader) {
         super(sectionHeader);
         this._lineStringSection = null;
@@ -94,23 +81,23 @@ class ElfDebugLineSection extends ElfSection {
 
                 const contentType = attribute.contentTypeCode;
                 switch (contentType) {
-                    case ElfLineInfoAttributes.Path: {
+                    case DwarfTypeCodes.Path: {
                         pathInfo.path = value;
                         break;
                     }
-                    case ElfLineInfoAttributes.Index: {
+                    case DwarfTypeCodes.Index: {
                         pathInfo.index = value;
                         break;
                     }
-                    case ElfLineInfoAttributes.Timestamp: {
+                    case DwarfTypeCodes.Timestamp: {
                         pathInfo.timestamp = value;
                         break;
                     }
-                    case ElfLineInfoAttributes.Size: {
+                    case DwarfTypeCodes.Size: {
                         pathInfo.size = value;
                         break;
                     }
-                    case ElfLineInfoAttributes.MD5: {
+                    case DwarfTypeCodes.MD5: {
                         pathInfo.md5 = value;
                         break;
                     }
@@ -181,9 +168,9 @@ class ElfDebugLineSection extends ElfSection {
                 break;
             }
 
-            const unitHeader = deserializer.readUnitHeader();
+            const unitHeader = deserializer.readDwarfUnitHeader();
             if (unitHeader.version != 5) {
-                throw(".debug_line version != 5 is not supported");
+                throw("DWARF version != 5 is not supported");
             }
 
             const unit = {};
@@ -233,7 +220,7 @@ class ElfDebugLineSection extends ElfSection {
             }
 
             deserializer.setOffset(unitDataOffset);
-            const program = new ElfDebugLineProgram(this, unit);
+            const program = new DwarfDebugLineProgram(this, unit);
             program.resolve(deserializer);
 
             unit.program = program;
@@ -250,21 +237,35 @@ class ElfDebugLineSection extends ElfSection {
 }
 
 //-----------------------------------------------------------------------------------------------//
+// Debug Line Info
+//-----------------------------------------------------------------------------------------------//
+
+class DwarfDebugLineEntry {
+    constructor(address, address_end, source, line) {
+        this.address = address;
+        this.address_end = address_end ? address_end : address;
+        this.source = source;
+        this.line = line;
+    }
+}
+
+//-----------------------------------------------------------------------------------------------//
 // Debug Line Program
 //-----------------------------------------------------------------------------------------------//
 
-class ElfDebugLineProgram {
+class DwarfDebugLineProgram {
     constructor(section, unit) {
         this._section = section;
         this._unit = unit;
         this._state = {};
-        this._program = null;
+        this._lastLine = null;
     }
 
     #reset() {
         const header = this._unit.header;
         const state = this._state;
         state.address = 0;
+        state.address_end = 0;
         state.op_index = 0;
         state.file = 1;
         state.line = 1;
@@ -276,6 +277,8 @@ class ElfDebugLineProgram {
         state.epilogue_begin = false;
         state.isa = 0;
         state.discriminator = 0;
+
+        this._lastLine = null;
     }
 
     #advance(steps) {
@@ -294,18 +297,30 @@ class ElfDebugLineProgram {
         const state = this._state;
         const unit = this._unit;
 
-        if (state.is_stmt)
-        {
+        if (state.is_stmt) {
             //console.log("0x" + state.address.toString(16) + " : " + unit.files[state.file].path + ", line " + state.line);
-            this._section.addEntry(new ElfDebugLineEntry(
-                state.address,
-                state.address,
-                unit.files[state.file].path,
-                state.line
-            ));
+            if (null == this._lastLine || this._lastLine.file != state.file || this._lastLine.line != state.line) {
+                this._section.addEntry(new DwarfDebugLineEntry(
+                    state.address,
+                    state.address,
+                    unit.files[state.file].path,
+                    state.line
+                ));
+
+                if (null == this._lastLine) {
+                    this._lastLine = {};
+                }
+
+                this._lastLine.file = state.file;
+                this._lastLine.line = state.line;
+            } else {
+                console.log("duplicate");
+            }
         }
-        const stateClone = Object.assign({}, state);
-        this._program.push(stateClone);
+
+        // no need to store information
+        // const stateClone = Object.assign({}, state);
+        // this._program.push(stateClone);
 
         state.basic_block = false;
         state.prologue_end = false;
@@ -319,7 +334,6 @@ class ElfDebugLineProgram {
         const addressSize = unitHeader.addressSize;
 
         const state = this._state;
-        this._program = [];
 
         this.#reset();
 
@@ -359,7 +373,7 @@ class ElfDebugLineProgram {
                         break;
                     }
                     case 2: { // DW_LNS_advance_pc
-                        const num = deserializer.readLEB128();
+                        const num = deserializer.readULEB128();
                         this.#advance(num);
                         break;
                     }
@@ -481,7 +495,5 @@ class ElfDebugLineProgram {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ElfDebugLineSection: ElfDebugLineSection,
-    ElfDebugLineEntry: ElfDebugLineEntry,
-    ElfDebugLineProgram: ElfDebugLineProgram
+    DwarfDebugLineSection: DwarfDebugLineSection
 }

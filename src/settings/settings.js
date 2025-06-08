@@ -26,11 +26,12 @@ const logger = new Logger("Settings");
 //-----------------------------------------------------------------------------------------------//
 
 const Constants = {
+    DefaultOutputFormat: "prg",
     ViceBinaryMonitorPort: 6502,                    // connectino port to VICE binary monitor interface
     ViceConnectTimeoutSec: 10,                      // connection timeout (in seconds) for VICE binary monitor
     ProjectConfigFile: "project-config.json",       // name of project config file
-    SupportedLanguageIds: [ "asm", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
-    AssemblerLanguageId: "asm",
+    SupportedLanguageIds: [ "asm", "acme", "kickass", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
+    AssemblerLanguageIds: [ "asm", "acme", "kickass" ],
     BasicLanguageId: "bas",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
@@ -38,12 +39,13 @@ const Constants = {
     CppStandard: "c++20",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
+    RemapLanguageIds: true,                         // remap grammars based on project settings
     AutoBuildDelayMs: 1250,
     ResourceFileFilter: "|res|raw|spm|spd|ctm|sid|wav|png|koa|kla|",
     CppFileFilter: "|c|cpp|cc|",
     CppOnlyFileFilter: "|cpp|cc|",
     COnlyFileFilter: "|c|",
-    AsmFileFilter: "|s|asm|",
+    AsmFileFilter: "|s|asm|a|",
     BasicFileFilter: "|bas|",
     ObjFileFilter: "|o|obj|",
     BasicInterpreterLoopRoutine: 0xa7e4,            // default adress of vector $308-309
@@ -53,7 +55,9 @@ const Constants = {
     TSBInterpreterLoopRoutine: 0x80e8,
     TSBInterpreterErrorRoutine: 0x839c,             // TSC modified BASIC vector at $300/$301
     BasicCharset1: "big/graphics",                  // used in settings
-    BasicCharset2: "small/big"                      // used in settings
+    BasicCharset2: "small/big",                     // used in settings
+    BasicStartC64: 0x0801,                          // BASIC start address of C64
+    BasicStartC128: 0x1c01                          // BASIC start address of C128
 };
 
 const AnsiColors = {
@@ -288,19 +292,29 @@ class Settings {
         const installDir = this.#getAbsDir(workspaceConfig.get("vs64.oscar64InstallDir"));
         if (installDir) {
             const oscar64IncludesDir = path.resolve(installDir);
-            this.oscar64Includes = [
+            this.oscar64IncludesC64 = [
                 path.resolve(oscar64IncludesDir, "include"),
                 path.resolve(oscar64IncludesDir, "include", "c64"),
+                path.resolve(oscar64IncludesDir, "include", "audio"),
+                path.resolve(oscar64IncludesDir, "include", "gfx"),
+                path.resolve(oscar64IncludesDir, "include", "opp")
+            ];
+
+            this.oscar64IncludesC128 = [
+                path.resolve(oscar64IncludesDir, "include"),
                 path.resolve(oscar64IncludesDir, "include", "c128"),
                 path.resolve(oscar64IncludesDir, "include", "audio"),
                 path.resolve(oscar64IncludesDir, "include", "gfx"),
                 path.resolve(oscar64IncludesDir, "include", "opp")
             ];
+
             this.oscar64Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("oscar64"));
         } else {
-            this.oscar64Includes = null;
+            this.oscar64IncludesC64 = null;
+
             if (fs.existsSync("/usr/share/oscar64/include")) {
-                this.cc65Includes = [ "/usr/share/oscar64/include" ];
+                this.oscar64IncludesC64 = [ "/usr/share/oscar64/include" ];
+                this.oscar64IncludesC128 = [ "/usr/share/oscar64/include" ];
             }
             this.oscar64Executable = "oscar64";
         }
@@ -310,10 +324,18 @@ class Settings {
         const installDir = this.#getAbsDir(workspaceConfig.get("vs64.llvmInstallDir"));
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
-            this.llvmIncludes = [
+
+            this.llvmIncludesC64 = [
                 path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
                 path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
                 path.resolve(llvmIncludesDir, "mos-platform", "c64", "include"),
+                path.resolve(llvmIncludesDir, "lib", "clang", "16", "include")
+            ];
+
+            this.llvmIncludesC128 = [
+                path.resolve(llvmIncludesDir, "mos-platform", "common", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "commodore", "include"),
+                path.resolve(llvmIncludesDir, "mos-platform", "c128", "include"),
                 path.resolve(llvmIncludesDir, "lib", "clang", "16", "include")
             ];
 
@@ -333,7 +355,8 @@ class Settings {
             }
 
         } else {
-            this.llvmIncludes = null;
+            this.llvmIncludesC64 = null;
+            this.llvmIncludesC128 = null;
             this.llvmIncludesX16 = null;
             this.clangExecutable = "mos-clang++";
             this.clangcExecutable = "mos-clang";
@@ -348,17 +371,22 @@ class Settings {
         if (toolkit.isLLVM) {
             if (machine == "x16" || machine == "cx16") {
                 compilerIncludes = this.llvmIncludesX16;
+            } else if (machine == "c128") {
+                compilerIncludes = this.llvmIncludesC128;
             } else {
-                compilerIncludes = this.llvmIncludes;
+                compilerIncludes = this.llvmIncludesC64;
             }
         } else if (toolkit.isCC65) {
             compilerIncludes = this.cc65Includes;
         } else if (toolkit.isOscar64) {
-            compilerIncludes = this.oscar64Includes;
+            if (machine == "c128") {
+                compilerIncludes = this.oscar64IncludesC128;
+            } else {
+                compilerIncludes = this.oscar64IncludesC64;
+            }
         }
 
         return compilerIncludes;
-
     }
 
     #migrateConfig(workspaceConfig, oldProperty, newProperty, deleteOld) {

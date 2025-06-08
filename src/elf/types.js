@@ -50,7 +50,11 @@ const ElfSectionTypes = {
     StringTable: 3,
 };
 
-const ElfLineInfoAttributes = {
+//-----------------------------------------------------------------------------------------------//
+// Dwarf Constants
+//-----------------------------------------------------------------------------------------------//
+
+const DwarfTypeCodes = {
     None: 0,
     Path: 1,
     Index: 2,
@@ -59,7 +63,7 @@ const ElfLineInfoAttributes = {
     MD5: 5
 };
 
-const ElfFormCodes = {
+const DwarfFormCodes = {
     None: 0x00,
 
     Address: 0x01,
@@ -114,7 +118,7 @@ const ElfFormCodes = {
     Indirect: 0x16,
 };
 
-const ElfAttributeNames = {
+const DwarfAttributeIds = {
     Sibling: 0x01,
     Location: 0x02,
     Name: 0x03,
@@ -238,7 +242,7 @@ const ElfAttributeNames = {
     HiUser: 0x3f
 };
 
-const ElfTagNames = {
+const DwarfTagIds = {
     ArrayType: 0x01,
     ClassType: 0x02,
     EntryPoint: 0x03,
@@ -309,6 +313,18 @@ const ElfTagNames = {
     ImmutableType: 0x4b
 };
 
+const DwarfUnitTypes = {
+    Compile: 0x01,
+    Type: 0x02,
+    Partial: 0x03,
+    Skeleton: 0x04,
+    SplitCompile: 0x05,
+    SplitType: 0x06,
+    LoUser: 0x80,
+    HiUser: 0xff
+};
+
+
 //-----------------------------------------------------------------------------------------------//
 // Module Exports
 //-----------------------------------------------------------------------------------------------//
@@ -316,8 +332,9 @@ const ElfTagNames = {
 module.exports = {
     ElfConstants: ElfConstants,
     ElfSectionTypes: ElfSectionTypes,
-    ElfLineInfoAttributes: ElfLineInfoAttributes,
-    ElfFormCodes: ElfFormCodes,
-    ElfAttributeNames: ElfAttributeNames,
-    ElfTagNames: ElfTagNames
+    DwarfTypeCodes: DwarfTypeCodes,
+    DwarfFormCodes: DwarfFormCodes,
+    DwarfAttributeIds: DwarfAttributeIds,
+    DwarfTagIds: DwarfTagIds,
+    DwarfUnitTypes: DwarfUnitTypes
 };

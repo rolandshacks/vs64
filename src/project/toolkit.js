@@ -12,6 +12,8 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
+const { Constants } = require('settings/settings');
+
 class Toolkit {
     constructor(name) {
 
@@ -31,6 +33,9 @@ class Toolkit {
 
         this.builtInDefines = null;
 
+        this.languageId = null;
+        this.languageIdOverride = null;
+
         this.#init();
     }
 
@@ -40,9 +45,13 @@ class Toolkit {
         switch (this.name) {
             case "acme":
                 this.builtInDefines = [ "__acme__"];
+                this.languageId = "asm";
+                this.languageIdOverride = "acme";
                 break;
             case "kick":
                 this.builtInDefines = [ "__kick__"];
+                this.languageId = "asm";
+                this.languageIdOverride = "kickass";
                 break;
             case "llvm":
                 this.builtInDefines = [ "__llvm__", "__clang__"];

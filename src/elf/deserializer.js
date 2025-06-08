@@ -13,7 +13,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { ElfConstants, ElfFormCodes } = require('elf/types');
+const { ElfConstants, DwarfFormCodes } = require('elf/types');
 
 //-----------------------------------------------------------------------------------------------//
 // ElfDeserializer
@@ -199,7 +199,7 @@ class ElfDeserializer {
         return this.readRaw(size);
     }
 
-    readUnitHeader() {
+    readDwarfUnitHeader() {
         const unitHeader = {};
 
         let initialLengthField = this.read32();
@@ -334,78 +334,78 @@ class ElfDeserializer {
 
         switch (formCode) {
 
-            case ElfFormCodes.Block:
-            case ElfFormCodes.ExprLoc:
+            case DwarfFormCodes.Block:
+            case DwarfFormCodes.ExprLoc:
                 byteSize = this.readULEB128();
                 break;
 
-            case ElfFormCodes.Block1:
+            case DwarfFormCodes.Block1:
                 byteSize = this.read8();
                 break;
 
-            case ElfFormCodes.Block2:
+            case DwarfFormCodes.Block2:
                 byteSize = this.read16();
                 break;
 
-            case ElfFormCodes.Block4:
+            case DwarfFormCodes.Block4:
                 byteSize = this.read32();
                 break;
 
-            case ElfFormCodes.Address:
-            case ElfFormCodes.RefAddr:
+            case DwarfFormCodes.Address:
+            case DwarfFormCodes.RefAddr:
                 byteSize = params.addressSize || this.#getArchSize();
                 break;
 
-            case ElfFormCodes.Flag:
-            case ElfFormCodes.Data1:
-            case ElfFormCodes.Ref1:
-            case ElfFormCodes.StrX1:
-            case ElfFormCodes.AddrX1:
+            case DwarfFormCodes.Flag:
+            case DwarfFormCodes.Data1:
+            case DwarfFormCodes.Ref1:
+            case DwarfFormCodes.StrX1:
+            case DwarfFormCodes.AddrX1:
                 byteSize = 1;
                 break;
 
-            case ElfFormCodes.Data2:
-            case ElfFormCodes.Ref2:
-            case ElfFormCodes.StrX2:
-            case ElfFormCodes.AddrX2:
+            case DwarfFormCodes.Data2:
+            case DwarfFormCodes.Ref2:
+            case DwarfFormCodes.StrX2:
+            case DwarfFormCodes.AddrX2:
                 byteSize = 2;
                 break;
 
-            case ElfFormCodes.StrX3:
+            case DwarfFormCodes.StrX3:
                 byteSize = 3;
                 break;
 
-            case ElfFormCodes.Data4:
-            case ElfFormCodes.Ref4:
-            case ElfFormCodes.RefSup4:
-            case ElfFormCodes.StrX4:
-            case ElfFormCodes.AddrX4:
+            case DwarfFormCodes.Data4:
+            case DwarfFormCodes.Ref4:
+            case DwarfFormCodes.RefSup4:
+            case DwarfFormCodes.StrX4:
+            case DwarfFormCodes.AddrX4:
                 byteSize = 4;
                 break;
 
-            case ElfFormCodes.StrP:
-            case ElfFormCodes.LineStringRef:
-            case ElfFormCodes.SecOffset:
-            case ElfFormCodes.StrpSup:
+            case DwarfFormCodes.StrP:
+            case DwarfFormCodes.LineStringRef:
+            case DwarfFormCodes.SecOffset:
+            case DwarfFormCodes.StrpSup:
                 byteSize = this.#getArchSize();
                 break;
 
-            case ElfFormCodes.Data8:
-            case ElfFormCodes.Ref8:
-            case ElfFormCodes.RefSig8:
-            case ElfFormCodes.RefSup8:
+            case DwarfFormCodes.Data8:
+            case DwarfFormCodes.Ref8:
+            case DwarfFormCodes.RefSig8:
+            case DwarfFormCodes.RefSup8:
                 byteSize = 8;
                 break;
 
-            case ElfFormCodes.Data16:
+            case DwarfFormCodes.Data16:
                 byteSize = 16;
                 break;
 
-            case ElfFormCodes.FlagPresent:
+            case DwarfFormCodes.FlagPresent:
                 byteSize = 0;
                 break;
 
-            case ElfFormCodes.ImplicitConst:
+            case DwarfFormCodes.ImplicitConst:
                 // The implicit value is stored in the abbreviation
                 // as a SLEB128, and there is no data in debug info.
                 byteSize = 0;
@@ -426,35 +426,35 @@ class ElfDeserializer {
 
             switch (formCode) {
 
-                case ElfFormCodes.String:
+                case DwarfFormCodes.String:
                     value = this.readCString();
                     break;
 
-                case ElfFormCodes.SData:
+                case DwarfFormCodes.SData:
                     value = this.readLEB128();
                     break;
 
-                case ElfFormCodes.UData:
-                case ElfFormCodes.RefUdata:
-                case ElfFormCodes.Indirect:
+                case DwarfFormCodes.UData:
+                case DwarfFormCodes.RefUdata:
+                case DwarfFormCodes.Indirect:
                     value = this.readULEB128();
                     break;
 
-                case ElfFormCodes.StrX:
+                case DwarfFormCodes.StrX:
                     ofs = this.readULEB128();
                     break;
 
-                case ElfFormCodes.AddrX:
+                case DwarfFormCodes.AddrX:
                     ref = this.readULEB128();
                     refIsAddr = true;
                     break;
 
-                case ElfFormCodes.LocListX:
+                case DwarfFormCodes.LocListX:
                     ref = this.readULEB128();
                     refIsLoc = true;
                     break;
 
-                case ElfFormCodes.RngListX:
+                case DwarfFormCodes.RngListX:
                     ref = this.readULEB128();
                     refIsRange = true;
                     break;
@@ -466,14 +466,14 @@ class ElfDeserializer {
         } else if (byteSize == 0) {
 
             switch (formCode) {
-                case ElfFormCodes.FlagPresent:
+                case DwarfFormCodes.FlagPresent:
                     value = true;
                     break;
 
-                case ElfFormCodes.ImplicitConst:
+                case DwarfFormCodes.ImplicitConst:
                     break;
 
-                case ElfFormCodes.ExprLoc:
+                case DwarfFormCodes.ExprLoc:
                     // 0 bytes valid?
                     break;
 
@@ -483,33 +483,33 @@ class ElfDeserializer {
 
         } else {
             switch (formCode) {
-                case ElfFormCodes.StrX1:
-                case ElfFormCodes.StrX2:
-                case ElfFormCodes.StrX3:
-                case ElfFormCodes.StrX4:
+                case DwarfFormCodes.StrX1:
+                case DwarfFormCodes.StrX2:
+                case DwarfFormCodes.StrX3:
+                case DwarfFormCodes.StrX4:
                     ofs = this.read(byteSize);
                     break;
 
-                case ElfFormCodes.StrP:
-                case ElfFormCodes.LineStringRef:
-                case ElfFormCodes.StrpSup:
+                case DwarfFormCodes.StrP:
+                case DwarfFormCodes.LineStringRef:
+                case DwarfFormCodes.StrpSup:
                     ref = this.read(byteSize);
                     break;
 
-                case ElfFormCodes.SecOffset:
+                case DwarfFormCodes.SecOffset:
                     value = this.read(byteSize);
                     break;
 
-                case ElfFormCodes.Data1:
-                case ElfFormCodes.Data2:
-                case ElfFormCodes.Data4:
-                case ElfFormCodes.Data8:
-                case ElfFormCodes.Data16:
-                case ElfFormCodes.Block1:
-                case ElfFormCodes.Block2:
-                case ElfFormCodes.Block4:
-                case ElfFormCodes.Block:
-                case ElfFormCodes.ExprLoc:
+                case DwarfFormCodes.Data1:
+                case DwarfFormCodes.Data2:
+                case DwarfFormCodes.Data4:
+                case DwarfFormCodes.Data8:
+                case DwarfFormCodes.Data16:
+                case DwarfFormCodes.Block1:
+                case DwarfFormCodes.Block2:
+                case DwarfFormCodes.Block4:
+                case DwarfFormCodes.Block:
+                case DwarfFormCodes.ExprLoc:
                     value = this.readRaw(byteSize);
                     break;
 

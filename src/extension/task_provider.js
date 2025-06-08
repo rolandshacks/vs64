@@ -69,8 +69,8 @@ class TaskTerminal {
         this._writeEmitter.fire(styledText);
     }
 
-    done() {
-        this._closeEmitter.fire(0);
+    done(exitCode) {
+        this._closeEmitter.fire(exitCode||0);
     }
 
     doBuild() {

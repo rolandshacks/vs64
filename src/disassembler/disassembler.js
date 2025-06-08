@@ -118,74 +118,72 @@ class _Options_ {
     }
 }
 
+class StatementType {};
+StatementType.Empty = 0x0;
+StatementType.Invalid = 0x1;
+StatementType.Normal = 0x2;
+StatementType.Buffer = 0x3;
+StatementType.Meta = 0x4;
+StatementType.Opcode = 0x5;
+StatementType.Basic = 0x6;
+StatementType.Comment = 0x7;
+StatementType.Label = 0x8;
+
 class Statement {
 
-    static create(addr, opcode, instruction, data, data2, address_mode, cycles, cross_page) {
-
-        const statement = new Statement("opcode");
-
-        statement.addr = addr;
-        statement.opcode = opcode;
-        statement.instruction = instruction;
-        statement.data = data;
-        statement.data2 = data2;
-        statement.address_mode = address_mode;
-        statement.cycles = cycles;
-        statement.cross_page = cross_page;
-
+    static createDefault() {
+        const statement = new Statement(StatementType.Opcode);
+        statement.addr = null;
+        statement.opcode = null;
+        statement.instruction = null;
+        statement.data = null;
+        statement.data2 = null;
+        statement.address_mode = null;
+        statement.cycles = null;
+        statement.cross_page = null;
+        statement.instruction_size = null;
+        statement.jump_address = null;
         return statement;
     }
 
     static createEmpty() {
-        return new Statement("empty");
+        return new Statement(StatementType.Empty);
     }
 
     static createMeta(meta, comment) {
-        const statement = new Statement("meta");
-
+        const statement = new Statement(StatementType.Mety);
         statement.meta = meta;
         statement.comment = comment;
-
         return statement;
     }
 
     static createBasic(basic_line, basic_code) {
-        const statement = new Statement("basic");
-
+        const statement = new Statement(StatementType.Basic);
         statement.basic_line = basic_line;
         statement.basic_code = basic_code;
-
         return statement;
-
     }
 
-    static createBuffer(addr, buffer) {
-
-        const statement = new Statement("buffer");
-
+    static createBuffer(addr, buffer, index) {
+        const statement = new Statement(StatementType.Buffer);
         statement.addr = addr;
         statement.buffer = buffer;
-
+        statement.index = index;
         return statement;
     }
 
     static createComment(comment) {
-        const statement = new Statement("comment");
-
+        const statement = new Statement(StatementType.Comment);
         statement.comment = comment;
-
         return statement;
     }
 
     static createInvalid(addr, opcode) {
-        const statement = new Statement("invalid");
-
+        const statement = new Statement(StatementType.Invalid);
         statement.addr = addr;
         statement.opcode = opcode;
         statement.comment = "unknown opcode";
-
         return statement;
-
     }
 
     constructor(type) {
@@ -211,7 +209,7 @@ class Statement {
     }
 
     get_label_name() {
-        if (this.type == 'buffer') {
+        if (this.type == StatementType.Buffer) {
             return "buffer" + this.index;
         } else if (this.irq_handler)
             return "irq" + this.index;
@@ -220,16 +218,17 @@ class Statement {
     }
 
     get_jump_addr() {
-        if (this.jump_address) return this.jump_address;
-        if (this.data2 != null) {
-            return (this.data2 << 8) + this.data;
-        } else if (this.data != null) {
+        if (this.jump_address !== null) {
+            return this.jump_address;
+        } else if (this.data2 !== null) {
+            return ((this.data2 & 0xff) << 8) | (this.data & 0xff);
+        } else if (this.data !== null) {
             let rel_addr = this.data;
             if (rel_addr >= 128) rel_addr -= 256; // signed 8bit
             return this.addr + rel_addr + 2;
-        } else {
-            return 0x0;
         }
+
+        return null;
     }
 
     add_ref(ref) {
@@ -246,16 +245,25 @@ class Statement {
         return (this.instruction == 41 || this.instruction == 42); // RTS || RTI
     }
 
-    // valid opcode to string
-
-    getInstractionName() {
-        const opcode_s = InstructionNames[this.instruction].toLowerCase();
-
+    getInstructionName() {
+        if (null == this.instruction) return "";
+        const instructionName = InstructionNames[this.instruction];
+        if (null == instructionName) return "";
+        const opcode_s = instructionName.toLowerCase();
         return opcode_s;
     }
 
-    getInstructionParams() {
+    getInstructionParamAsAddr() {
+        let val = 0x0;
+        if (this.data != null && this.data2 != null) {
+            val = (this.data2 << 8) + this.data;
+        } else if (this.data != null) {
+            val = this.data;
+        }
+        return val;
+    }
 
+    getInstructionParams() {
         let data_s = null;
         let val = null;
         if (this.data != null && this.data2 != null) {
@@ -290,7 +298,7 @@ class Statement {
     }
 
     getInstructionHex() {
-        if (this.type == 'invalid') {
+        if (this.type == StatementType.Invalid) {
             return format8(this.opcode, true);
         }
 
@@ -323,10 +331,10 @@ class Statement {
 
         return lines;
     }
-
 }
 
 function find_addr(statements, addr) {
+    if (addr === null) return null;
     for (const statement of statements) {
         if (statement.addr == addr) {
             return statement;
@@ -342,16 +350,7 @@ function get(data, pos) {
     return data[pos];
 }
 
-
-function _comment_(txt) {
-    return {
-        type: "comment",
-        text: txt
-    };
-}
-
 function process(binary, write, options) {
-
     OpcodeMap = new Map();
     for (const opcode_info of OpcodeTable) {
         const opcode = opcode_info[0];
@@ -364,6 +363,7 @@ function process(binary, write, options) {
         return;
     }
 
+    const jump_table = [];
     const statements = [];
 
     let ofs = 0;
@@ -381,6 +381,9 @@ function process(binary, write, options) {
 
     statements.push(Statement.createMeta(out_s, "load address (" + load_address + ")"));
     statements.push(Statement.createEmpty());
+
+    let sys_jump_address = null;
+    let sys_jump_ofs = null;
 
     if (load_address == 0x0801) {
         // load address is BASIC start
@@ -404,7 +407,7 @@ function process(binary, write, options) {
             tcb_tokens.push(item[0]);
         }
 
-        while (ofs < binary_size) {
+        while (ofs < binary_size && (null === sys_jump_ofs || ofs < sys_jump_ofs)) {
 
             let output_buffer = "";
 
@@ -418,7 +421,7 @@ function process(binary, write, options) {
             ofs += 2;
 
             // read statement
-            while (ofs < binary_size) {
+            while (ofs < binary_size && (null === sys_jump_ofs || ofs < sys_jump_ofs)) {
 
                 const b = int8FromBytes(binary[ofs]);
                 ofs++;
@@ -444,6 +447,27 @@ function process(binary, write, options) {
                                 while (ofs < binary_size && int8FromBytes(binary[ofs]) != 0) {
                                     output_buffer += charFromPetsciiBytes(binary[ofs], lower_case);
                                     ofs++;
+                                }
+                            } else if (b == 0x9e && null === sys_jump_address) { // SYS
+                                let i = ofs;
+                                while (i < binary_size && int8FromBytes(binary[i]) == 0x20) { i++; }
+
+                                let steps = 0;
+                                let addr = 0;
+                                while (i < binary_size && steps < 5) {
+                                    let c = int8FromBytes(binary[i]);
+                                    if (c >= 48 && c <= 57) {
+                                        addr = (addr * 10) + (c - 48);
+                                    } else {
+                                        break;
+                                    }
+                                    steps++;
+                                    i++;
+                                }
+
+                                if (steps > 0) {
+                                    sys_jump_address = addr;
+                                    sys_jump_ofs = sys_jump_address - load_address + 2;
                                 }
                             }
 
@@ -501,44 +525,156 @@ function process(binary, write, options) {
     statements.push(Statement.createEmpty());
 
     let buffer_index = 0;
-
-    let opcode = 0x0;
     let addr = 0x0;
+    const asm_start_offset = ofs;
 
-    while (ofs < binary_size) {
-        addr = load_address + ofs - 2;
-        opcode = binary[ofs];
-
-        if (opcode == 0x0) {
-            const buffer = [];
-            while (ofs < binary_size && binary[ofs] == 0x0) {
-                buffer.push(binary[ofs]);
-                ofs += 1;
+    iterate_binary(binary, load_address, asm_start_offset, null, (info) => {
+        if (info.statement) {
+            const statement = info.statement;
+            if (statement.is_jump()) {
+                const jump_addr = statement.get_jump_addr();
+                if (null !== jump_addr) {
+                    jump_table.push(jump_addr);
+                }
             }
-            const statement = Statement.createBuffer(addr, buffer);
-            statement.index = buffer_index;
+        }
+    });
+
+    jump_table.sort(function(a, b) { return a - b; });
+
+    iterate_binary(binary, load_address, asm_start_offset, jump_table, (info) => {
+        addr = info.address;
+        if (info.illegal) {
+            statements.push(Statement.createInvalid(addr, info.illegal.opcode));
+            return;
+        } else if (info.buffer) {
+            const b = info.buffer;
+            const buffer = binary.subarray(b.start, b.end);
+            const statement = Statement.createBuffer(addr, buffer, buffer_index);
             statements.push(statement);
             buffer_index += 1;
-            continue;
+            return;
+        } else if (info.statement) {
+            const statement = info.statement;
+            statement.addr = addr;
+            statements.push(statement);
+        }
+    });
+
+    for (const statement of statements) {
+        if (statement.is_jump() || statement.jump_address !== null) {
+            const jump_target = find_addr(statements, statement.get_jump_addr());
+            if (jump_target) {
+                statement.add_jump_target(jump_target);
+                jump_target.add_ref(statement);
+                if (!statement.is_jump()) {
+                    jump_target.irq_handler = true;
+                }
+            }
+        }
+    }
+
+    add_comments(statements);
+
+    let label_index = 0;
+    let irq_index = 0;
+    for (const statement of statements) {
+        if (statement.has_refs()) {
+            if (statement.irq_handler != null) {
+                statement.index = irq_index;
+                irq_index += 1;
+            } else {
+                statement.index = label_index;
+                label_index += 1;
+            }
+        }
+    }
+
+    let last_blank = false;
+
+    // output statements
+    for (const statement of statements) {
+
+        if (statement.has_refs()) {
+            if (!last_blank) write(StatementType.Empty, null);
+            write(StatementType.Label, statement);
         }
 
-        if (!OpcodeMap.get(opcode)) {
-            statements.push(Statement.createInvalid(addr, opcode));
+        if (statement.type == StatementType.Buffer && (!last_blank)) {
+            write(StatementType.Empty, null);
+        }
+
+        last_blank = false;
+
+        write(statement.type, statement);
+
+        if (statement.type == StatementType.Empty) {
+            last_blank = true;
+        }
+
+        if (statement.is_return()) {
+            if (!last_blank) {
+                write(StatementType.Empty, null);
+                last_blank = true;
+            }
+        }
+    }
+
+    return;
+}
+
+function iterate_binary(binary, load_addr, ofs, jump_table, visitor) {
+
+    const ofs_end = binary.length;
+
+    let opcode = 0x0;
+
+    let jump_table_idx = 0;
+    let next_jump_addr = (null != jump_table && jump_table.length > 0 ? jump_table[0] : null);
+
+    let last_addr = null;
+    let addr = null;
+
+    while (ofs < ofs_end) {
+        last_addr = addr;
+        addr = load_addr + ofs - 2;
+
+        if (null != jump_table) {
+            while (jump_table_idx < jump_table.length && addr > jump_table[jump_table_idx]) {
+                jump_table_idx++;
+            }
+            next_jump_addr = (jump_table_idx < jump_table.length ? jump_table[jump_table_idx] : null);
+        }
+
+        opcode = binary[ofs];
+        if (opcode == 0x0) {
+            // binary data
+            const buffer_start = ofs;
+            while (ofs < ofs_end && binary[ofs] == 0x0) { ofs += 1; }
+            visitor({
+                address: addr,
+                position: buffer_start,
+                buffer: {
+                    start: buffer_start,
+                    end: ofs
+                }
+            });
+            continue;
+        } else if (!OpcodeMap.get(opcode)) {
+            // invalid opcode
+            visitor({
+                address: addr,
+                position: ofs,
+                invalid: {
+                    opcode: opcode
+                }
+            });
             ofs += 1;
             continue;
         }
 
         const opcode_info = OpcodeMap.get(opcode);
-        const instruction = opcode_info[1];
-        let opcode_name = InstructionNames[instruction];
-        if (!opcode_name) {
-            //console.log("unknown opcode name: $" + format8(opcode))
-            opcode_name = "???";
-        }
-
         const address_mode = opcode_info[2];
-        const cycles = opcode_info[3];
-        const cross_page = opcode_info[4];
 
         let data = null;
         let data2 = null;
@@ -559,113 +695,271 @@ function process(binary, write, options) {
             data_size = 2;
         } else { ; } // imp, acc
 
-        if (data_size >= 1) data = (ofs + 1 < binary_size) ? binary[ofs + 1] : 0;
-        if (data_size >= 2) data2 = (ofs + 2 < binary_size) ? binary[ofs + 2] : 0;
+        if (data_size >= 1) {
+            data = (ofs + 1 < ofs_end) ? binary[ofs + 1] : 0;
+        }
+
+        if (data_size >= 2) {
+            data2 = (ofs + 2 < ofs_end) ? binary[ofs + 2] : 0;
+        }
 
         const instruction_size = 1 + data_size;
 
-        const statement = Statement.create(addr, opcode, instruction, data, data2, address_mode, cycles, cross_page);
+        if (null !== next_jump_addr) {
+            if (addr < next_jump_addr && addr + instruction_size > next_jump_addr) {
+                // assume raw data, skip the bytes
+                ofs += (next_jump_addr - addr);
+                continue;
+            }
+        }
 
-        if (instruction == 42) { statement.set_comment("return"); }
-        else if (instruction == 41) { statement.set_comment("return from interrupt"); }
-        else if (instruction == 35 || instruction == 36) { statement.set_comment("push to stack"); }
-        else if (instruction == 37 || instruction == 38) { statement.set_comment("pull from stack"); }
-        else if (instruction == 46) { statement.set_comment("disable interrupts"); }
-        else if (instruction == 15) { statement.set_comment("enable interrupts"); }
-        else if (opcode == 0xa2 && get(binary, ofs + 2) == 0xa0 && get(binary, ofs + 4) == 0x8e && get(binary, ofs + 7) == 0x8c) {
+        const statement = Statement.createDefault();
+        statement.addr = addr;
+        statement.opcode = opcode;
+        statement.instruction =  opcode_info[1];
+        statement.address_mode = opcode_info[2];
+        statement.cycles = opcode_info[3];
+        statement.cross_page = opcode_info[4];
+        statement.instruction_size = instruction_size;
+        statement.data = data;
+        statement.data2 = data2;
+
+        // detect implicit address references (from irq setup, etc.)
+        if (opcode == 0xa2 &&
+            get(binary, ofs + 2) == 0xa0 &&
+            get(binary, ofs + 4) == 0x8e &&
+            get(binary, ofs + 7) == 0x8c) {
+
+            // LDX + LDY + STX + STY := set IRQ
+
             const addr_1 = get(binary, ofs + 1) | (get(binary, ofs + 3) << 8);
             const addr_2 = get(binary, ofs + 5) | (get(binary, ofs + 6) << 8);
             const addr_3 = get(binary, ofs + 8) | (get(binary, ofs + 9) << 8);
 
-            if (addr_2 == 0xfffe && addr_3 == 0xffff) {
-                statement.set_comment("set hardware raster irq handler");
-                statement.jump_address = addr_1;
-            } else if (addr_2 == 0x0314 && addr_3 == 0x0315) {
-                statement.set_comment("set kernal raster irq handler");
+            if ((addr_2 == 0xfffe && addr_3 == 0xffff) ||
+                (addr_2 == 0x0314 && addr_3 == 0x0315)) {
                 statement.jump_address = addr_1;
             }
-         } else if (opcode == 0x8c && get(binary, ofs + 3) == 0x8d) {
+        } else if (opcode == 0x8c && get(binary, ofs + 3) == 0x8d) {
+            // STY + STA
             const addr_1 = get(binary, ofs + 1) | (get(binary, ofs + 2) << 8);
             const addr_2 = get(binary, ofs + 4) | (get(binary, ofs + 5) << 8);
 
-            if (addr_1 == 0xfffe && addr_2 == 0xffff) {
-                statement.set_comment("set hardware raster irq handler");
+            if ((addr_1 == 0xfffe && addr_2 == 0xffff) ||
+                (addr_1 == 0x0314 && addr_2 == 0x0315)) {
                 statement.jump_address = addr_1;
-            } else if (addr_1 == 0x0314 && addr_2 == 0x0315) {
-                statement.set_comment("set kernal raster irq handler");
-                statement.jump_address = addr_1;
-            }
-
-        } else if (ofs + instruction_size < binary_size) {
-            const next_opcode = binary[ofs + instruction_size];
-            const next_opcode_info = OpcodeMap.get(next_opcode);
-            if (next_opcode_info) {
-                const next_instruction = next_opcode_info[1];
-                if (instruction == 29 && next_instruction == 47) { statement.set_comment("load/store A"); }
-                else if (instruction == 30 && next_instruction == 48) { statement.set_comment("load/store X"); }
-                else if (instruction == 31 && next_instruction == 49) { statement.set_comment("load/store Y"); }
             }
         }
 
-        statements.push(statement);
+        visitor({
+            address: addr,
+            position: ofs,
+            statement: statement,
+            opcode_info: opcode_info
+        });
+
         ofs += instruction_size;
     }
 
-    for (const statement of statements) {
-        if (statement.is_jump() || statement.jump_address != null) {
-            addr = statement.get_jump_addr();
-            const jump_target = find_addr(statements, addr);
-            if (jump_target) {
-                statement.add_jump_target(jump_target);
-                jump_target.add_ref(statement);
-                if (!statement.is_jump()) {
-                    jump_target.irq_handler = true;
-                }
-            }
-        }
-    }
+    return ofs;
+}
 
-    let label_index = 0;
-    let irq_index = 0;
+function add_comments(statements) {
+    //let previous_statement = null;
     for (const statement of statements) {
-        if (statement.has_refs()) {
-            if (statement.irq_handler != null) {
-                statement.index = irq_index;
-                irq_index += 1;
+        const instruction = statement.instruction;
+        if (null == instruction) continue;
+
+        const instructionName = statement.getInstructionName();
+        const opcode = statement.opcode;
+
+        if (instruction == 42) {
+            statement.set_comment("return");
+        } else if (statement.is_jump()) {
+            let addr = (statement.jump_target != null) ? statement.jump_target.addr : statement.jump_address;
+            if (null == addr && opcode == 0x4c) addr = statement.getInstructionParamAsAddr(); // absolute JMP address
+            if (null != addr) statement.set_comment(instructionName + " $" + format16(addr));
+        } else if (opcode == 0x8c || opcode == 0x8d || opcode == 0x8e) {
+            // store to abs address
+            const addr = statement.getInstructionParamAsAddr();
+            let addrName = getMemoryAddressName(addr);
+            if (null != addrName) {
+                statement.set_comment("store " + addrName);
             } else {
-                statement.index = label_index;
-                label_index += 1;
+                statement.set_comment("store to $" + format16(addr));
+            }
+        } else if (opcode == 0xac || opcode == 0xad || opcode == 0xae) {
+            // store to abs address
+            const addr = statement.getInstructionParamAsAddr();
+            let addrName = getMemoryAddressName(addr);
+            if (null != addrName) {
+                statement.set_comment("load " + addrName);
+            } else {
+                statement.set_comment("load from $" + format16(addr));
+            }
+        } else if (statement.address_mode == AddressMode.abs) {
+            const addr = statement.getInstructionParamAsAddr();
+            let addrName = getMemoryAddressName(addr);
+            if (null != addrName) {
+                statement.set_comment(instructionName + " " + addrName);
+            } else {
+                statement.set_comment(instructionName + " $" + format16(addr));
             }
         }
+
+        //previous_statement = statement;
+    }
+}
+
+const VICRegisterNames = [
+    "sprite #0 x",
+    "sprite #0 y",
+    "sprite #1 x",
+    "sprite #1 y",
+    "sprite #2 x",
+    "sprite #2 y",
+    "sprite #3 x",
+    "sprite #3 y",
+    "sprite #4 x",
+    "sprite #4 y",
+    "sprite #5 x",
+    "sprite #5 y",
+    "sprite #6 x",
+    "sprite #6 y",
+    "sprite #7 x",
+    "sprite #7 y",
+    "sprite x bit 8",
+    "screen control #1",
+    "raster line",
+    "light pen x",
+    "light pen y",
+    "sprite enable",
+    "screen control #2",
+    "sprite double height",
+    "memory setup",
+    "interrupt status",
+    "interrupt control",
+    "sprite priority",
+    "sprite multicolor",
+    "sprite double width",
+    "sprite-sprite collision",
+    "sprite-background collision",
+    "border color",
+    "background color",
+    "extra background color #1",
+    "extra background color #2",
+    "extra background color #3",
+    "sprite extra color #1",
+    "sprite extra color #2",
+    "sprite #0 color",
+    "sprite #1 color",
+    "sprite #2 color",
+    "sprite #3 color",
+    "sprite #4 color",
+    "sprite #5 color",
+    "sprite #6 color",
+    "sprite #7 color"
+];
+
+const SIDRegisterNames = [
+    "voice #1 frequency",
+    "voice #1 frequency",
+    "voice #1 pulse width",
+    "voice #1 pulse width",
+    "voice #1 control register",
+    "voice #1 attack and decay",
+    "voice #1 sustain and release",
+    "voice #2 frequency",
+    "voice #2 frequency",
+    "voice #2 pulse width",
+    "voice #2 pulse width",
+    "voice #2 control register",
+    "voice #2 attack and decay",
+    "voice #2 sustain and release",
+    "voice #3 frequency",
+    "voice #3 frequency",
+    "voice #3 pulse width",
+    "voice #3 pulse width",
+    "voice #3 control register",
+    "voice #3 attack and decay",
+    "voice #3 sustain and release",
+    "filter cut off frequency",
+    "filter cut off frequency",
+    "filter control",
+    "volume and filter modes",
+    "paddle x value",
+    "paddle y value",
+    "voice #3 waveform output",
+    "voice #3 ADSR output"
+];
+
+const CIA1RegisterNames = [
+    "port A keyboard and joystick #2",
+    "port B keyboard and joystick #1",
+    "port A data direction",
+    "port B data direction",
+    "timer A",
+    "timer A",
+    "timer B",
+    "timer B",
+    "time / alarm",
+    "time / alarm",
+    "time / alarm",
+    "time / alarm",
+    "serial shift register",
+    "interrupt control and status",
+    "timer A control",
+    "timer B control"
+];
+
+const CIA2RegisterNames = [
+    "port A serial bus access",
+    "port B RS232 access",
+    "port A data direction",
+    "port B data direction",
+    "timer A",
+    "timer A",
+    "timer B",
+    "timer B",
+    "time / alarm",
+    "time / alarm",
+    "time / alarm",
+    "time / alarm",
+    "serial shift register",
+    "interrupt control and status",
+    "timer A control",
+    "timer B control"
+];
+
+function arrayGet(a, idx, defaultValue) {
+    defaultValue ||= null;
+    if (null == a || a.length < 1) return defaultValue;
+    if (idx < 0 || idx >= a.length) return defaultValue;
+    return a[idx] || defaultValue;
+}
+
+function getMemoryAddressName(addr) {
+    if (null == addr) return null;
+
+    let addrName = null;
+
+    if (addr <= 0xff) {
+        addrName = "zeropage register";
+    } else if (addr >= 0xd800 && addr <= 0xdbff) {
+        addrName = "color RAM";
+    } else if (addr >= 0xd000 && addr <= 0xd3ff) {
+        addrName = "VIC " + arrayGet(VICRegisterNames, addr-0xd000, "register");
+    } else if (addr >= 0xd400 && addr <= 0xd7ff) {
+        addrName = "SID " + arrayGet(SIDRegisterNames, addr-0xd400, "register");
+    } else if (addr >= 0xdc00 && addr <= 0xdcff) {
+        addrName = "CIA1 " + arrayGet(CIA1RegisterNames, addr-0xdc00, "register");
+    } else if (addr >= 0xdd00 && addr <= 0xddff) {
+        addrName = "CIA2 " + arrayGet(CIA2RegisterNames, addr-0xdd00, "register");
+    } else if (addr >= 0xfffe && addr <= 0xffff) {
+        addrName = "IRQ address";
     }
 
-    let last_blank = false;
-
-    for (const statement of statements) {
-
-        if (statement.has_refs()) {
-            if (!last_blank) write("empty", null);
-            write("label", statement);
-        }
-
-        if (statement.type == 'buffer' && (!last_blank)) {
-            write("empty", null);
-        }
-
-        last_blank = false;
-
-        write(statement.type, statement);
-        if (statement.type == "empty") last_blank = true;
-
-        if (statement.is_return()) {
-            if (!last_blank) {
-                write("empty", null);
-                last_blank = true;
-            }
-        }
-    }
-
-    return;
+    return addrName;
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -874,36 +1168,35 @@ class Disassembler {
         let line = null;
 
         switch (type) {
-            case 'empty': {
+            case StatementType.Empty: {
                 line = Formatter.empty();
                 break;
             }
-            case 'label': {
+            case StatementType.Label: {
                 const label = statement.get_label_name() + LABEL_SUFFIX;
                 line = Formatter.label(label);
                 break;
             }
-            case 'comment': {
+            case StatementType.Comment: {
                 const comment = statement.comment;
                 line = Formatter.comment(comment);
                 break;
             }
-            case 'meta': {
+            case StatementType.Meta: {
                 const meta = statement.meta;
                 const comment = statement.comment;
                 line = Formatter.meta(meta, comment);
                 break;
             }
-            case 'basic': {
+            case StatementType.Basic: {
                 const basic_line = statement.basic_line;
                 const basic_code = statement.basic_code;
                 line = Formatter.basic(basic_line, basic_code);
                 break;
             }
-            case 'opcode': {
+            case StatementType.Opcode: {
                 const addr = "$" + format16(statement.addr, true);
-
-                const instruction = statement.getInstractionName();
+                const instruction = statement.getInstructionName();
                 const params = statement.getInstructionParams();
                 const jumpLabel = statement.getInstructionJumpLabel();
                 const hex = statement.getInstructionHex();
@@ -911,14 +1204,14 @@ class Disassembler {
                 line = Formatter.opcode(instruction, params, jumpLabel, addr, hex, comment);
                 break;
             }
-            case 'invalid': {
+            case StatementType.Invalid: {
                 const addr = "$" + format16(statement.addr, true);
                 const instruction = "???";
                 const hex = statement.getInstructionHex();
                 const comment = statement.comment;
                 line = Formatter.opcode(instruction, null, null, addr, hex, comment);
             }
-            case 'buffer': {
+            case StatementType.Buffer: {
                 const label = "." + statement.get_label_name();
                 const prefix = "!byte";
                 const lines = statement.getHexLines();

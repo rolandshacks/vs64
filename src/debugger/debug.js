@@ -26,7 +26,8 @@ const MemoryType = {
     Ram: 2,
     Rom: 3,
     Io: 4,
-    Cartridge: 5
+    Cartridge: 5,
+    Vdc: 6
 };
 
 //-----------------------------------------------------------------------------------------------//
@@ -980,7 +981,6 @@ class CpuState {
         this.cpuFlags = new CpuFlags();
         this.cpuInfo = new CpuInfo();
     }
-
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -1178,6 +1178,10 @@ class DebugInterface {
         return null;
     }
 
+    hasMemoryType(_memoryType) {
+        return true;
+    }
+
     async readMemory(_startAddress_, _endAddress_, _memoryType) {
         return null;
     }
@@ -1220,7 +1224,8 @@ const DebugInterruptReason = {
 //-----------------------------------------------------------------------------------------------//
 
 class DebugProcess {
-    constructor() {
+    constructor(sessionInfo) {
+        this._sessionInfo = sessionInfo;
         this._proc = null;
         this._supportsRelaunch = false;
     }

@@ -1,5 +1,5 @@
 //
-// String Offset Table
+// Dwarf String Offset Table
 //
 
 //-----------------------------------------------------------------------------------------------//
@@ -15,10 +15,10 @@ BIND(module);
 const { ElfSection } = require('elf/section');
 
 //-----------------------------------------------------------------------------------------------//
-// Elf String Offset Table Section
+// String Offset Table Section
 //-----------------------------------------------------------------------------------------------//
 
-class ElfStringOffsetTableSection extends ElfSection {
+class DwarfStringOffsetTableSection extends ElfSection {
     constructor(sectionHeader) {
         super(sectionHeader);
 
@@ -35,9 +35,9 @@ class ElfStringOffsetTableSection extends ElfSection {
 
         const deserializer = this.getDeserializer();
 
-        const unitHeader = deserializer.readUnitHeader();
+        const unitHeader = deserializer.readDwarfUnitHeader();
         if (unitHeader.version != 5) {
-            throw(".debug_line version != 5 is not supported");
+            throw("DWARF version != 5 is not supported");
         }
 
         const unit = {};
@@ -61,5 +61,5 @@ class ElfStringOffsetTableSection extends ElfSection {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ElfStringOffsetTableSection: ElfStringOffsetTableSection
+    DwarfStringOffsetTableSection: DwarfStringOffsetTableSection
 }

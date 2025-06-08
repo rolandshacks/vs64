@@ -1,5 +1,5 @@
 //
-// Address Table
+// Dwarf Address Table
 //
 
 //-----------------------------------------------------------------------------------------------//
@@ -15,10 +15,10 @@ BIND(module);
 const { ElfSection } = require('elf/section');
 
 //-----------------------------------------------------------------------------------------------//
-// Elf Address Table Section
+// Address Table Section
 //-----------------------------------------------------------------------------------------------//
 
-class ElfAddressTableSection extends ElfSection {
+class DwarfAddressTableSection extends ElfSection {
     constructor(sectionHeader) {
         super(sectionHeader);
         this._addressTable = this.#decodeAddressTable();
@@ -34,9 +34,9 @@ class ElfAddressTableSection extends ElfSection {
 
         const deserializer = this.getDeserializer();
 
-        const unitHeader = deserializer.readUnitHeader();
+        const unitHeader = deserializer.readDwarfUnitHeader();
         if (unitHeader.version != 5) {
-            throw(".debug_line version != 5 is not supported");
+            throw("DWARF version != 5 is not supported");
         }
 
         const unit = {};
@@ -70,5 +70,5 @@ class ElfAddressTableSection extends ElfSection {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ElfAddressTableSection: ElfAddressTableSection
+    DwarfAddressTableSection: DwarfAddressTableSection
 }

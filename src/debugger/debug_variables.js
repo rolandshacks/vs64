@@ -14,6 +14,7 @@ BIND(module);
 
 const { Formatter } = require('utilities/formatter');
 const { DebugDataType } = require('debugger/debug_info_types');
+const { MemoryType } = require('debugger/debug');
 
 //const { Logger } = require('utilities/logger');
 //const logger = new Logger("DebugVariables");
@@ -48,6 +49,7 @@ const DebugVariables = {
     VARIABLES_SCOPE_VIC: (_variables_ofs++),
     VARIABLES_SCOPE_SPRITES: (_variables_ofs++),
     VARIABLES_SCOPE_SID: (_variables_ofs++),
+    VARIABLES_SCOPE_VDC: (_variables_ofs++),
     VARIABLES_SCOPE_BASIC: (_variables_ofs++),
     VARIABLES_SCOPE_BASIC_REGISTERS: (_variables_ofs++),
     VARIABLES_SCOPE_BASIC_VECTORS: (_variables_ofs++),
@@ -85,7 +87,7 @@ class DebugVariablesProvider {
         this._session = session;
     }
 
-    getScopes() {
+    getScopes(hasVdc) {
 
         const session = this._session;
 
@@ -110,6 +112,12 @@ class DebugVariablesProvider {
             ["Sprites (VIC)",           DebugVariables.VARIABLES_SCOPE_SPRITES],
             ["Sound (SID)",             DebugVariables.VARIABLES_SCOPE_SID],
         );
+
+        if (false && hasVdc) { // disabled, because VICE does not seem to support this correctly
+            scopes.push(
+                ["Ext. Video (VDC)",    DebugVariables.VARIABLES_SCOPE_VDC]
+            );
+        }
 
         return scopes;
     }
@@ -439,6 +447,18 @@ class DebugVariablesProvider {
                     ];
                 } else {
                     variables = [];
+                }
+            } else if (DebugVariables.VARIABLES_SCOPE_VDC == variableRef) {
+
+                variables = [];
+
+                const emu = session._emulator;
+                const vdcMemory = await emu.readMemory(0x0, 0xffff, MemoryType.Vdc);
+
+                if (null != vdcMemory) {
+                    variables.push(
+                        { name: "VDC Registers", type: "stat", value: Formatter.formatMemory(vdcMemory, 0, 36), variablesReference: 0, memoryReference: -1 }
+                    );
                 }
             }
 

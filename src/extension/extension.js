@@ -136,10 +136,13 @@ class Extension {
             const languageFeatureProvider = new LanguageFeatureProvider(this._project, this._languageServer);
 
             // assembler
-            subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerReferenceProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
-            subscriptions.push(vscode.languages.registerDocumentSymbolProvider(Constants.AssemblerLanguageId, languageFeatureProvider));
+
+            for (const languageId of Constants.AssemblerLanguageIds) {
+                subscriptions.push(vscode.languages.registerDefinitionProvider(languageId, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerReferenceProvider(languageId, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerCompletionItemProvider(languageId, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerDocumentSymbolProvider(languageId, languageFeatureProvider));
+            }
 
             // BASIC
             subscriptions.push(vscode.languages.registerDefinitionProvider(Constants.BasicLanguageId, languageFeatureProvider));
@@ -178,6 +181,10 @@ class Extension {
 
             this._statusBar = statusBar;
         }
+
+        vscode.workspace.onDidOpenTextDocument((document) => {
+            thisInstance.adjustDocumentLanguageId(document);
+        });
 
         // listen do document save
         vscode.workspace.onDidSaveTextDocument((document) => {
@@ -320,6 +327,41 @@ class Extension {
 
     }
 
+    adjustAllDocumentLanguageIds() {
+
+        if (!Constants.RemapLanguageIds) return;
+
+        const project = this._project;
+        if (!project.isValid()) return;
+
+        const toolkit = project.toolkit;
+        if (null == toolkit || null == toolkit.languageIdOverride) return;
+
+        const textDocuments = vscode.workspace.textDocuments;
+        if (null != textDocuments) {
+            for (const document of textDocuments) {
+                this.adjustDocumentLanguageId(document);
+            }
+        }
+    }
+
+    adjustDocumentLanguageId(document) {
+
+        if (!Constants.RemapLanguageIds) return;
+
+        const project = this._project;
+        if (null == document || !project.isValid()) return;
+
+        const toolkit = project.toolkit;
+        if (null == toolkit || null == toolkit.languageIdOverride) return;
+
+        // override language id?
+        if (document.languageId != toolkit.languageIdOverride &&
+            Constants.AssemblerLanguageIds.indexOf(document.languageId) != -1) {
+            vscode.languages.setTextDocumentLanguage(document, toolkit.languageIdOverride);
+        }
+    }
+
     showWelcome(forced) {
         const settings = this._settings;
         if (!settings) return;
@@ -458,7 +500,7 @@ class Extension {
             try {
                 const fileBackup = fs.readFileSync(filename);
                 fs.writeFileSync(filename + "~", fileBackup);
-            } catch (err) {;}
+            } catch (_err) {;}
         }
 
         let i = "    ";
@@ -511,7 +553,7 @@ class Extension {
 
         try {
             fs.writeFileSync(filename, s);
-        } catch (err) {;}
+        } catch (_err) {;}
 
     }
 
@@ -557,6 +599,8 @@ class Extension {
                 if (this._intellisenseConfigurationProvider) {
                     this._intellisenseConfigurationProvider.notifyConfigChange();
                 }
+
+                this.adjustAllDocumentLanguageIds();
             }
 
         } catch (err) {
@@ -751,7 +795,7 @@ class Extension {
 
             logger.error(txt);
             terminal.write(txt + "\r\n");
-            terminal.done();
+            terminal.done(1);
 
             return;
         }
@@ -763,7 +807,7 @@ class Extension {
                 const txt = "build process already active";
                 logger.error(txt);
                 terminal.write(txt + "\r\n");
-                terminal.done();
+                terminal.done(1);
                 return;
             }
 
@@ -782,7 +826,7 @@ class Extension {
                     const txt = "clean failed: " + err;
                     logger.error(txt);
                     terminal.write(txt + "\r\n", AnsiColors.Red);
-                    terminal.done();
+                    terminal.done(1);
                     throw(txt);
                 }
 
@@ -792,7 +836,7 @@ class Extension {
                 this.showStatus("$(pass) Clean succeeded");
 
                 if (action == "clean") {
-                    terminal.done();
+                    terminal.done(0);
                     return;
                 }
             }
@@ -836,7 +880,7 @@ class Extension {
                         }
 
                         this._builder = null;
-                        terminal.done();
+                        terminal.done(hasError ? 1 : 0);
 
                         if (hasError) {
                             this.showStatus("$(error) " + statusText||txt);
@@ -847,7 +891,7 @@ class Extension {
                     })
                     .catch((_result_) => {
                         this._builder = null;
-                        terminal.done();
+                        terminal.done(1);
                         this.showStatus("$(error) Build failed");
                     });
 
@@ -857,7 +901,7 @@ class Extension {
                     const txt = "build failed: " + err;
                     logger.error(txt);
                     terminal.write(txt + "\r\n", AnsiColors.Red);
-                    terminal.done();
+                    terminal.done(1);
                 }
             }
         }

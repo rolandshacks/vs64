@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.6.0 Major Update
+
+- Added specific support for ACME and KickAss grammars
+- Fixed major bug at handling Elf/Dwarf debug/line info
+- Added preliminary support for building and launching .CRTs
+- Replaced hardcoded settings that created platform dependencies
+- Improved integrated disassembler for PRG files
+- Bug-fixes and minor improvements
+
 ## 2.5.22 Minor Update
 
 - Added some missing PETCAT control codes for the BASIC compiler (dish, ensh, etc.)

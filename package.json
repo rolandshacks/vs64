@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.5.22",
+	"version": "2.6.0",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -312,13 +312,34 @@
 		],
 		"languages": [
 			{
+				"id": "kickass",
+				"aliases": [
+					"6502 KickAss"
+				],
+				"extensions": [
+					".kick"
+				],
+				"configuration": "./language/kickass.language.json"
+			},
+			{
+				"id": "acme",
+				"aliases": [
+					"6502 ACME"
+				],
+				"extensions": [
+					".acme"
+				],
+				"configuration": "./language/acme.language.json"
+			},
+			{
 				"id": "asm",
 				"aliases": [
 					"6502 Assembler"
 				],
 				"extensions": [
 					".asm",
-					".s"
+					".s",
+					".a"
 				],
 				"configuration": "./language/asm.language.json"
 			},
@@ -353,6 +374,16 @@
 			}
 		],
 		"grammars": [
+			{
+				"language": "kickass",
+				"scopeName": "source.asm.kickass",
+				"path": "./language/kickass.grammar.json"
+			},
+			{
+				"language": "acme",
+				"scopeName": "source.asm.acme",
+				"path": "./language/acme.grammar.json"
+			},
 			{
 				"language": "asm",
 				"scopeName": "source.asm",
@@ -578,6 +609,12 @@
 		"breakpoints": [
 			{
 				"language": "asm"
+			},
+			{
+				"language": "acme"
+			},
+			{
+				"language": "kickass"
 			},
 			{
 				"language": "bas"

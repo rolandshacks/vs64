@@ -84,10 +84,6 @@ test("test debug info cc65", async () => {
 
     const _addressInfo = debugInfo.getAddressInfo(2070);
 
-
-
-
-
 });
 
 }); // describe

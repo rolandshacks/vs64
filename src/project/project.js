@@ -34,6 +34,8 @@ class Project {
         this._outputs = null;
         this._toolkit = null;
         this._machine = null;
+        this._format = null;
+        this._cpu = null;
         this._buildTree = null;
     }
 
@@ -41,6 +43,7 @@ class Project {
     get name() { return this._name; }
     get toolkit() { return this._toolkit; }
     get machine() { return this._machine; }
+    get format() { return this._format; }
     get sources() { return this._sources; }
     get description() { return this._description_; }
     get basedir() { return this._basedir; }
@@ -142,7 +145,9 @@ class Project {
 
         this.#load();
 
-        this._outname = this._name + ".prg";
+        const formatExtension = this._format.startsWith("crt") ? "crt" : this._format;
+
+        this._outname = this._name + "." + formatExtension;
         this._outfile = path.resolve(this._builddir, this._outname);
 
         const toolkit = this.toolkit;
@@ -251,6 +256,7 @@ class Project {
 
         this._description = data.description||"";
         this._machine = data.machine;
+        this._format = data.format || Constants.DefaultOutputFormat;
         this._compiler = data.compiler;
         this._assembler = data.assembler;
         this._linker = data.linker;
@@ -919,6 +925,7 @@ class Project {
             script.push("ninja_required_version = 1.3");
             script.push(Ninja.keyValue("toolkit", toolkit.name));
             script.push(Ninja.keyValue("machine", project.machine||""));
+            script.push(Ninja.keyValue("format", project.format||""));
             script.push(Ninja.keyValue("basedir", project.basedir));
             script.push(Ninja.keyValue("builddir", project.builddir));
             script.push("");
@@ -1062,7 +1069,7 @@ class Project {
 
             let cpu = "6510";
             if (project.machine) {
-                cpu = (project.machine != "none") ? project.machine : null;
+                cpu = (project.machine != "none" && project.machine != "c64" && project.machine != "c128") ? project.machine : null;
             }
 
             const flags = new NinjaArgs(
@@ -1223,7 +1230,6 @@ class Project {
 
             flags.add("-n");
             flags.add("-g");
-            flags.add("-tf=prg");
 
             if (releaseBuild) {
                 c_flags.add("-O3");
@@ -1245,9 +1251,10 @@ class Project {
             }
 
             let defaultTargetConf = targetName ? "-tm=" + targetName : null;
+            if (defaultTargetConf && !flags.hasArg("-tm=") == -1 && !c_flags.hasArg("-tm=") == -1) c_flags.add(defaultTargetConf);
+            if (defaultTargetConf && !flags.hasArg("-tm=") == -1 && !asm_flags.hasArg("-tm=") == -1) asm_flags.add(defaultTargetConf);
 
-            if (defaultTargetConf && flags.indexOf("-tm=") == -1 && c_flags.indexOf("-tm=") == -1) c_flags.add(defaultTargetConf);
-            if (defaultTargetConf && flags.indexOf("-tm=") == -1 && asm_flags.indexOf("-tm=") == -1) asm_flags.add(defaultTargetConf);
+            if (!flags.hasArg("-tf=")) flags.add("-tf=" + project.format);
 
             script.push(Ninja.keyValue("cc_exe", (project.compiler || settings.oscar64Executable)));
             script.push("");

@@ -1,5 +1,5 @@
 //
-// Abbreviation Table
+// Dwarf Abbreviation Table
 //
 
 //-----------------------------------------------------------------------------------------------//
@@ -18,7 +18,7 @@ const { ElfSection } = require('elf/section');
 // Elf Abbreviation Table Section
 //-----------------------------------------------------------------------------------------------//
 
-class ElfAbbreviationTableSection extends ElfSection {
+class DwarfAbbreviationTableSection extends ElfSection {
     constructor(sectionHeader) {
         super(sectionHeader);
         this._abbreviations = null;
@@ -80,5 +80,5 @@ class ElfAbbreviationTableSection extends ElfSection {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ElfAbbreviationTableSection: ElfAbbreviationTableSection
+    DwarfAbbreviationTableSection: DwarfAbbreviationTableSection
 }

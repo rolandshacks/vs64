@@ -270,6 +270,16 @@ class ArgumentList {
         return this._argv.indexOf(s);
     }
 
+    hasArg(s) {
+        if (null == s || s.length == 0 || this.empty()) return false;
+
+        for (const arg of this._argv) {
+            if (arg.startsWith(s)) return true;
+        }
+
+        return false;
+    }
+
 }
 
 //-----------------------------------------------------------------------------------------------//

@@ -19,11 +19,12 @@ const { ElfDeserializer } = require('elf/deserializer');
 const { ElfSection, ElfSectionHeader } = require('elf/section');
 const { ElfStringTable } = require('elf/string_table');
 const { ElfSymbolTable, ElfSymbol } = require('elf/symbol_table');
-const { ElfDebugLineSection } = require('elf/debug_line');
-const { ElfAbbreviationTableSection } = require('elf/abbreviation_table');
-const { ElfAddressTableSection } = require('elf/address_table');
-const { ElfStringOffsetTableSection } = require('elf/string_offset_table');
-const { ElfDebugInfoSection } = require('elf/debug_info');
+
+const { DwarfAddressTableSection } = require('elf/address_table');
+const { DwarfStringOffsetTableSection } = require('elf/string_offset_table');
+const { DwarfAbbreviationTableSection } = require('elf/abbreviation_table');
+const { DwarfDebugLineSection } = require('elf/debug_line');
+const { DwarfDebugInfoSection } = require('elf/debug_info');
 
 //-----------------------------------------------------------------------------------------------//
 // Elf
@@ -213,24 +214,23 @@ class ElfSectionFactory {
             elfSection = new ElfStringTable(sectionHeader);
         } else if (sectionType == ElfSectionTypes.SymbolTable) {
             elfSection = new ElfSymbolTable(sectionHeader);
-        } else if (sectionName == ".debug_line") {
-            elfSection = new ElfDebugLineSection(sectionHeader);
         } else if (sectionName == ".debug_line_str") {
             elfSection = new ElfStringTable(sectionHeader);
         } else if (sectionName == ".debug_str") {
             elfSection = new ElfStringTable(sectionHeader);
+        } else if (sectionName == ".debug_line") {
+            elfSection = new DwarfDebugLineSection(sectionHeader);
         } else if (sectionName == ".debug_addr") {
-            elfSection = new ElfAddressTableSection(sectionHeader);
+            elfSection = new DwarfAddressTableSection(sectionHeader);
         } else if (sectionName == ".debug_str_offsets") {
-            elfSection = new ElfStringOffsetTableSection(sectionHeader);
+            elfSection = new DwarfStringOffsetTableSection(sectionHeader);
         } else if (sectionName == ".debug_abbrev") {
-            elfSection = new ElfAbbreviationTableSection(sectionHeader);
+            elfSection = new DwarfAbbreviationTableSection(sectionHeader);
         } else if (sectionName == ".debug_info") {
-            elfSection = new ElfDebugInfoSection(sectionHeader);
+            elfSection = new DwarfDebugInfoSection(sectionHeader);
         } else {
             elfSection = new ElfSection(sectionHeader);
         }
-
         return elfSection;
     }
 

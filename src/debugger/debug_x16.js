@@ -12,10 +12,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
 const { DebugProcess, DebugInterface } = require('debugger/debug');
-
-const logger = new Logger("X16Debug");
 
 //-----------------------------------------------------------------------------------------------//
 // Constants
@@ -36,8 +33,8 @@ class X16Connector extends DebugInterface {
 //-----------------------------------------------------------------------------------------------//
 
 class X16Process extends DebugProcess {
-    constructor() {
-        super();
+    constructor(sessionInfo) {
+        super(sessionInfo);
     }
 
     async spawn(executable, params, binary, options) {

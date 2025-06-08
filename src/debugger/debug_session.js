@@ -23,7 +23,7 @@ const { Utils } = require('utilities/utils');
 const { Formatter } = require('utilities/formatter');
 const { Expression } = require('utilities/expression');
 const { Logger } = require('utilities/logger');
-const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType } = require('debugger/debug');
+const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 const { Emulator } = require('emulator/emu');
 const { ViceProcess } = require('debugger/debug_vice');
 const { X16Process } = require('debugger/debug_x16');
@@ -223,7 +223,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
     }
 
-    disconnectRequest(response, args) {
+    async disconnectRequest(response, args) {
         this.#destroyEmulatorInstance();
         super.disconnectRequest(response, args);
     }
@@ -274,6 +274,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         const options = this._debuggerSessionInfo;
         const debuggerType = options.type;
+        const project = this._project;
 
         if (this._emulatorProcess && this._emulatorProcess.alive) {
             this._emulatorProcess.kill();
@@ -287,8 +288,17 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             instance.#debuggerProcessExitHandler(proc);
         }
 
+        const processOptions = {
+            onexit: processExitHandler
+        };
+
+        const sessionInfo = {
+            binary: project.outfile,
+            format: project.format
+        };
+
         if (debuggerType == Constants.DebuggerTypeVice) {
-            this._emulatorProcess = new ViceProcess();
+            this._emulatorProcess = new ViceProcess(sessionInfo);
 
             const args = settings.viceArgs + (options.args ? (" " + options.args) : "");
             const emulatorCommand = settings.viceExecutable + " " + args;
@@ -299,13 +309,13 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     settings.viceExecutable,
                     settings.vicePort,
                     args,
-                    { onexit: processExitHandler }
+                    processOptions
                 );
             } catch (err) {
                 throw(err);
             }
         } else if (debuggerType == Constants.DebuggerTypeX16) {
-            this._emulatorProcess = new X16Process();
+            this._emulatorProcess = new X16Process(sessionInfo);
 
             let args = []
             if (settings.x16Args && settings.x16Args.length > 0) args.push(settings.x16Args);
@@ -333,7 +343,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                     settings.x16Executable,
                     argsLine,
                     options.prg,
-                    { onexit: processExitHandler }
+                    processOptions
                 );
             } catch (err) {
                 throw(err);
@@ -935,7 +945,11 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
     async scopesRequest(response, args) {
 
         if (null != args && DebugConstants.STACKFRAME_NUMBER === args.frameId) {
-            const scopes = this._variablesProvider.getScopes();
+
+            let emu = this._emulator;
+
+            const flagVdc = emu.hasMemoryType(MemoryType.Vdc);
+            const scopes = this._variablesProvider.getScopes(flagVdc);
 
             if (scopes && scopes.length > 0) {
 
@@ -1195,34 +1209,21 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             e.body.allThreadsStopped = true;
 
             this.sendEvent(e);
-
         }
     }
 
     async onDebugBreakpoint(breakpoint) {
 
+        let msg = "BREAK at $" + Utils.fmtAddress(breakpoint.address);
+        if (breakpoint.source) msg += ", file " + breakpoint.source;
+        msg += ", line " + breakpoint.line;
+
         if (this._isBasic || breakpoint.isBasic) {
-
-            this.#debuggerLog(
-                "BREAKPOINT at $" +
-                Utils.fmtAddress(breakpoint.address) +
-                ", file " + breakpoint.source +
-                ", line " + breakpoint.line +
-                ", basic line " + breakpoint.basicLine
-            );
-
-        } else {
-
-            this.#debuggerLog(
-                "BREAKPOINT at $" +
-                Utils.fmtAddress(breakpoint.address) +
-                ", line " + breakpoint.line
-            );
-
+            msg += ", basic line " + breakpoint.basicLine;
         }
 
+        this.#debuggerLog(msg);
         DebugHelper.showCode(breakpoint.source, breakpoint.line);
-
     }
 
     onDebugBreak(pc) {
@@ -1757,7 +1758,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         return s;
     }
 
-    async formatMemory(address, memorySize, elementSize, dataType) {
+    async formatMemory(address, memorySize, elementSize, _dataType) {
         const emu = this._emulator;
         if (!memorySize) memorySize = 1;
         const readSize = Math.min(256, memorySize);

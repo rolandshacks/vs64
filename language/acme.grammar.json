@@ -1,9 +1,12 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Generic 6502 Assembler Language Grammar",
+	"name": "ACME 6502 Assembler Language Grammar",
 	"patterns": [
 		{
 			"include": "#generic"
+		},
+		{
+			"include": "#acme"
 		},
 		{
 			"include": "#llvm"
@@ -48,12 +51,6 @@
 					"begin": "//",
 					"end": "$",
 					"comment": "Single line comment"
-				},
-				{
-					"name": "comment.block",
-					"begin": "/\\*",
-					"end": "\\*/",
-					"comment": "Block comment"
 				}
 			]
 		},
@@ -172,6 +169,140 @@
 			]
 		},
 
+		"acme": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor"
+				},
+				{
+					"include": "#acme-directives"
+				}
+			]
+		},
+
+		"acme-preprocessor": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor-keywords"
+				},
+				{
+					"include": "#acme-preprocessor-flow-control"
+				},
+				{
+					"include": "#acme-preprocessor-io"
+				}
+            ]
+		},
+		"acme-preprocessor-keywords": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(cpu|al|as|rl|rs)\\b"
+				}
+			]
+		},
+		"acme-preprocessor-flow-control": {
+			"patterns": [
+				{
+					"name": "meta.diff.header",
+					"match": "\\!(if|ifdef|for|do|warn|error|serious|endoffile|pseudopc)\\b"
+				}
+			]
+		},
+		"acme-preprocessor-io": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor.io",
+					"match": "\\!(binary|bin)\\b"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.output"
+						},
+						"2": {
+							"name": "string.quoted.double.untitled"
+						},
+						"3": {
+							"name": "meta.preprocessor.io.format"
+						}
+					},
+					"match": "(\\!to)\\s*(\\\"[^\"]+\\\")\\s*,\\s*([a-zA-Z]+)"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.input"
+						},
+						"2": {
+							"name": "string.quoted.double.library.name"
+						}
+					},
+					"match": "(\\!source|\\!src)\\s*([\\\"<][^\\\">]+[\\\">])"
+				}
+			]
+		},
+
+		"acme-directives": {
+			"patterns": [
+				{
+					"include": "#acme-directives-macro-declaration"
+				},
+				{
+					"include": "#acme-directives-macro-call"
+				},
+				{
+					"include": "#acme-directives-scope-declaration"
+				},
+				{
+					"include": "#acme-directives-data"
+				},
+				{
+					"include": "#acme-directives-text"
+				}
+            ]
+		},
+		"acme-directives-macro-declaration": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\!(macro)\\b"
+				}
+			]
+		},
+		"acme-directives-macro-call": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\+(\\w+)\\b"
+				}
+			]
+		},
+		"acme-directives-scope-declaration": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(addr|set|zone)\\b"
+				}
+			]
+		},
+		"acme-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|24|32|wo|word|align|fill|fi|hex|h|skip)\\b"
+				}
+			]
+		},
+		"acme-directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text|Text)\\b"
+				}
+			]
+		},
+
 		"llvm": {
 			"patterns": [
 				{
@@ -182,5 +313,5 @@
 		}
 
 	},
-	"scopeName": "source.asm"
+	"scopeName": "source.asm.acme"
 }

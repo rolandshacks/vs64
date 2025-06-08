@@ -852,22 +852,33 @@ class ViceMonitorClient {
         return token._promise;
     }
 
+    hasMemoryBank(memoryType) {
+        return (null != this.getMemoryBankId(memoryType));
+    }
+
+    getMemoryBankId(memoryType) {
+        if (null == this._bankIdMap) {
+            return null;
+        }
+
+        let bankName;
+
+        if (memoryType == MemoryType.Default) bankName = 'default';
+        else if (memoryType == MemoryType.Cpu) bankName = 'cpu';
+        else if (memoryType == MemoryType.Ram) bankName = 'ram';
+        else if (memoryType == MemoryType.Rom) bankName = 'rom';
+        else if (memoryType == MemoryType.Io) bankName = 'io';
+        else if (memoryType == MemoryType.Cartridge) bankName = 'cart';
+        else if (memoryType == MemoryType.Vdc) bankName = 'vdc';
+        else { return null; }
+
+        return this._bankIdMap.get(bankName);
+    }
+
     async cmdMemorySet(startAddress, endAddress, memoryType, haveEffect, memoryBlock) {
         if (!endAddress) endAddress = startAddress; // write 1 byte
 
-        let bankId = 0x0;
-        if (this._bankIdMap) {
-            let bankName = 'default';
-            if (memoryType) {
-                if (memoryType == MemoryType.Default) bankName = 'default';
-                else if (memoryType == MemoryType.Cpu) bankName = 'cpu';
-                else if (memoryType == MemoryType.Ram) bankName = 'ram';
-                else if (memoryType == MemoryType.Rom) bankName = 'rom';
-                else if (memoryType == MemoryType.Io) bankName = 'io';
-                else if (memoryType == MemoryType.Cartridge) bankName = 'cart';
-            }
-            bankId = this._bankIdMap.get(bankName)||0x0;
-        }
+        const bankId = this.getMemoryBankId(memoryType)||0x0;
 
         const memorySpace = 0x0; // main memory
 
@@ -891,19 +902,7 @@ class ViceMonitorClient {
 
         if (!endAddress) endAddress = startAddress; // read 1 byte
 
-        let bankId = 0x0;
-        if (this._bankIdMap) {
-            let bankName = 'default';
-            if (memoryType) {
-                if (memoryType == MemoryType.Default) bankName = 'default';
-                else if (memoryType == MemoryType.Cpu) bankName = 'cpu';
-                else if (memoryType == MemoryType.Ram) bankName = 'ram';
-                else if (memoryType == MemoryType.Rom) bankName = 'rom';
-                else if (memoryType == MemoryType.Io) bankName = 'io';
-                else if (memoryType == MemoryType.Cartridge) bankName = 'cart';
-            }
-            bankId = this._bankIdMap.get(bankName)||0x0;
-        }
+        const bankId = this.getMemoryBankId(memoryType)||0x0;
 
         const memorySpace = 0x0; // main memory
 
@@ -1079,9 +1078,11 @@ class ViceMonitorClient {
 //-----------------------------------------------------------------------------------------------//
 
 class ViceProcess extends DebugProcess {
-    constructor() {
-        super();
-        this._supportsRelaunch = true;
+    constructor(sessionInfo) {
+        super(sessionInfo);
+
+        // relaunch just supported for "prg" targets
+        this._supportsRelaunch = (sessionInfo && sessionInfo.format == "prg");
     }
 
     static createDebugInterface(session) {
@@ -1108,14 +1109,20 @@ class ViceProcess extends DebugProcess {
             args.push("-binarymonitoraddress"); args.push("ip4://127.0.0.1:" + port);
         }
 
-        args.push("-autostartprgmode"); args.push("1");
+        const sessionInfo = this._sessionInfo;
+        if (sessionInfo && sessionInfo.format == "prg") {
+            args.push("-autostartprgmode"); args.push("1");
+        }
 
         if (params) {
             args.push(...Utils.splitQuotedString(params));
         }
 
-        await super.spawn_exec(executable, args, options);
+        if (sessionInfo && sessionInfo.format.startsWith("crt")) {
+            args.push(sessionInfo.binary)
+        }
 
+        await super.spawn_exec(executable, args, options);
     }
 }
 
@@ -1371,17 +1378,35 @@ class ViceConnector extends DebugInterface {
         return this._memoryCache;
     }
 
-    async readMemory(startAddress, endAddress, _memoryType_) {
-        const memCache = await this.#getMemoryCache();
-        if (!memCache) return null;
+    hasMemoryType(memoryType) {
+        const vice = this._vice;
+        if (!vice) return false;
+        return vice.hasMemoryBank(memoryType);
+    }
 
-        if (startAddress == 0 && endAddress + 1 == memCache.length) {
-            // no need to get a clone, directly use the cache
-            return memCache;
+    async readMemory(startAddress, endAddress, memoryType) {
+
+        if (null != memoryType && memoryType != MemoryType.Default) {
+            const vice = this._vice;
+            if (!vice) return null;
+
+            const result = await vice.cmdMemoryGet(startAddress, endAddress, memoryType);
+            if (!result) return null;
+
+            return result.memory;
+
+        } else {
+            const memCache = await this.#getMemoryCache();
+            if (!memCache) return null;
+
+            if (startAddress == 0 && endAddress + 1 == memCache.length) {
+                // no need to get a clone, directly use the cache
+                return memCache;
+            }
+
+            const mem = memCache.subarray(startAddress, endAddress+1);
+            return mem;
         }
-
-        const mem = memCache.subarray(startAddress, endAddress+1);
-        return mem;
     }
 
     async writeMemory(startAddress, endAddress, data) {

@@ -16,7 +16,7 @@
             "name": "Run Modules",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/runners/d64.run.js",
+            "program": "${workspaceFolder}/test/runners/elf.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {

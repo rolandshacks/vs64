@@ -1,12 +1,15 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Generic 6502 Assembler Language Grammar",
+	"name": "KickAss 6502 Assembler Language Grammar",
 	"patterns": [
 		{
 			"include": "#generic"
 		},
 		{
 			"include": "#llvm"
+		},
+		{
+			"include": "#kick"
 		}
 	],
 
@@ -37,12 +40,6 @@
 
 		"generic-comments": {
 			"patterns": [
-				{
-					"name": "comment.line.semicolon",
-					"begin": ";",
-					"end": "$",
-					"comment": "Single line comment"
-				},
 				{
 					"name": "comment.line.double-slash",
 					"begin": "//",
@@ -172,6 +169,75 @@
 			]
 		},
 
+		"kick": {
+			"patterns": [
+				{
+					"include": "#kick-preprocessor"
+				},
+				{
+					"include": "#kick-directives"
+				}
+			]
+		},
+
+		"kick-preprocessor": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "#(define|elif|else|endif|if|import|importif|importonce|undef)\\b"
+				}
+			]
+		},
+
+		"kick-directives": {
+			"patterns": [
+				{
+					"include": "#kick-directives-flow-control"
+				},
+				{
+					"include": "#kick-directives-asm-control"
+				},
+				{
+					"include": "#kick-directives-data"
+				},
+				{
+					"include": "#kick-directives-text"
+				}
+            ]
+		},
+		"kick-directives-flow-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(for|if|while|return)\\b"
+				}
+			]
+		},
+		"kick-directives-asm-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(align|assert|asserterror|break|cpu|define|disk|encoding|error|errorif|eval|file|filemodify|filenamespace|function|import|importonce|label|lohifill|macro|memblock|modify|namespace|pc|plugin|print|printnow|pseudocommand|pseudopc|segment|segmentdef|segmentout|zp)\\b"
+				}
+			]
+		},
+		"kick-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(by|byte|const|dw|dword|enum|fill|fillword|struct|var|wo|word)\\b"
+				}
+			]
+		},
+		"kick-directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(te|text|)\\b"
+				}
+			]
+		},
+
 		"llvm": {
 			"patterns": [
 				{
@@ -182,5 +248,5 @@
 		}
 
 	},
-	"scopeName": "source.asm"
+	"scopeName": "source.asm.kickass"
 }

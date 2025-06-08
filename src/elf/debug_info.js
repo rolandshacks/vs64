@@ -1,5 +1,5 @@
 //
-// Debug Info
+// Dwarf Debug Info
 //
 
 //-----------------------------------------------------------------------------------------------//
@@ -14,16 +14,15 @@ BIND(module);
 
 const { Utils } = require('utilities/utils');
 const { ElfSection } = require('elf/section');
-const { ElfTagNames, ElfAttributeNames } = require('elf/types');
-const { ElfFormCodes } = require('./types');
+const { DwarfTagIds, DwarfAttributeIds, DwarfFormCodes, DwarfUnitTypes } = require('elf/types');
 
-const StoreDebugInfo = true;
+const STORE_TEMP_VERBOSE_DEBUG_INFO = true;
 
 //-----------------------------------------------------------------------------------------------//
-// Elf Debug Info Section
+// Dwarf Debug Info Section
 //-----------------------------------------------------------------------------------------------//
 
-class ElfDebugInfoSection extends ElfSection {
+class DwarfDebugInfoSection extends ElfSection {
     constructor(sectionHeader) {
         super(sectionHeader);
         this._entries = null;
@@ -34,119 +33,62 @@ class ElfDebugInfoSection extends ElfSection {
     resolve() {
         if (!super.resolve()) return;
 
-        const elf = this.elf;
-
         const deserializer = this.getDeserializer();
         const endOfs = deserializer.ofs + this._header.size;
+
+        this._entries = [];
 
         while (!deserializer.eof()) {
             if (deserializer.ofs >= endOfs) {
                 break;
             }
 
-            const unitHeader = deserializer.readUnitHeader();
-            if (unitHeader.version != 5) {
-                throw(".debug_line version != 5 is not supported");
+            const unit = DwarfUnit.fromStream(this, deserializer);
+            if (null != unit) {
+                this._entries.push(unit);
             }
 
-            const unit = {
-                elf: elf,
-                section: this,
-                header: unitHeader
-            };
-
-            deserializer.setFormat(unitHeader.format);
-            unit.type = deserializer.read8();
-
-            switch (unit.type) {
-                case 0x1: { // DW_UT_compile
-                    unit.addressSize = deserializer.read8();
-                    unit.debugAbbrevOffset = deserializer.readOffs();
-                    break;
-                }
-                case 0x2: { // DW_UT_type
-                    unit.addressSize = deserializer.read8();
-                    unit.debugAbbrevOffset = deserializer.readOffs();
-                    unit.typeSignature = deserializer.read64();
-                    unit.typeOffset = deserializer.readOffs();
-                    break;
-                }
-                case 0x3: { // DW_UT_partial
-                    unit.addressSize = deserializer.read8();
-                    unit.debugAbbrevOffset = deserializer.readOffs();
-                    break;
-                }
-                case 0x4: { // DW_UT_skeleton
-                    unit.addressSize = deserializer.read8();
-                    unit.debugAbbrevOffset = deserializer.readOffs();
-                    unit.dwoId = deserializer.read64();
-                    break;
-                }
-                case 0x5: { // DW_UT_split_compile
-                    unit.addressSize = deserializer.read8();
-                    unit.debugAbbrevOffset = deserializer.readOffs();
-                    unit.dwoId = deserializer.read64();
-                    break;
-                }
-                case 0x6: { // DW_UT_split_type
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-
+            /*
             if (deserializer.eof()) break;
             if (deserializer.ofs >= unitHeader.endOfs) continue;
 
-            this._entries = new ElfDebugInformationEntry();
-            let parent = this._entries;
-            const entryStack = [];
+            let parentTag = null;
+            const stack = [];
 
             while (deserializer.ofs < unitHeader.endOfs) {
-                let entry = ElfDebugInformationEntry.fromStream(deserializer, unit);
+                let tag = DwarfTag.fromStream(deserializer, unit);
 
-                if (entry == null) {
-                    if (entryStack.length > 0) {
-                        parent = entryStack.pop();
-                    }
+                if (tag == null) {
+                    parentTag = stack.pop();
                 } else {
-                    parent.addChild(entry);
-                    if (entry.hasChildren) {
-                        entryStack.push(parent);
-                        parent = entry;
+                    if (null != parentTag) {
+                        parentTag.addChild(tag);
+                    } else {
+                        unit.addChild(tag);
                     }
-                    this.#resolveEntry(entry);
+
+                    if (tag.hasChildren) {
+                        if (null != parentTag) {
+                            stack.push(parentTag);
+                        }
+                        parentTag = tag;
+                    }
+
+                    this.#resolveEntry(tag);
                 }
             }
 
             deserializer.setOffset(unitHeader.endOfs); // skip unread data
+            */
         }
-    }
-
-    #resolveEntry(entry) {
-        if (!entry) return;
-
-        /*
-        if (entry.tag == ElfTagNames.Variable) {
-            const name = entry.getAttribute(ElfAttributeNames.Name);
-            const linkName = entry.getAttribute(ElfAttributeNames.LinkageName);
-            if (name && linkName) {
-                console.log(name.value + " := " + linkName.value);
-            }
-        }
-        */
-
     }
 
 }
 
-class ElfDebugInformationEntry {
-    constructor(unit) {
-        this._unit = unit;
-        this.tag = null;
+class DwarfItem {
+    constructor(parent) {
+        this.parent = parent;
         this.hasChildren = false;
-        this.attributes = null;
         this.children = null;
     }
 
@@ -157,10 +99,22 @@ class ElfDebugInformationEntry {
 
         this.children.push(child);
         child.parent = this;
+
+        this.hasChildren = true;
     }
 
     getChildren() {
         return this.children;
+    }
+
+}
+
+class DwarfTag extends DwarfItem {
+    constructor(parent) {
+        super(parent);
+        this.id = null;
+        this.elf = (parent != null) ? parent.elf : null;
+        this.attributes = null;
     }
 
     getAttribute(attributeNameCode) {
@@ -170,10 +124,9 @@ class ElfDebugInformationEntry {
 
     #deserialize(deserializer) {
 
-        this.tag = null;
-
-        const unit = this._unit;
-        const elf = unit.elf;
+        this.id = null;
+        const unit = this.parent;
+        const elf = this.elf;
 
         const abbreviationTable = elf.getSection(".debug_abbrev");
         if (!abbreviationTable) return;
@@ -191,10 +144,8 @@ class ElfDebugInformationEntry {
         const infoStruct = abbreviationTable.get(abbreviationCode);
         if (!infoStruct) return;
 
-        this.tag = infoStruct.tag;
-        this.tagName = Utils.getEnumKey(ElfTagNames, this.tag);
-
-        //console.log("TAG: " + this.tagName + "------------------------");
+        this.id = infoStruct.tag;
+        this.tagName = Utils.getEnumKey(DwarfTagIds, this.id);
 
         this.hasChildren = infoStruct.hasChildren;
 
@@ -202,23 +153,17 @@ class ElfDebugInformationEntry {
             this.attributes = new Map();
             for (const attributeSpec of infoStruct.attributes) {
 
-                /*
-                const deb0 = Utils.getEnumKey(ElfAttributeNames, attributeSpec.name);
-                const deb1 = Utils.getEnumKey(ElfFormCodes, attributeSpec.formCode);
-                console.log(deb0 + " / " + deb1);
-                */
-
                 const value = deserializer.readAttribute(attributeSpec.formCode, params);
                 const attribute = {
                     code: attributeSpec.name,
                     value: value
                 };
 
-                if (StoreDebugInfo) {
-                    attribute.name = Utils.getEnumKey(ElfAttributeNames, attributeSpec.name);
+                if (STORE_TEMP_VERBOSE_DEBUG_INFO) {
+                    attribute.name = Utils.getEnumKey(DwarfAttributeIds, attributeSpec.name);
                     attribute.formCode = attributeSpec.formCode;
-                    attribute.formCodeName = Utils.getEnumKey(ElfFormCodes, attributeSpec.formCode);
-                    //console.log("(" + name + " : " + Utils.getEnumKey(ElfFormCodes, attributeSpec.formCode) + ")");
+                    attribute.formCodeName = Utils.getEnumKey(DwarfFormCodes, attributeSpec.formCode);
+                    //console.log("(" + name + " : " + Utils.getEnumKey(DwarfFormCodes, attributeSpec.formCode) + ")");
                     //console.log(name + " = " + attribute.value);
                 }
 
@@ -227,13 +172,140 @@ class ElfDebugInformationEntry {
         }
     }
 
-    static fromStream(deserializer, unit) {
-        const entry = new ElfDebugInformationEntry(unit);
-        entry.#deserialize(deserializer);
-        if (null == entry.tag) return null; // end entry
-        return entry;
+    resolve() {
+        /*
+        if (this.id == DwarfTagIds.Variable) {
+            const name = this.getAttribute(DwarfAttributeIds.Name);
+            const linkName = this.getAttribute(DwarfAttributeIds.LinkageName);
+            if (name && linkName) {
+                console.log(name.value + " := " + linkName.value);
+            }
+        }
+        */
     }
 
+    static fromStream(deserializer, unit) {
+        const tag = new DwarfTag(unit);
+        tag.#deserialize(deserializer);
+        if (null == tag.id) return null; // end entry
+        return tag;
+    }
+
+}
+
+//-----------------------------------------------------------------------------------------------//
+// Dwarf Unit
+//-----------------------------------------------------------------------------------------------//
+
+class DwarfUnit extends DwarfItem {
+    constructor(parent) {
+        super(parent);
+        this.elf = (parent != null) ? parent.elf : null;
+        this.type = null;
+        this.header = null;
+        this.addressSize = null;
+        this.debugAbbrevOffset = null;
+        this.typeSignature = null;
+        this.typeOffset = null;
+        this.dwoId = null;
+    }
+
+    #deserialize(deserializer) {
+
+        const unitHeader = deserializer.readDwarfUnitHeader();
+        if (unitHeader.version != 5) {
+            throw("DWARF version != 5 is not supported");
+        }
+
+        this.header = unitHeader;
+        deserializer.setFormat(unitHeader.format);
+
+        this.#deserializeFields(deserializer);
+        this.#deserializeTags(deserializer);
+
+        deserializer.setOffset(unitHeader.endOfs); // skip unread data
+    }
+
+    #deserializeFields(deserializer) {
+        this.type = deserializer.read8();
+
+        switch (this.type) {
+            case DwarfUnitTypes.Compile: { // DW_UT_compile
+                this.addressSize = deserializer.read8();
+                this.debugAbbrevOffset = deserializer.readOffs();
+                break;
+            }
+            case DwarfUnitTypes.Type: { // DW_UT_type
+                this.addressSize = deserializer.read8();
+                this.debugAbbrevOffset = deserializer.readOffs();
+                this.typeSignature = deserializer.read64();
+                this.typeOffset = deserializer.readOffs();
+                break;
+            }
+            case DwarfUnitTypes.Partial: { // DW_UT_partial
+                this.addressSize = deserializer.read8();
+                this.debugAbbrevOffset = deserializer.readOffs();
+                break;
+            }
+            case DwarfUnitTypes.Skeleton: { // DW_UT_skeleton
+                this.addressSize = deserializer.read8();
+                this.debugAbbrevOffset = deserializer.readOffs();
+                this.dwoId = deserializer.read64();
+                break;
+            }
+            case DwarfUnitTypes.SplitCompile: { // DW_UT_split_compile
+                this.addressSize = deserializer.read8();
+                this.debugAbbrevOffset = deserializer.readOffs();
+                this.dwoId = deserializer.read64();
+                break;
+            }
+            case DwarfUnitTypes.SplitType: { // DW_UT_split_type
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    #deserializeTags(deserializer) {
+        const unitHeader = this.header;
+
+        if (deserializer.eof()) return;
+        if (deserializer.ofs >= unitHeader.endOfs) return;
+
+        let parentTag = null;
+        const stack = [];
+
+        while (deserializer.ofs < unitHeader.endOfs) {
+            let tag = DwarfTag.fromStream(deserializer, this);
+
+            if (tag == null) {
+                parentTag = stack.pop();
+            } else {
+                if (null != parentTag) {
+                    parentTag.addChild(tag);
+                } else {
+                    this.addChild(tag);
+                }
+
+                if (tag.hasChildren) {
+                    if (null != parentTag) {
+                        stack.push(parentTag);
+                    }
+                    parentTag = tag;
+                }
+
+                tag.resolve();
+            }
+        }
+    }
+
+    static fromStream(section, deserializer) {
+        const unit = new DwarfUnit(section);
+        unit.#deserialize(deserializer);
+        return unit;
+    }
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -241,5 +313,5 @@ class ElfDebugInformationEntry {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-    ElfDebugInfoSection: ElfDebugInfoSection
+    DwarfDebugInfoSection: DwarfDebugInfoSection
 }

@@ -75,6 +75,10 @@ let Formatter = {
     formatU32dec: function(value, plain) {
         if (plain) return value.toString();
         return value.toString() + " ($" + Utils.fmt(value.toString(16), 8) + ")";
+    },
+
+    formatMemory: function(mem, ofs, num, elementSize, prefix, separator) {
+        return Utils.formatMemory(mem, ofs, num, elementSize, prefix, separator);
     }
 }
 
