@@ -294,7 +294,9 @@ The general structure of the file is like this:
     "name": "example",
     "description": "Example project",
     "toolkit": "acme",
-    "main": "src/main.asm",
+    "sources": [
+        "src/main.asm"
+    ],
     "build": "release",
     "definitions": [],
     "includes": ["src/includes"]
@@ -441,10 +443,6 @@ Example C128 project for with Oscar64:
 }
 ```
 
-> main
-
-Can be used instead of 'sources' in simple projects. Defines the main source file which is compiled and used as the entry point for recursive dependency scanning.
-
 > build
 
 Defines either a `"release"` or `"debug"` build. Debug builds are the default if not specified.
@@ -500,6 +498,16 @@ Supported flags:
 > compiler
 
 Overrides the path to the compiler executable. The default path is specified in the settings.
+
+> format
+
+(Currently Oscar64-only) Defines the target format ('prg' or 'crt') and is an equivalent to the "-tf=" command line argument. Format can be `"prg"`, `"crt"`, `"crt8"` or `"crt16"`, default target format is prg.
+
+Example to build a .crt with the Oscar64 compiler:
+
+```
+"format": "crt"
+```
 
 > resources
 

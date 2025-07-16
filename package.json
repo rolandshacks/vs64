@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.6.0",
+	"version": "2.6.1",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -32,18 +32,17 @@
 	"dependencies": {
 		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "5.2.4",
-		"vscode-cpptools": "^6.1.0"
+		"fast-xml-parser": "5.2.5"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.24.0",
 		"@types/node": "22.15.30",
 		"@types/vscode": "^1.87.0",
-		"@vscode/vsce": "3.5.0",
+		"@vscode/vsce": "3.6.0",
 		"esbuild": "^0.25.2",
 		"eslint": "^9.24.0",
 		"globals": "^16.0.0",
-		"jest": "^29.7.0",
+		"jest": "^30.0.4",
 		"typescript": "^5.4.5"
 	},
 	"galleryBanner": {
