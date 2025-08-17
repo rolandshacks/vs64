@@ -495,9 +495,10 @@ class Project {
                 {
                     name: "C64",
                     compileCommands: "${workspaceFolder}/build/compile_commands.json",
+                    intellisenseMode: "clang-arm",
                     compilerPath: compilerPath,
-                    cppStandard: "c++20",
-                    cStandard: "c99"
+                    cppStandard: "c++23",
+                    cStandard: "c23"
                 }
             ],
             version: 4

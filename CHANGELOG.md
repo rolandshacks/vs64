@@ -1,6 +1,13 @@
 # Change Log
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.6.3 Minor Update
+
+- Added more PETSCII control codes (cbm-, etc.)
+- Fixed special cases for BASIC parsing ("THENFOR")
+- Bug-fixes and minor improvements
+- Upgraded embedded Python for Windows to version 3.13.7
+
 ## 2.6.2 Minor Update
 
 - Fixed bug in language type handling in document symbol provider

@@ -39,9 +39,9 @@ class CharsetResource(Resource):
                   _name_: Optional[str]=None):
         """Convert charset resource data to string."""
 
-        data_size = len(self.charset_data)
-
         if not self.charset_data: return ""
+
+        data_size = len(self.charset_data)
 
         num_chars = (data_size >> 3)
         if num_chars < 1: return ""
