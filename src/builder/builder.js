@@ -183,12 +183,12 @@ class Build {
         ];
 
         logger.when(LogLevel.Trace, () => {
-            //args.push("-d");
-            //args.push("keepdepfile");
+            args.push("-d");
+            args.push("keepdepfile");
         });
 
         logger.notWhen(LogLevel.Debug, () => {
-            //args.push("--quiet");
+            args.push("--quiet");
         });
 
         let proc = null;
