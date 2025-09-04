@@ -161,7 +161,7 @@ class Project {
         } else if (toolkit.isBasic) {
             this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
         } else if (toolkit.isTmpx) {
-            this._outdebug = path.resolve(this._builddir, this._name + ".report");
+             this._outdebug = path.resolve(this._builddir, this._name + ".tmpxreport");
         }
 
         this._outputs = [

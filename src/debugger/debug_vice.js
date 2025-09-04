@@ -1605,6 +1605,14 @@ class ViceConnector extends DebugInterface {
         await vice.cmdReset();
         await vice.cmdAutostart(filename, true);
 
+        //Temporary monitor enabling. Better then nothing until I get tmpx_debug_info.js to work.
+        const fs = require('fs');
+        let reportNameParts = filename.split(".");
+        reportNameParts.pop();
+        const reportName = reportNameParts.join(".") + ".tmpxreport";
+        if(fs.existsSync(reportName)){
+            vice.disconnect();
+        }
     }
 
     getCpuState() {
@@ -1615,7 +1623,6 @@ class ViceConnector extends DebugInterface {
 
         return vice.getState();
     }
-
 }
 
 //-----------------------------------------------------------------------------------------------//
