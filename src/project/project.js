@@ -555,6 +555,7 @@ class Project {
 
     #writeTmp06EditorRules() {
         const settingsFilePath = path.join(this.basedir, ".vscode", "settings.json");
+        //Todo do something about magic numbers
         const rulers = [31, 40, 80];
     fs.readFile(settingsFilePath, "utf8", (err, text) => {
         if (err) {

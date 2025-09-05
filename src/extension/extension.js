@@ -60,6 +60,7 @@ class Extension {
         this._languageFeatureProvider = null;
         this._statusBar = null;
         this._d64FileSystemProvider = null;
+        this._tmpxDiagnostics = null;
     }
 
     isActivated() {
@@ -254,6 +255,21 @@ class Extension {
             }));
         }
 
+        //Register tmpx specifics
+        //TODO do something about magic numbers
+        const maxCodeLineLength = 31;
+        const maxCommentLineLength = 40;
+        if(this._settings.tmp06CompatibilityMode){
+            this._tmpxDiagnostics = vscode.languages.createDiagnosticCollection('vs64-tmpx');
+            subscriptions.push(this._tmpxDiagnostics);
+                vscode.workspace.textDocuments.forEach(document => {
+                thisInstance.placeTmp06CompatibilityWarnings(document, maxCodeLineLength, maxCommentLineLength);
+            });
+            vscode.workspace.onDidChangeTextDocument(event => {
+                thisInstance.placeTmp06CompatibilityWarnings(event.document, maxCodeLineLength, maxCommentLineLength);
+            });
+        }
+
         // register task provider
         {
             this._taskProvider = new TaskProvider(
@@ -290,6 +306,7 @@ class Extension {
 
             vscode.window.onDidChangeActiveTextEditor(function(textEditor) {
                 thisInstance.onDidChangeActiveTextEditor(textEditor);
+                
             });
 
             // start debugger adapter
@@ -859,6 +876,27 @@ class Extension {
         }
     }
 
+    placeTmp06CompatibilityWarnings(document, maxCodeLineLength, maxCommentLineLength) {
+        if (document.languageId != "asm") return;
+        const diagnostics = []
+        for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
+            const lineStart = new vscode.Position(lineIndex, 0);
+            const line = document.lineAt(lineIndex);
+            const lineLength = line.text.length;
+            let maxLineLength = maxCodeLineLength;
+            if (line.text.startsWith(';')) {
+                maxLineLength = maxCommentLineLength;
+            } else if (lineLength > maxLineLength) {
+                const lineEnd = new vscode.Position(lineIndex, lineLength);
+                const range = new vscode.Range(lineStart, lineEnd);
+                const diagnostic = new vscode.Diagnostic(range, "Line exceeds " + maxLineLength + " characters, will not display correctly in Turbo Macro Pro 06", vscode.DiagnosticSeverity.Warning);
+                diagnostic.source = 'vs64-tmpx';
+                diagnostics.push(diagnostic);
+            }
+            
+        }
+        this._tmpxDiagnostics.set(document.uri, diagnostics);
+    }
 }
 
 //-----------------------------------------------------------------------------------------------//
@@ -866,5 +904,6 @@ class Extension {
 //-----------------------------------------------------------------------------------------------//
 
 module.exports = {
-	Extension : Extension
+    Extension: Extension
 };
+
