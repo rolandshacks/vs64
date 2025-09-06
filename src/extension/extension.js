@@ -886,7 +886,7 @@ class Extension {
             let maxLineLength = maxCodeLineLength;
             if (line.text.startsWith(';')) {
                 maxLineLength = maxCommentLineLength;
-            } else if (lineLength > maxLineLength) {
+            } if (lineLength > maxLineLength) {
                 const lineEnd = new vscode.Position(lineIndex, lineLength);
                 const range = new vscode.Range(lineStart, lineEnd);
                 const diagnostic = new vscode.Diagnostic(range, "Line exceeds " + maxLineLength + " characters, will not display correctly in Turbo Macro Pro 06", vscode.DiagnosticSeverity.Warning);
