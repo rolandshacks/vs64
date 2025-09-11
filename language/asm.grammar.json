@@ -318,19 +318,75 @@
 		"tmpx": {
 			"patterns": [
 				{
+					"include": "#tmpx-preprocessor"
+				},{
 					"include": "#tmpx-directives"
 				},{
-					"include": "#tmpx-bastext"
-				},{
 					"include": "#tmpx-labels-macros"
+				},{
+					"include": "#tmpx-bastext"
 				}
 			]
 		},
-
+		"tmpx-preprocessor": {
+			"patterns": [
+				{
+					"include": "#tmpx-preprocessor-keywords"
+				},{
+					"include": "#tmpx-preprocessor-flow-control"
+				},{
+					"include": "#tmpx-preprocessor-io"
+				}
+			]
+		},
+		"tmpx-preprocessor-keywords": {
+			"patterns": [
+				{
+					"match": "\\.var\\b",
+					"name": "meta.preprocessor"
+				}
+			]
+		},
+		"tmpx-preprocessor-flow-control": {
+			"patterns": [
+				{
+					"match": "\\.(?i:if(?:n?def|ne|eq|pl|mi)?|end(?:if)?|lbl|goto)\\b",
+					"name": "meta.diff.header"
+				}
+			]
+		},
+		"tmpx-preprocessor-io": {
+			"patterns": [
+				{
+					"match": "\\.(?i:binary|include)\\b",
+					"name": "meta.preprocessor.io.input"
+				},{
+					"match": "\\.(?i:pro(?:n|ff)|(?:hide|show)mac)\\b",
+					"name": "meta.preprocessor.io.output"
+				}
+			]
+		},
 		"tmpx-directives": {
 			"patterns": [
 				{
-					"match": "\\.(?i)[\\s]*\\b(screen|null|text|include|repeat|ifeq|ifne|ifmi|ifdef|ifdef|ifndef|endif|text|lbl|block|bend|segment|offs|pron|proff|hidemac|showmac|eor|end|bounce)\\b",
+					"include": "#tmpx-directives-data"
+				},{
+					"include": "#tmpx-directives-text"
+				}
+			]
+		},
+		"tmpx-directives-data": {
+			"patterns": [
+				{
+					"match": "\\.[\\s]*\\b(?i:byte|bounce|eor|repeat|rta|word)\\b",
+					"name": "keyword.instructions"
+				}
+			]
+		},
+		"tmpx-directives-text": {
+			"patterns": [
+				{
+					"match": "\\.[\\s]*\\b(?i:null|screen|shift|text)\\b",
 					"name": "keyword.instructions"
 				}
 			]
