@@ -6,7 +6,16 @@
 			"include": "#generic"
 		},
 		{
+			"include": "#acme"
+		},
+		{
+			"include": "#tmpx"
+		},
+		{
 			"include": "#llvm"
+		},
+		{
+			"include": "#kick"
 		}
 	],
 
@@ -168,6 +177,343 @@
 						}
 					},
 					"match": "(\\*=)"
+				}
+			]
+		},
+
+		"acme": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor"
+				},
+				{
+					"include": "#acme-directives"
+				}
+			]
+		},
+
+		"acme-preprocessor": {
+			"patterns": [
+				{
+					"include": "#acme-preprocessor-keywords"
+				},
+				{
+					"include": "#acme-preprocessor-flow-control"
+				},
+				{
+					"include": "#acme-preprocessor-io"
+				}
+            ]
+		},
+		"acme-preprocessor-keywords": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(cpu|al|as|rl|rs)\\b"
+				}
+			]
+		},
+		"acme-preprocessor-flow-control": {
+			"patterns": [
+				{
+					"name": "meta.diff.header",
+					"match": "\\!(if|ifdef|for|do|warn|error|serious|endoffile|pseudopc)\\b"
+				}
+			]
+		},
+		"acme-preprocessor-io": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor.io",
+					"match": "\\!(binary|bin)\\b"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.output"
+						},
+						"2": {
+							"name": "string.quoted.double.untitled"
+						},
+						"3": {
+							"name": "meta.preprocessor.io.format"
+						}
+					},
+					"match": "(\\!to)\\s*(\\\"[^\"]+\\\")\\s*,\\s*([a-zA-Z]+)"
+				},
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.input"
+						},
+						"2": {
+							"name": "string.quoted.double.library.name"
+						}
+					},
+					"match": "(\\!source|\\!src)\\s*([\\\"<][^\\\">]+[\\\">])"
+				}
+			]
+		},
+
+		"acme-directives": {
+			"patterns": [
+				{
+					"include": "#acme-directives-macro-declaration"
+				},
+				{
+					"include": "#acme-directives-macro-call"
+				},
+				{
+					"include": "#acme-directives-scope-declaration"
+				},
+				{
+					"include": "#acme-directives-data"
+				},
+				{
+					"include": "#acme-directives-text"
+				}
+            ]
+		},
+		"acme-directives-macro-declaration": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\!(macro)\\b"
+				}
+			]
+		},
+		"acme-directives-macro-call": {
+			"patterns": [
+				{
+					"name": "entity.name.function.macro",
+					"match": "\\+(\\w+)\\b"
+				}
+			]
+		},
+		"acme-directives-scope-declaration": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "\\!(addr|set|zone)\\b"
+				}
+			]
+		},
+		"acme-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(8|08|by|byte|16|24|32|wo|word|align|fill|fi|hex|h|skip)\\b"
+				}
+			]
+		},
+		"acme-directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\!(?i)[\\s]*\\b(ct|convtab|pet|raw|scr|scrxor|tx|text|Text)\\b"
+				}
+			]
+		},
+
+		"tmpx": {
+			"patterns": [
+				{
+					"include": "#tmpx-preprocessor"
+				},{
+					"include": "#tmpx-directives"
+				},{
+					"include": "#tmpx-label-macro-call"
+				},{
+					"include": "#tmpx-bastext"
+				}
+			]
+		},
+		"tmpx-preprocessor": {
+			"patterns": [
+				{
+					"include": "#tmpx-preprocessor-keywords"
+				},{
+					"include": "#tmpx-preprocessor-flow-control"
+				},{
+					"include": "#tmpx-preprocessor-io"
+				}
+			]
+		},
+		"tmpx-preprocessor-keywords": {
+			"patterns": [
+				{
+					"match": "\\.(?i:var|offs)\\b",
+					"name": "meta.preprocessor"
+				}
+			]
+		},
+		"tmpx-preprocessor-flow-control": {
+			"patterns": [
+				{
+					"match": "\\.(?i:if(?:n?def|ne|eq|pl|mi)?|end(?:if)?|lbl|goto)\\b",
+					"name": "meta.diff.header"
+				}
+			]
+		},
+		"tmpx-preprocessor-io": {
+			"patterns": [
+				{
+					"match": "\\.(?i:binary|include)\\b",
+					"name": "meta.preprocessor.io.input"
+				},{
+					"match": "\\.(?i:pro(?:n|ff)|(?:hide|show)mac)\\b",
+					"name": "meta.preprocessor.io.output"
+				}
+			]
+		},
+		"tmpx-directives": {
+			"patterns": [
+				{
+					"include": "#tmpx-directives-macro-declaration"
+				},{
+					"include": "#tmpx-directives-scope-declaration"
+				},{
+					"include": "#tmpx-directives-data"
+				},{
+					"include": "#tmpx-directives-text"
+				}
+			]
+		},
+		"tmpx-directives-macro-declaration": {
+			"patterns": [
+				{
+					"match": "\\.(?i:macro|segment|endm)\\b",
+					"name": "entity.name.function.macro"
+				}
+			]
+		},
+		"tmpx-directives-scope-declaration": {
+			"patterns": [
+				{
+					"match": "\\.(?i:block|bend)\\b",
+					"name": "meta.preprocessor"
+				}
+			]
+		},
+		"tmpx-directives-data": {
+			"patterns": [
+				{
+					"match": "\\.[\\s]*\\b(?i:byte|bounce|eor|repeat|rta|word)\\b",
+					"name": "keyword.instructions"
+				}
+			]
+		},
+		"tmpx-directives-text": {
+			"patterns": [
+				{
+					"match": "\\.[\\s]*\\b(?i:null|screen|shift|text)\\b",
+					"name": "keyword.instructions"
+				}
+			]
+		},
+		"tmpx-bastext": {
+			"patterns": [
+				{
+					"name": "constant",
+					"match": "\\{(?i)(\\$[0-9a-fA-F]{2})|(\\d{3})|(arrow left|black|blue|brown|clear|cm (?:a(?:sterisk)?|p(?:ound)?|[b-oq-z@+-])|ct (?:[a-df-ln-pu-z])|cyan|dark gray|delete|down|f[1-8]|gray|green|home|left|light (?:green|blue|gray)|null|orange|pi|pink|pound|purple|red|return|reverse (?:on|off)|right|sh (?:[@+-]|asterisk|pound|space)|space|up|white|yellow)\\}",
+					"captures": {
+						"1": {
+							"name": "constant.numeric.hex"
+						},
+						"2": {
+							"name": "constant.numeric.decimal"
+						},
+						"3": {
+							"name": "constant.character"
+						}
+					}
+				}
+			]
+		},
+		"tmpx-label-macro-call": {
+			"patterns": [
+				{
+					"match": "^\\s*(?i)(?:([_a-z][_a-z0-9]*)\\s*)?(#[_a-z][_a-z0-9]*)\\b",
+					"captures": {
+						"1": {
+							"name": "emphasis"
+						},
+						"2": {
+							"name": "entity.name.function.macro"		
+						}
+					}
+				},{
+					"match": "\\b(?i)[_a-z][_a-z0-9]*\\b",
+					"name": "emphasis"
+				}
+			]
+		},
+
+		"kick": {
+			"patterns": [
+				{
+					"include": "#kick-preprocessor"
+				},
+				{
+					"include": "#kick-directives"
+				}
+			]
+		},
+
+		"kick-preprocessor": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "#(define|elif|else|endif|if|import|importif|importonce|undef)\\b"
+				}
+			]
+		},
+
+		"kick-directives": {
+			"patterns": [
+				{
+					"include": "#kick-directives-flow-control"
+				},
+				{
+					"include": "#kick-directives-asm-control"
+				},
+				{
+					"include": "#kick-directives-data"
+				},
+				{
+					"include": "#kick-directives-text"
+				}
+            ]
+		},
+		"kick-directives-flow-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(for|if|while|return)\\b"
+				}
+			]
+		},
+		"kick-directives-asm-control": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(align|assert|asserterror|break|cpu|define|disk|encoding|error|errorif|eval|file|filemodify|filenamespace|function|import|importonce|label|lohifill|macro|memblock|modify|namespace|pc|plugin|print|printnow|pseudocommand|pseudopc|segment|segmentdef|segmentout|zp)\\b"
+				}
+			]
+		},
+		"kick-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(by|byte|const|dw|dword|enum|fill|fillword|struct|var|wo|word)\\b"
+				}
+			]
+		},
+		"kick-directives-text": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "\\.(?i)[\\s]*\\b(te|text|)\\b"
 				}
 			]
 		},

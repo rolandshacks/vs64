@@ -389,6 +389,10 @@ class ParserBase {
         return (this._options && this._options.toolkit && this._options.toolkit.isAcme);
     }
 
+    get isTmpx() {
+        return (this._options && this._options.toolkit && this._options.toolkit.isTmpx);
+    }
+
     get isLLVM() {
         return (this._options && this._options.toolkit && this._options.toolkit.isLLVM);
     }

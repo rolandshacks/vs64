@@ -23,6 +23,7 @@ const { Scanner } = require('project/scanner');
 const { Toolkit } = require('project/toolkit');
 const { Ninja, NinjaArgs } = require('project/ninja');
 const { ProjectItem, TranslationList } = require('project/project_types');
+const { json } = require('stream/consumers');
 
 const logger = new Logger("Project");
 
@@ -171,6 +172,9 @@ class Project {
             case "basic":
                 this._outdebug = path.resolve(this._builddir, this._name + ".bmap");
                 break;
+            case "tmpx":
+                this._outdebug = path.resolve(this._builddir, this._name + ".tmpxreport");
+                break;
             default:
                 break;
         }
@@ -196,11 +200,11 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
-        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic')"); }
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'llvm', 'cc65', 'oscar64', 'basic' or 'tmpx')"); }
         const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "llvm", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
-            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic'");
+        if (["acme", "kick", "llvm", "cc65", "oscar64", "basic", "tmpx"].indexOf(toolkitId) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'cc65', 'oscar64', 'basic', 'tmpx'");
         }
 
         this._toolkit = Toolkit.fromName(toolkitId);
@@ -252,6 +256,11 @@ class Project {
                 logger.warn("KickAssembler does not support more than one input file. Additional assembler sources from the project file will be ignored.");
             }
 
+        }else if (toolkit.isTmpx) {
+            const asmSources = this.querySourceByExtension(Constants.AsmFileFilter);
+            if (asmSources && asmSources.length > 1) {
+                logger.warn("Tmpx assembler does not support more than one input file directly. Please add includes via .include statements. Additional assembler sources from the project file will be ignored.");
+            }
         }
 
         this._description = data.description||"";
@@ -571,6 +580,44 @@ class Project {
         }
     }
 
+    #writeTmp06EditorRules() {
+        const settingsFilePath = path.join(this.basedir, ".vscode", "settings.json");
+        //Todo do something about magic numbers
+        const rulers = [31, 40, 80];
+    fs.readFile(settingsFilePath, "utf8", (err, text) => {
+        if (err) {
+            if (err.code === "ENOENT") {
+                const settingsObject = { editor: { rulers: rulers } };
+                const settingsText = JSON.stringify(settingsObject, null, 4);
+                fs.writeFile(settingsFilePath, settingsText, "utf8", (writeErr) => {
+                    if (writeErr) {
+                        console.error("Failed to write settings.json:", writeErr);
+                    }
+                });
+            } else {
+                console.error("Failed to read settings.json:", err);
+            }
+            return;
+        }
+
+        try {
+            const settingsObject = JSON.parse(text);
+            if (!settingsObject.editor) {
+                settingsObject.editor = {};
+            }
+            settingsObject.editor.rulers = rulers;
+            const settingsText = JSON.stringify(settingsObject, null, 4);
+            fs.writeFile(settingsFilePath, settingsText, "utf8", (writeErr) => {
+                if (writeErr) {
+                    console.error("Failed to write settings.json:", writeErr);
+                }
+            });
+        } catch (parseErr) {
+            console.error("Failed to parse settings.json:", parseErr);
+        }
+    });
+    }
+
     #getCompilerExecutable(filename) {
 
         const toolkit = this.toolkit;
@@ -862,6 +909,10 @@ class Project {
             });
 
             depFiles.add(thisInstance.outfile, dependencies);
+        } else if (toolkit.isTmpx) {
+            // generate one dependency list for all compilation units
+            const dependencies = asmFiles.clone();
+            
         }
 
         const buildTree = {
@@ -893,7 +944,10 @@ class Project {
             this.#writeCompileCommands();
             this.#writeCppProperties();
         }
-
+        if (toolkit.isTmpx && settings.tmp06CompatibilityMode) {
+            this.#writeTmp06EditorRules();
+        }
+        
         const buildFile = this.buildfile;
 
         if (!forcedOverwrite) {
@@ -1132,6 +1186,39 @@ class Project {
 
             script.push("");
 
+        } else if (toolkit.isTmpx) {
+            script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.tmpxExecutable)));
+            script.push("");
+            let cpu = "6510";
+            if (project.machine) {
+                cpu = (project.machine != "none") ? project.machine : null;
+            }
+
+            const flags = new NinjaArgs(
+                "--msvc",
+                "--maxerrors", "99"
+            );
+            let input_path = path.join("$basedir", "src", "main.asm");
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule asm");
+            script.push("   depfile = $out.d");
+            script.push("   deps = gcc");
+            script.push('   command = $asm_exe -i $in -o $out -l "$dbg_out"');
+            script.push("");
+
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
+
+            script.push("");
+
+            script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()))
         } else if (toolkit.isCC65) {
 
             const flags = new NinjaArgs();

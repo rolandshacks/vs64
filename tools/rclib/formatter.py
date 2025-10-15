@@ -24,6 +24,7 @@ class OutputFormatVariant(Enum):
     NONE = 0
     ACME = 1
     KICK = 2
+    TMPX = 3
 
 #############################################################################
 # Output Formatters
@@ -269,7 +270,16 @@ class AsmFormatter(BaseFormatter):
             self.constant_value = '!set {0} = {1}\n'
             self.type_name_byte = '!byte'
             self.type_name_word = '!word'
-
+        elif self.format_variant is OutputFormatVariant.TMPX:
+            self.comment_begin = ';;'
+            self.commentline_char = ';'
+            self.bytearray_begin = '{0}\n'
+            self.bytearray_linebegin = '    .byte '
+            self.bytearray_end = '{0}_end\n'
+            self.label_fmt = '{0}'
+            self.constant_value = '{0} = {1}\n'
+            self.type_name_byte = '.byte'
+            self.type_name_word = '.word'
         else:
             self.comment_begin = '//'
             self.commentline_char = '/'
@@ -325,6 +335,8 @@ class FormatterFactory:
             formatter = AsmFormatter(OutputFormatVariant.ACME)
         elif format_str == "kick":
             formatter = AsmFormatter(OutputFormatVariant.KICK)
+        elif format_str == "tmpx":
+            formatter = AsmFormatter(OutputFormatVariant.TMPX)
         elif not format_str:
             formatter = BaseFormatter(OutputFormat.NONE)
         else:

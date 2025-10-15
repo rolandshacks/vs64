@@ -196,6 +196,7 @@ class Settings {
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
         this.setupKickAssembler(workspaceConfig);
+        this.setupTmpx(workspaceConfig);
         this.setupLLVM(workspaceConfig);
         this.setupCC65(workspaceConfig);
         this.setupOscar64(workspaceConfig);
@@ -268,6 +269,22 @@ class Settings {
         } else {
             this.kickExecutable = "KickAss.jar";
         }
+    }
+
+    setupTmpx(workspaceConfig) {
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.tmpxInstallDir"));
+        this.tmp06CompatibilityMode = workspaceConfig.get("vs64.tmp06CompatibilityMode");
+        if (installDir) {
+             if (fs.existsSync(path.join(installDir, "tmpx.exe"))) {
+                this.tmpxExecutable = path.resolve(installDir, "tmpx.exe");
+            } else {
+                this.tmpxExecutable = path.resolve(installDir, "tmpx");
+            }
+        }else {
+            this.tmpxExecutable = "tmpx"
+        }
+        //To be removed when tmpx output format is updated and wrapper no longer required.
+        this.tmpxExecutable = this.pythonExecutable + " " + path.resolve(this.extensionPath, "tools", "tmpw.py") + " " + this.tmpxExecutable;
     }
 
     setupCC65(workspaceConfig) {

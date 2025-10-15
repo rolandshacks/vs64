@@ -24,6 +24,8 @@ const { Utils } = require('utilities/utils');
 const { Project } = require('project/project');
 const { Settings } = require('settings/settings');
 const { Build } = require('builder/builder');
+const toolkit = require('../src/project/toolkit');
+const { includes } = require('../src/emulator/roms/kernal');
 
 //-----------------------------------------------------------------------------------------------//
 // Helpers
@@ -109,6 +111,26 @@ describe('project', () => {
         expect(buildTree.obj.get(2).from.substr(-7)).toBe("asm.asm");
 
 
+    });
+
+    test("project_construct_tmpx", () => {
+        const config = {
+            name: "name",
+            toolkit: "tmpx",
+            sources: [
+                "main.asm"
+            ]
+        };
+
+        const project = setupProject(config);
+
+        expect(project.isValid()).toBeTruthy();
+        expect(project.name).toBe("name");
+        expect(project.toolkit.name).toBe("tmpx");
+
+        project.updateBuildTree();
+        const buildTree = project.buildTree;
+        expect(buildTree).toBeTruthy();
     });
 
     test("project_construct_acme", () => {
@@ -220,6 +242,25 @@ describe('project', () => {
         expect(project.isValid()).toBeTruthy();
         generateProjectFiles(project);
 
+    });
+
+    test.only("project_build_file_tmpx", () => {
+        const config = {
+            name: "tmpxproject",
+            toolkit: "tmpx",
+            sources: [
+                "src/main.asm",
+                "resources/res.raw"
+            ],
+
+            includes: [
+                "inc folder/aaa/bbb",
+                "second folder/ccc"
+            ]
+        };
+        const project = setupProject(config);
+        expect(project.isValid()).toBeTruthy();
+        generateProjectFiles(project);
     });
 
     test("project_build_file_kick", () => {

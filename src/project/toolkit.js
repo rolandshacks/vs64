@@ -21,13 +21,15 @@ class Toolkit {
 
         this.isAcme = (name == "acme");
         this.isKick = (name == "kick");
+        this.isTmpx = (name == "tmpx");
         this.isCC65 = (name == "cc65");
         this.isOscar64 = (name == "oscar64");
         this.isLLVM = (name == "llvm");
         this.isBasic = (name == "basic");
+        this.isTmpx = (name == "tmpx");
 
         this.isCpp = (this.isLLVM || this.isCC65 || this.isOscar64);
-        this.isAssembler = (this.isAcme || this.isKick);
+        this.isAssembler = (this.isAcme || this.isKick || this.txmpx);
 
         this.hasProblemMatcher = (this.isOscar64 || this.isKick);
 
