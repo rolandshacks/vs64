@@ -59,6 +59,8 @@
 		"c64",
 		"commodore",
 		"assembler",
+		"tmpx",
+		"turbo macro pro",
 		"acme",
 		"kickassembler",
 		"llvm",
@@ -108,8 +110,18 @@
 				"category": "VS64"
 			},
 			{
+				"command": "vs64.createProjectTmpx",
+				"title": "Create TMPx Assembler Project",
+				"category": "VS64"
+			},
+			{
 				"command": "vs64.createProjectKick",
 				"title": "Create KickAssembler Project",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.createProjectTmpx",
+				"title": "Create TMPx Assembler Project",
 				"category": "VS64"
 			},
 			{
@@ -196,6 +208,14 @@
 						]
 					},
 					{
+						"id": "setup_tmpx",
+						"title": "Setup Turbo Macro Pro X by Style",
+						"description": "In order to use Trubo Macro Pro, please download, install and add the Turbo Macro Pro install directory to the VS64 preferences.\n\n[Visit TMPx Home Page](https://turbo.style64.org/docs/table-of-contents)\n\n[Customize TMPx Setup](command:vs64.showSettings?%22tmpx%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/tmpx.md"
+						}
+					},
+					{
 						"id": "setup_cc65",
 						"title": "Setup CC65 C-Compiler",
 						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Customize CC65 Setup](command:vs64.showSettings?%22cc65%22)",
@@ -240,7 +260,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create TmpX Assembler Project](command:vs64.createProjectTmpx)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -435,6 +455,16 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to KickAssembler installation"
+					},
+					"vs64.tmpxInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to tmpx installation"
+					},
+					"vs64.tmp06CompatibilityMode": {
+						"type": "boolean",
+						"default": false,
+						"description": "Enable TMP06 compatibility mode"
 					},
 					"vs64.llvmInstallDir": {
 						"type": "string",

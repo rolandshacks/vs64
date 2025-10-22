@@ -1,0 +1,11 @@
+{
+    "name": "example",
+    "description": "Example project",
+    "toolkit": "tmpx",
+    "sources": [
+        "src/main.asm"
+    ],
+    "build": "debug",
+    "definitions": [],
+    "includes": []
+}

@@ -39,6 +39,12 @@ const AsmGrammar = {
         "define", "elif", "else", "endif", "if", "import", "importif", "importonce", "undef"
     ],
 
+    tmpxPseudoOpcodes: [
+        "byte", "text", "screen", "include", "binary", "macro", "endm", "block", "bend", "var", "word", "rta", "null",
+        "shift", "repeat", "if", "ifne", "ifeq", "ifpl", "ifmi", "ifdef", "ifndef", "endif", "lbl", "goto",
+        "segment", "offs", "pron", "proff", "hidemac", "showmac", ".eor", "end","bounce"
+    ],
+
     fuzzySearch: function(query) {
 
         if (!query || query.length < 1) return null;
@@ -53,14 +59,15 @@ const AsmGrammar = {
                 }
             }
         } else if  (query.charCodeAt(0) == CharCode.Period) {
-            for (let item of AsmGrammar.kickAssemblerDirectives) {
+            //Not ideal because now both tmpx and kickass show suggestions they do not support. Gotta figure out what assembler we are using somehow.
+            for (let item of new Set(AsmGrammar.kickAssemblerDirectives.concat(AsmGrammar.tmpxPseudoOpcodes))) {
                 const token = "." + item;
                 if (token.startsWith(query)) {
                     items.push(token);
                 }
             }
         } else if  (query.charCodeAt(0) == CharCode.NumberSign) {
-            for (let item of AsmGrammar.kickPreprocessorDirectives) {
+            for (let item of AsmGrammar.kickPreprocessorDirective) {
                 const token = "#" + item;
                 if (token.startsWith(query)) {
                     items.push(token);
@@ -95,6 +102,7 @@ class AsmParser extends ParserBase {
 
         let isKickAss = this.isKickAss;
         let isAcme = this.isAcme;
+        let isTmpx = this.isTmpx;
         let isLLVM = this.isLLVM;
 
         let tokensPerLineOfs = -1;
@@ -154,11 +162,11 @@ class AsmParser extends ParserBase {
 
                 tokens.push(new Token(TokenType.Preprocessor, src, range));
 
-            } else if (c == CharCode.Plus && c2 == CharCode.Plus) { // ++ label
+            } else if (c == CharCode.Plus && c2 == CharCode.Plus && isAcme) { // ++ label
                 it.next(); // skip ++
                 it.next();
             } else if (
-                (c == CharCode.Period && isAcme) ||
+                (c == CharCode.Period && (isAcme || isTmpx)) ||
                 (c == CharCode.Exclamation && isKickAss) ||
                 c == CharCode.Underscore ||
                 ParserHelper.isAlpha(c) ||
@@ -180,6 +188,11 @@ class AsmParser extends ParserBase {
                         // just a '+' operator in front of identifier
                         it.next();
                     }
+                } else if (isTmpx && c == CharCode.NumberSign && ParserHelper.isSymbolChar(c2)){
+                    isReference = true;
+                    const prefixRange = new Range(it.ofs, it.row, itcol);
+                    prefixRange.inc(); it.next();
+                    tokens.push(new Token(TokenType.Reference), src, prefixRange);
                 } else if (isKickAss && c == CharCode.Exclamation && ParserHelper.isSymbolChar(c2)) {
                     if (tokensPerLineCount > 0) {
                         // !label reference
@@ -204,7 +217,8 @@ class AsmParser extends ParserBase {
 
             } else if (
                 (c == CharCode.Exclamation && isAcme) ||
-                (c == CharCode.Period && (isKickAss || isLLVM))) { // directive or macro
+                (c == CharCode.Period && (isKickAss || isLLVM))
+                (c == CharCode.Hashtag && isTmpx)) { // directive or macro
 
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
@@ -308,6 +322,7 @@ class AsmParser extends ParserBase {
         const isKickAss = this.isKickAss;
         const isAcme = this.isAcme;
         const isLLVM = this.isLLVM;
+        const isTmpx = this.isTmpx;
 
         const ofs = tokenOffset;
         const count = tokenCount;
@@ -356,6 +371,12 @@ class AsmParser extends ParserBase {
             } else if (isLLVM) {
                 if (macroCommand == ".macro" && paramToken.type == TokenType.Identifier) {
                     statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                }
+            } else if (isTmpx) {
+                if (macroCommand == ".macro" && paramToken == TokenType.Identifier){
+                    statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                }else if (macroCommand == ".include" && paramToken == TokenType.String){
+                    statement = new Statement(StatementType.Include, null, paramToken, token, ofs, count);
                 }
             }
 
