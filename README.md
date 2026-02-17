@@ -118,20 +118,6 @@ To enable the BASIC extensions, just add the compiler argument '-t' or '--tsb' t
 "args": ["--tsb"]
 ```
 
-### Crunching BASIC Code
-
-The basic compiler supports crunching of BASIC code:
-
-* Removal of spaces
-* Line number re-ordering
-* Removal of REM statements
-
-To enable this feature, just set the build mode in the project file to "release":
-
-```
-"build": "release"
-```
-
 ### Upper/Lower Case Character Set
 
 In order to properly use the different ROM character sets in BASIC programs, remapping of upper/lower case character codes is needed. This can be achieved in two different ways:
@@ -234,6 +220,79 @@ A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex
 For more details, please refer to the PETCAT user manual. In addition, control codes as seen in Compute! magazine are supported.  This includes repeating control codes of the format `{count code}`.  For example, `{12 right}`.  Compute! also supported a number of other aliases for the control codes shown above that are supported including:
 
 >{down}, {right}, {spaces}, {up}, {left}, {shift-space}, {rvs}, {off}
+
+### Crunched BASIC Code
+
+The basic compiler supports crunching of BASIC code:
+
+* Removal of spaces
+* Line number re-ordering
+* Removal of REM statements
+
+To enable this feature, just set the build mode in the project file to "release":
+
+```
+"build": "release"
+```
+
+### Formatted BASIC Code
+
+The BASIC compiler supports formatting for readable, maintainable code on the commodore 64:
+
+* `#linestep N` - Sets the increment between auto-generated line numbers (default: 1)
+* `#lineskip N` - Jumps to the next multiple of N for the next line number
+* Empty colon lines (`:`) - Creates visual spacing in your code
+
+These directives work when NOT in crunch mode. If you want formatted output, use "debug" build mode:
+
+```
+"build": "debug"
+```
+In "release" mode (crunched), these directives are ignored.
+
+Example of a highly formatted program.
+```
+#lowercase
+#linestep 10
+
+50 rem *** basic program ***
+:
+:
+
+mainloop:
+#lineskip 500
+rem *** main loop ***
+PRINT "hello world!     ";
+gosub flashborder:
+goto mainloop
+:
+:
+
+flashborder:
+#lineskip 500
+rem *** flash border ***
+poke 53280,rnd(0)*255
+return
+:
+:
+```
+Result when compiled (non-crunched "debug" mode) and listed on the Commodore 64
+```
+50 REM *** BASIC PROGRAM ***
+60 :
+70 :
+500 REM *** MAIN LOOP ***
+510 PRINT "HELLO WORLD!     ";
+520 GOSUB 1000
+530 GOTO 500
+540 :
+550 :
+1000 REM *** FLASH BORDER ***
+1010 POKE 53280,RND(0)*255
+1020 RETURN
+1030 :
+1040 :
+```
 
 ### Resource Compilation
 

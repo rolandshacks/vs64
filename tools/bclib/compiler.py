@@ -338,6 +338,8 @@ class BasicCompiler:
         self.labels = {}
         self.modules = None
         self.repeat_pattern = re.compile("(\\d+)\\s(\\w+)")
+        self.linestep = 1
+        self.next_multiple = -1
 
         if self.options.feature_tsb:
             all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(
@@ -513,6 +515,34 @@ class BasicCompiler:
         elif directive == "lower" or directive == "lowercase" or directive == "cset1":
             # switch compiler text mode to lower/upper case
             options.lower_case = True
+
+        elif directive == "linestep":
+            # set BASIC line number increment (e.g., #linestep 10)
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                self.linestep = int(parts[1])
+
+            else:
+                return CompileError(
+                    filename, "invalid or missing value for #linestep", line_index
+                )
+
+        elif directive == "lineskip":
+            # skip ahead to next multiple of given number
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                skip_multiple = int(parts[1])
+                if skip_multiple <= 0:
+                    return CompileError(filename, "#lineskip must be > 0", line_index)
+
+                # Move last_line to the next multiple of skip_multiple
+                previous_line = self.last_line
+                self.next_multiple = ((previous_line // skip_multiple) + 1) * skip_multiple
+                
+            else:
+                return CompileError(
+                    filename, "invalid or missing value for #lineskip", line_index
+                )
 
         else:
             # ignore comments or unknown preprocessor statement
@@ -866,7 +896,10 @@ class BasicCompiler:
 
             last_was_whitespace = current_char == " "
 
-        while basic_line.peek_last_char() == ":":
+        if crunch and basic_line.peek_last_char() == ":":
+            basic_line.drop_last_char()
+
+        if not crunch and basic_line.peek_last_char() == ":" and basic_line.get_code_size() > 1:
             basic_line.drop_last_char()
 
         if crunch and basic_line.is_empty():
@@ -920,7 +953,14 @@ class BasicCompiler:
                         return (0, None, None)  # just label line, no BASIC code
 
             # auto-generate next line number
-            line_number = self.last_line + 1
+            if crunch:
+                line_number = self.last_line + 1
+            else:
+                if self.next_multiple > 0:
+                    line_number = self.next_multiple
+                    self.next_multiple = -1
+                else:
+                    line_number = self.last_line + self.linestep
 
         if preprocess:
             for new_label in self.new_labels:
