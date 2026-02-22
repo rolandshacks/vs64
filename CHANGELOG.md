@@ -1,5 +1,11 @@
 # Change Log
+
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
+
+## 2.6.4 Minor Update
+
+- Added auto-numbering features for BASIC (thanks jim-64!)
+- Bug-fixes and minor improvements
 
 ## 2.6.3 Minor Update
 

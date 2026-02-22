@@ -318,6 +318,22 @@ class BasicProgram:
 
 
 #############################################################################
+# Basic Compiler State
+#############################################################################
+class BasicCompilerState:
+    """Basic compiler state."""
+
+    def __init__(self):
+        """Constructor."""
+        self.reset()
+
+    def reset(self):
+        """Reset state."""
+        self.line_step_size = 1
+        self.next_line = -1
+
+
+#############################################################################
 # Basic Compiler
 #############################################################################
 
@@ -338,6 +354,7 @@ class BasicCompiler:
         self.labels = {}
         self.modules = None
         self.repeat_pattern = re.compile("(\\d+)\\s(\\w+)")
+        self.state = BasicCompilerState()
 
         if self.options.feature_tsb:
             all_tokens = list(Constants.BASIC_TOKENS.keys()) + list(
@@ -383,6 +400,7 @@ class BasicCompiler:
 
         # restore initial options
         options.lower_case = initial_lower_case_settings
+        self.state.reset()
 
         # compile all modules
         for module in self.modules:
@@ -462,7 +480,10 @@ class BasicCompiler:
                     return err
             else:
                 # handle BASIC line
-                self.fetch_line_info(module, line, True)
+                (_, _, _, err) = self.fetch_line_info(module, line, True, line_index)
+                if err:
+                    return err
+                    
 
         return None
 
@@ -514,6 +535,33 @@ class BasicCompiler:
             # switch compiler text mode to lower/upper case
             options.lower_case = True
 
+        elif directive == "linestep":
+            # set BASIC line number increment (e.g., #linestep 10)
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                self.state.line_step_size = int(parts[1])
+
+            else:
+                return CompileError(
+                    filename, "invalid or missing value for #linestep", line_index
+                )
+
+        elif directive == "lineskip":
+            # skip ahead to next multiple of given number
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                next_line_multiple = int(parts[1])
+                if next_line_multiple <= 0:
+                    return CompileError(filename, "#lineskip must be > 0", line_index)
+
+                # set next line number
+                self.state.next_line = ((self.last_line // next_line_multiple) + 1) * next_line_multiple
+                
+            else:
+                return CompileError(
+                    filename, "invalid or missing value for #lineskip", line_index
+                )
+
         else:
             # ignore comments or unknown preprocessor statement
             pass
@@ -563,7 +611,10 @@ class BasicCompiler:
         verbosity_level = self.options.verbosity_level
 
         # parse line number or label from line
-        (line_number, label, ofs) = self.fetch_line_info(module, line, False)
+        (line_number, label, ofs, err) = self.fetch_line_info(module, line, False, line_index)
+        if err:
+            return (None, err)
+
         if ofs is None:
             # just label line, no BASIC code
             return (None, None)
@@ -866,7 +917,10 @@ class BasicCompiler:
 
             last_was_whitespace = current_char == " "
 
-        while basic_line.peek_last_char() == ":":
+        if crunch and basic_line.peek_last_char() == ":":
+            basic_line.drop_last_char()
+
+        if not crunch and basic_line.peek_last_char() == ":" and basic_line.get_code_size() > 1:
             basic_line.drop_last_char()
 
         if crunch and basic_line.is_empty():
@@ -875,9 +929,10 @@ class BasicCompiler:
 
         return (basic_line, None)
 
-    def fetch_line_info(self, _module_: BasicModule, line: str, preprocess: bool):
+    def fetch_line_info(self, module: BasicModule, line: str, preprocess: bool, line_index: int):
         """Fetch line number from basic line"""
 
+        filename = module.filename
         line_number = 0
         label = None
         ofs = 0
@@ -889,6 +944,10 @@ class BasicCompiler:
         if result:
             # found regular line number
             line_number = int(result[0])
+            if line_number <= self.last_line:
+                return (None, None, None, CompileError(
+                    filename, "line number collision", line_index
+                ))
 
             if crunch:
                 # overwrite line number
@@ -917,10 +976,19 @@ class BasicCompiler:
                     if ofs >= len(line):
                         if verbosity_level > 0 and preprocess:
                             print(f"{label}:")
-                        return (0, None, None)  # just label line, no BASIC code
+                        return (0, None, None, None)  # just label line, no BASIC code
 
             # auto-generate next line number
-            line_number = self.last_line + 1
+            if crunch:
+                line_number = self.last_line + 1
+            else:
+                if self.state.next_line > 0:
+                    line_number = self.state.next_line
+                    self.state.next_line = -1
+                elif self.last_line == 0:
+                    line_number = 1
+                else:
+                    line_number = self.last_line + self.state.line_step_size
 
         if preprocess:
             for new_label in self.new_labels:
@@ -929,7 +997,7 @@ class BasicCompiler:
 
         self.last_line = line_number
 
-        return (line_number, label, ofs)
+        return (line_number, label, ofs, None)
 
     def map_line_number(self, _module_: BasicModule, number: int) -> int:
         """ "Map line number to crunched line number."""
