@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline'; font-src 'self' data:;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="vscode.css" rel="stylesheet" />
+    <link href="theme.css" rel="stylesheet" />
+    <link href="default.css" rel="stylesheet" />
+    <link href="mediaview.css" rel="stylesheet" />
+
+    <title>${TITLE}</title>
+
+    <style>
+
+        :root {
+            --vscode-font-weight:normal;
+            --vscode-font-size:13px;
+            --vscode-editor-font-family:&quot;Operator Mono Lig&quot;, &quot;Cascadia Code&quot;;
+            --vscode-editor-font-weight:normal;
+            --vscode-editor-font-size:15px;
+
+            --vscode-foreground:#f3eff5;
+            --vscode-errorForeground:#f48771;
+            --vscode-descriptionForeground:rgba(243, 239, 245, 0.7);
+            --vscode-icon-foreground:#c5c5c5;
+
+            --vscode-button-foreground:#F2FFFF;
+            --vscode-button-background:#297AA0;
+            --vscode-button-hoverBackground:#297AA0;
+        }
+
+        body {
+            background-color: #f04040;
+            color: #f3eff5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 12px;
+        }
+
+        .editor-window {
+            background-color: #1f1f1f;
+            margin: 0px 0px 0px 0px;
+            padding: 0px 0px 0px 0px;
+            overflow: scroll;
+        }
+
+        .content.test {
+            font: 14px sans-serif;
+        }
+
+        .toolbar {
+            overflow: hidden;
+            position: fixed;
+            top: 0px;
+            margin: 0px 0px 0px 0px;
+            border: 1px solid #40404060;
+            border-radius: 3px;
+            box-shadow: 2px 2px 2px #00000040;
+
+            background-color: #00000040;
+            color: #ffffff;
+            padding: 10px 7px 10px 7px;
+            font-size: 12px;
+            cursor: default;
+            user-select: none;
+        }
+
+        .toolbar-button {
+            background-color: #313131;
+            border: 1px solid #3c3c3c;
+            border-top: 1px solid #ffffff80;
+            border-left: 1px solid #ffffff80;
+            box-shadow: 2px 2px 2px #00000040;
+            border-radius: 3px;
+            padding: 4px 12px 4px 12px;
+            cursor: pointer;
+        }
+
+    </style>
+
+</head>
+
+<body class="editor-window">
+
+    <div id="idTooltip" class="tooltip">Tooltip</div>
+    <div id="idProperties" class="properties test"></div>
+    <canvas id="idContent" class="content test"></canvas>
+
+    <script type="module" language="javascript">
+        import { WebDocument } from "./src/document.js";
+        import { Application } from "./src/app.js";
+        import { $ } from "./src/utilities.js";
+        import { testMain } from "../../test/web/test.js";
+
+        window.onload = function() {
+            const app = new Application($("idContent"), "view.media");
+            app.activate();
+            testMain(app);
+        }
+
+        window.onresize = function() {
+            const app = Application.instance;
+            if (null != app && app.activated) {
+                app.resize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
+
+<!--
+
+    JointJS Library Usage:
+
+    CSS
+    <link href="../../node_modules/jointjs/dist/joint.min.css" rel="stylesheet" />
+
+    LIBS
+    <script nonce="${NONCE}" src="../../node_modules/jquery/dist/jquery.min.js"></script>
+    <script nonce="${NONCE}" src="../../node_modules/lodash/lodash.min.js"></script>
+    <script nonce="${NONCE}" src="../../node_modules/backbone/backbone-min.js"></script>
+    <script nonce="${NONCE}" src="../../node_modules/dagre/dist/dagre.min.js"></script>
+    <script nonce="${NONCE}" src="../../node_modules/graphlib/dist/graphlib.min.js"></script>
+    <script nonce="${NONCE}" src="../../node_modules/jointjs/dist/joint.min.js"></script>
+
+    Cytoscape Usage:
+
+    LIB
+    <script nonce="${NONCE}" src="../../node_modules/cytoscape/dist/cytoscape.min.js"></script>
+
+-->

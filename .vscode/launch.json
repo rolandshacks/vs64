@@ -120,6 +120,20 @@
                 "--extensionDevelopmentPath=${workspaceFolder}",
                 "--extensionTestsPath=${workspaceFolder}/test"
             ]
+        },
+        {
+            "name": "Run SpriteEd in Chrome",
+            "request": "launch",
+            "type": "chrome",
+            "file": "${workspaceFolder}/media/sprite_editor/index.html"
+        },
+        {
+            "name": "Run Custom Views in Browser",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:8080/resources/views/test.html",
+            "webRoot": "${workspaceFolder}"
+
         }
     ]
 }

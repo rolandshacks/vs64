@@ -135,7 +135,7 @@ class CharPadResource(CharsetResource):
         return data & 0x0f
 
     def parse(self) -> Optional[CompileError]:
-        """Parset resource data."""
+        """Parse resource data."""
         err = super().parse()
         if err: return err
 

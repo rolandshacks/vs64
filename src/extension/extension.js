@@ -5,7 +5,6 @@
 const path = require('path');
 const fs = require('fs');
 const vscode = require('vscode');
-//const {CppToolsApi, Version, CustomConfigurationProvider, getCppToolsApi} = require('vscode-cpptools');
 
 //-----------------------------------------------------------------------------------------------//
 // Init module and lookup path
@@ -28,10 +27,12 @@ const { Build, BuildResult } = require('builder/builder');
 const { DiagnosticProvider } = require('extension/diagnostic_provider');
 const { TaskProvider } = require('extension/task_provider');
 const { StatusBar, StatusBarNotifier, StatusBarButton } = require('extension/statusbar');
-const { DisassemblerView } = require('extension/disassembler_view');
 const { LanguageServer } = require('language/language_server');
 const { LanguageFeatureProvider } = require('language/language_provider');
 const { D64FileSystemProvider } = require('disk/d64_filesystem_provider');
+
+const { MediaViewProvider } = require('views/mediaview');
+const { DisassemblyViewProvider } = require('views/disassembly');
 
 const logger = new Logger("Extension");
 
@@ -273,10 +274,32 @@ class Extension {
 
         // register disassembler editors / views
         {
-            const editorProvider = new DisassemblerView(extensionContext, this._settings);
+            const disassemblyViewProvider = new DisassemblyViewProvider(extensionContext, {
+                name: "disassembly",
+                title: "Disassembly View",
+                settings: this._settings
+            });
+
             subscriptions.push(vscode.window.registerCustomEditorProvider(
                 "vs64.prg",
-                editorProvider,
+                disassemblyViewProvider,
+                {
+                    webviewOptions: {
+                        enableFindWidget: true,
+                        retainContextWhenHidden: false
+                    }
+                })
+            );
+
+            const mediaViewProvider = new MediaViewProvider(extensionContext, {
+                name: "mediaview",
+                title: "Media View",
+                settings: this._settings
+            });
+
+            subscriptions.push(vscode.window.registerCustomEditorProvider(
+                "vs64.media",
+                mediaViewProvider,
                 {
                     webviewOptions: {
                         enableFindWidget: true,
@@ -360,6 +383,14 @@ class Extension {
             Constants.AssemblerLanguageIds.indexOf(document.languageId) != -1) {
             vscode.languages.setTextDocumentLanguage(document, toolkit.languageIdOverride);
         }
+    }
+
+    showPreview(uri) {
+        if (uri.scheme == "prg-preview") return;
+
+        vscode.commands
+            .executeCommand('vscode.open', uri.with({scheme: 'prg-preview'}))
+            .then(null, vscode.window.showErrorMessage);
     }
 
     showWelcome(forced) {

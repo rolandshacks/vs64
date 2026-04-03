@@ -27,6 +27,7 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for the VICE emulator using the binary monitor protocol
 * Launch support for the X16 emulator
+* Preview of C64 media files (SID, sprites, charsets)
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
 * Direct access to D64 disks as virtual workspace folders

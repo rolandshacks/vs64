@@ -1,0 +1,28 @@
+
+:root {
+    --graph-base-color1: #7EC5A3;
+
+    --graph-background-color: #ffffff;
+    --graph-text-color: #000000;
+    --graph-border-color: var(--graph-text-color);
+
+	--graph-document-background: #ffffff;
+    --graph-document-color: var(--graph-text-color);
+
+    --graph-group-background: #e0e0e0;
+    --graph-group-color: var(--graph-text-color);
+
+    --graph-element-background: #f00fff;
+    --graph-element-color: var(--graph-text-color);
+
+    --graph-header-background: #80e0ff;
+    --graph-header-color: var(--graph-text-color);
+
+    --graph-footer-background: #40a0c0;
+    --graph-footer-color: var(--graph-text-color);
+
+    --graph-struct-color: #f08050;
+
+    --graph-edge-color: var(--graph-border-color);
+
+}
