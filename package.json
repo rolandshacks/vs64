@@ -113,6 +113,11 @@
 				"category": "VS64"
 			},
 			{
+				"command": "vs64.createProject64Tass",
+				"title": "Create 64tass Assembler Project",
+				"category": "VS64"
+			},
+			{
 				"command": "vs64.createProjectLlvm",
 				"title": "Create LLVM-MOS C++ Project",
 				"category": "VS64"
@@ -196,6 +201,17 @@
 						]
 					},
 					{
+						"id": "setup_64tass",
+						"title": "Setup 64tass Cross-Assembler",
+						"description": "In order to use 64tass, please download, install and add the 64tass install directory to the VS64 preferences.\n\n[Visit 64tass Home Page](https://tass64.sourceforge.net)\n\n[Customize 64tass Setup](command:vs64.showSettings?%2264tass%22)",
+						"media": {
+							"markdown": "resources/walkthroughs/64tass.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:vs64.tass64InstallDir"
+						]
+					},
+					{
 						"id": "setup_cc65",
 						"title": "Setup CC65 C-Compiler",
 						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Customize CC65 Setup](command:vs64.showSettings?%22cc65%22)",
@@ -240,7 +256,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create 64tass Assembler Project](command:vs64.createProject64Tass)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -331,6 +347,13 @@
 				"configuration": "./language/acme.language.json"
 			},
 			{
+				"id": "64tass",
+				"aliases": [
+					"6502 64tass"
+				],
+				"configuration": "./language/64tass.language.json"
+			},
+			{
 				"id": "asm",
 				"aliases": [
 					"6502 Assembler"
@@ -384,6 +407,11 @@
 				"path": "./language/acme.grammar.json"
 			},
 			{
+				"language": "64tass",
+				"scopeName": "source.asm.64tass",
+				"path": "./language/64tass.grammar.json"
+			},
+			{
 				"language": "asm",
 				"scopeName": "source.asm",
 				"path": "./language/asm.grammar.json"
@@ -435,6 +463,11 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to KickAssembler installation"
+					},
+					"vs64.tass64InstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to 64tass assembler installation"
 					},
 					"vs64.llvmInstallDir": {
 						"type": "string",

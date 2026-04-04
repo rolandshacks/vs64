@@ -1,0 +1,11 @@
+{
+    "name": "example",
+    "description": "Example project",
+    "toolkit": "64tass",
+    "main": "src/main.asm",
+    "build": "debug",
+    "definitions": [],
+    "includes": [],
+    "args": [],
+    "compiler": ""
+}

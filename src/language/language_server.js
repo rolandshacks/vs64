@@ -69,12 +69,12 @@ class LanguageServer {
         return parser._impl.getTokenAtSourcePos(source, offset, leftOnly, greedyParsing);
     }
 
-    fuzzySearch(languageId, identifier) {
+    fuzzySearch(languageId, identifier, toolkit) {
         // used for code completion
         if (languageId == "bas") {
             return BasicGrammar.fuzzySearch(identifier);
         }
-        return AsmGrammar.fuzzySearch(identifier);
+        return AsmGrammar.fuzzySearch(identifier, toolkit);
     }
 
     getSources(recursiveSearch, project) {

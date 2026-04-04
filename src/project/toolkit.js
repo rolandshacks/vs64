@@ -21,13 +21,14 @@ class Toolkit {
 
         this.isAcme = (name == "acme");
         this.isKick = (name == "kick");
+        this.isTass = (name == "64tass");
         this.isCC65 = (name == "cc65");
         this.isOscar64 = (name == "oscar64");
         this.isLLVM = (name == "llvm");
         this.isBasic = (name == "basic");
 
         this.isCpp = (this.isLLVM || this.isCC65 || this.isOscar64);
-        this.isAssembler = (this.isAcme || this.isKick);
+        this.isAssembler = (this.isAcme || this.isKick || this.isTass);
 
         this.hasProblemMatcher = (this.isOscar64 || this.isKick);
 
@@ -52,6 +53,11 @@ class Toolkit {
                 this.builtInDefines = [ "__kick__"];
                 this.languageId = "asm";
                 this.languageIdOverride = "kickass";
+                break;
+            case "64tass":
+                this.builtInDefines = [ "__64tass__"];
+                this.languageId = "asm";
+                this.languageIdOverride = "64tass";
                 break;
             case "llvm":
                 this.builtInDefines = [ "__llvm__", "__clang__"];

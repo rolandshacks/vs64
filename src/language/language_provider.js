@@ -37,7 +37,8 @@ class LanguageFeatureProvider {
         const identifier = lang.getTokenAtDocumentPos(document, position, true, true);
         if (!identifier) return null;
 
-        const completedItems = lang.fuzzySearch(document.languageId, identifier);
+        const toolkit = this._project ? this._project.toolkit : null;
+        const completedItems = lang.fuzzySearch(document.languageId, identifier, toolkit);
         if (!completedItems || completedItems.length < 1) return null;
 
         const startPosition = new vscode.Position(position.line, position.character - identifier.length);

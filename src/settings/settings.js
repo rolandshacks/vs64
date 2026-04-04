@@ -196,6 +196,7 @@ class Settings {
         this.setupNinja(workspaceConfig);
         this.setupAcme(workspaceConfig);
         this.setupKickAssembler(workspaceConfig);
+        this.setup64Tass(workspaceConfig);
         this.setupLLVM(workspaceConfig);
         this.setupCC65(workspaceConfig);
         this.setupOscar64(workspaceConfig);
@@ -267,6 +268,15 @@ class Settings {
             this.kickExecutable = path.resolve(installDir, "KickAss.jar");
         } else {
             this.kickExecutable = "KickAss.jar";
+        }
+    }
+
+    setup64Tass(workspaceConfig) {
+        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.tass64InstallDir"));
+        if (installDir) {
+            this.tass64Executable = path.resolve(installDir, Utils.normalizeExecutableName("64tass"));
+        } else {
+            this.tass64Executable = "64tass";
         }
     }
 

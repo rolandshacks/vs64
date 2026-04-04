@@ -39,7 +39,19 @@ const AsmGrammar = {
         "define", "elif", "else", "endif", "if", "import", "importif", "importonce", "undef"
     ],
 
-    fuzzySearch: function(query) {
+    tass64Directives: [
+        "addr", "align", "binary", "binclude", "block", "byte", "case", "cerror", "char",
+        "cpu", "cwarn", "databank", "default", "dint", "dpage", "dword", "else", "enc",
+        "encoding", "endblock", "endenum", "endfunction", "endmacro", "endnamespace",
+        "endpage", "endproc", "endrept", "endsection", "endstruct", "endswitch", "endunion",
+        "endweak", "endwhile", "endif", "enum", "error", "fi", "fill", "for", "function",
+        "goto", "if", "elsif", "include", "label", "lint", "long", "macro", "namespace",
+        "next", "null", "option", "page", "pend", "proc", "ptext", "rept", "rta",
+        "section", "seed", "segment", "shift", "shiftl", "sint", "struct", "switch",
+        "text", "union", "var", "warn", "weak", "while", "word"
+    ],
+
+    fuzzySearch: function(query, toolkit) {
 
         if (!query || query.length < 1) return null;
 
@@ -53,7 +65,10 @@ const AsmGrammar = {
                 }
             }
         } else if  (query.charCodeAt(0) == CharCode.Period) {
-            for (let item of AsmGrammar.kickAssemblerDirectives) {
+            const directives = (toolkit && toolkit.isTass)
+                ? AsmGrammar.tass64Directives
+                : AsmGrammar.kickAssemblerDirectives;
+            for (let item of directives) {
                 const token = "." + item;
                 if (token.startsWith(query)) {
                     items.push(token);
@@ -95,6 +110,7 @@ class AsmParser extends ParserBase {
 
         let isKickAss = this.isKickAss;
         let isAcme = this.isAcme;
+        let isTass = this.isTass;
         let isLLVM = this.isLLVM;
 
         let tokensPerLineOfs = -1;
@@ -204,7 +220,7 @@ class AsmParser extends ParserBase {
 
             } else if (
                 (c == CharCode.Exclamation && isAcme) ||
-                (c == CharCode.Period && (isKickAss || isLLVM))) { // directive or macro
+                (c == CharCode.Period && (isKickAss || isTass || isLLVM))) { // directive or macro
 
                 const range = new Range(it.ofs, it.row, it.col);
                 range.inc(); it.next();
@@ -307,6 +323,7 @@ class AsmParser extends ParserBase {
 
         const isKickAss = this.isKickAss;
         const isAcme = this.isAcme;
+        const isTass = this.isTass;
         const isLLVM = this.isLLVM;
 
         const ofs = tokenOffset;
@@ -351,6 +368,14 @@ class AsmParser extends ParserBase {
                 if (macroCommand == ".macro" && paramToken.type == TokenType.Identifier) {
                     statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
                 } else if (macroCommand == ".const" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
+                }
+            } else if (isTass) {
+                if (macroCommand == ".macro" && paramToken.type == TokenType.Identifier) {
+                    statement = new Statement(StatementType.Definition, StatementType.MacroDefinition, paramToken, tokens, ofs, count);
+                } else if (macroCommand == ".include" && paramToken.type == TokenType.String) {
+                    statement = new Statement(StatementType.Include, null, paramToken, tokens, ofs, count);
+                } else if (macroCommand == ".var" && paramToken.type == TokenType.Identifier) {
                     statement = new Statement(StatementType.Definition, StatementType.ConstantDefinition, paramToken, tokens, ofs, count);
                 }
             } else if (isLLVM) {

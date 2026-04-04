@@ -159,6 +159,9 @@ class Project {
             case "kick":
                 this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
                 break;
+            case "64tass":
+                this._outdebug = path.resolve(this._builddir, this._name + ".lbl");
+                break;
             case "llvm":
                 this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
                 break;
@@ -196,11 +199,11 @@ class Project {
         if (!data.name) { throw("property 'name' is missing."); }
         this._name = data.name;
 
-        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic')"); }
+        if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', '64tass', 'llvm', 'cc65', 'oscar64' or 'basic')"); }
         const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "llvm", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
-            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic'");
+        if (["acme", "kick", "64tass", "llvm", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', '64tass', 'llvm', 'cc65', 'oscar64' or 'basic'");
         }
 
         this._toolkit = Toolkit.fromName(toolkitId);
@@ -1127,6 +1130,68 @@ class Project {
                 });
 
                 phonyTargets.unshift("resources"); // insert at start
+
+                script.push("build $target | $dbg_out : asm " + Ninja.join(sources));
+            }
+
+            script.push("");
+
+        } else if (toolkit.isTass) {
+
+            script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.tass64Executable)));
+            script.push("");
+
+            const flags = new NinjaArgs(
+                "--cbm-prg",
+                "-Wall",
+                "--simple-labels"
+            );
+
+            if (!releaseBuild) {
+                flags.add("-DDEBUG=1");
+            } else {
+                flags.add("-DDEBUG=0");
+            }
+
+            flags.add(this._args);
+            flags.add(this._assemblerFlags);
+
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyValueRaw("includes", includes.join("-I ")));
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule asm");
+            script.push("    command = $asm_exe $flags $includes -l \"$dbg_out\" -o $out $in");
+            script.push("");
+
+            if (hasResources) {
+                buildTree.gen.forEach((to, from) => {
+                    script.push(Ninja.build(to, from, "res"));
+                });
+                script.push("");
+                script.push("build resources: phony " + Ninja.join(buildTree.gen.array()));
+                script.push("");
+            }
+
+            if (!hasResources || !dontBuildResources) {
+                script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()));
+            } else {
+                const sources = [];
+                const resources = [];
+
+                buildTree.asm.forEach((itemTo, itemFrom, _itemRule, _itemIdx) => {
+                    if (null == itemFrom) {
+                        sources.push(itemTo);
+                    } else {
+                        resources.push(itemTo);
+                    }
+                });
+
+                phonyTargets.unshift("resources");
 
                 script.push("build $target | $dbg_out : asm " + Ninja.join(sources));
             }

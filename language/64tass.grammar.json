@@ -1,0 +1,299 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "64tass 6502 Assembler Language Grammar",
+	"patterns": [
+		{
+			"include": "#generic"
+		},
+		{
+			"include": "#tass"
+		}
+	],
+
+	"repository": {
+
+		"generic": {
+			"patterns": [
+				{
+					"include": "#generic-comments"
+				},
+				{
+					"include": "#generic-strings"
+				},
+				{
+					"include": "#generic-numbers"
+				},
+				{
+					"include": "#generic-labels"
+				},
+				{
+					"include": "#generic-opcodes"
+				},
+				{
+					"include": "#generic-directives"
+				}
+			]
+		},
+
+		"generic-comments": {
+			"patterns": [
+				{
+					"name": "comment.line.semicolon",
+					"begin": ";",
+					"end": "$",
+					"comment": "Single line comment"
+				}
+			]
+		},
+
+		"generic-strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.asm",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape.asm",
+							"match": "\\\\."
+						}
+					]
+				},
+				{
+					"name": "string.quoted.single.asm",
+					"begin": "'",
+					"end": "'",
+					"patterns": [
+						{
+							"name": "constant.character.escape.asm",
+							"match": "''"
+						}
+					]
+				}
+			]
+		},
+
+		"generic-numbers": {
+			"patterns": [
+				{
+					"match": "#?\\$[0-9a-fA-F_]+\\b",
+					"name": "constant.numeric.hex"
+				},
+				{
+					"match": "#?%[0-1_]+\\b",
+					"name": "constant.numeric.bin"
+				},
+				{
+					"match": "#?[0-9][0-9_]*(\\.[0-9_]+)?([eEpP][+-]?[0-9_]+)?\\b",
+					"name": "constant.numeric.dec"
+				}
+			]
+		},
+
+		"generic-labels": {
+			"patterns": [
+				{
+					"name": "emphasis",
+					"match": "^(\\w+)"
+				}
+			]
+		},
+
+		"generic-opcodes": {
+			"patterns": [
+				{
+					"include": "#generic-opcodes-instructions"
+				},
+				{
+					"include": "#generic-opcodes-control"
+				},
+				{
+					"include": "#generic-opcodes-illegal"
+				},
+				{
+					"include": "#generic-opcodes-65c02"
+				},
+				{
+					"include": "#generic-opcodes-65816"
+				}
+			]
+		},
+		"generic-opcodes-instructions": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)[\\s]*\\b(adc|and|asl|bit|clc|cld|cli|clv|cmp|cpx|cpy|dec|dex|dey|eor|inc|inx|iny|lda|ldx|ldy|lsr|nop|ora|pha|php|pla|plp|rol|ror|sbc|sec|sed|sei|sta|stx|sty|tax|txa|tay|tya|tsx|txs)\\b"
+				}
+			]
+		},
+		"generic-opcodes-control": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "(?i)[\\s]*\\b(bcc|bcs|beq|bmi|bne|bpl|brk|bvc|bvs|jmp|jsr|rti|rts)\\b"
+				}
+			]
+		},
+		"generic-opcodes-illegal": {
+			"patterns": [
+				{
+					"name": "keyword.illegal",
+					"match": "(?i)[\\s]*\\b(slo|rla|sre|rra|sax|lax|dcp|isc|anc|asr|arr|sbx|dop|top|jam)\\b"
+				}
+			]
+		},
+		"generic-opcodes-65c02": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+                    "match": "(?i)[\\s]*\\b((bbr|bbs|rmb|smb)[0-7]|trb|tsb|phx|phy|plx|ply|stz)\\b"
+				},
+				{
+					"name": "keyword.control",
+					"match": "(?i)[\\s]*\\b(bra)\\b"
+				}
+			]
+		},
+		"generic-opcodes-65816": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)[\\s]*\\b(brl|cop|jml|jsl|mvn|mvp|pea|pei|per|phb|phd|phk|plb|pld|rep|rtl|sep|stp|tcd|tcs|tdc|tsc|txy|tyx|wai|wdm|xba|xce)\\b"
+				}
+			]
+		},
+		"generic-directives": {
+			"patterns": [
+				{
+					"include": "#generic-directives-pc"
+				}
+            ]
+		},
+		"generic-directives-pc": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "keyword.instructions"
+						}
+					},
+					"match": "(\\*\\s*=)"
+				}
+			]
+		},
+
+		"tass": {
+			"patterns": [
+				{
+					"include": "#tass-directives-flow"
+				},
+				{
+					"include": "#tass-directives-structure"
+				},
+				{
+					"include": "#tass-directives-data"
+				},
+				{
+					"include": "#tass-directives-io"
+				},
+				{
+					"include": "#tass-directives-encoding"
+				},
+				{
+					"include": "#tass-builtin-functions"
+				},
+				{
+					"include": "#tass-builtin-constants"
+				},
+				{
+					"include": "#tass-assignment"
+				}
+			]
+		},
+
+		"tass-directives-flow": {
+			"patterns": [
+				{
+					"name": "meta.diff.header",
+					"match": "(?i)\\.(if|elsif|else|endif|fi|for|next|rept|endrept|while|endwhile|switch|case|default|endswitch|goto|error|warn|cerror|cwarn|option)\\b"
+				}
+			]
+		},
+
+		"tass-directives-structure": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "(?i)\\.(block|endblock|proc|pend|endproc|section|endsection|segment|macro|endmacro|function|endfunction|struct|endstruct|union|endunion|enum|endenum|namespace|endnamespace|weak|endweak|page|endpage|cpu|seed|dpage|databank|var|label)\\b"
+				}
+			]
+		},
+
+		"tass-directives-data": {
+			"patterns": [
+				{
+					"name": "keyword.instructions",
+					"match": "(?i)\\.(byte|char|word|sint|long|lint|dword|dint|text|fill|align|null|ptext|shift|shiftl|addr|rta)\\b"
+				}
+			]
+		},
+
+		"tass-directives-io": {
+			"patterns": [
+				{
+					"captures": {
+						"1": {
+							"name": "meta.preprocessor.io.input"
+						},
+						"2": {
+							"name": "string.quoted.double.library.name"
+						}
+					},
+					"match": "(?i)(\\.(include|binclude))\\s*(\\\"[^\"]*\\\")"
+				},
+				{
+					"name": "meta.preprocessor.io",
+					"match": "(?i)\\.(include|binclude|binary)\\b"
+				}
+			]
+		},
+
+		"tass-directives-encoding": {
+			"patterns": [
+				{
+					"name": "meta.preprocessor",
+					"match": "(?i)\\.(enc|encoding)\\b"
+				}
+			]
+		},
+
+		"tass-builtin-functions": {
+			"patterns": [
+				{
+					"name": "support.function",
+					"match": "(?i)\\b(sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|sqrt|cbrt|log|log10|exp|pow|hypot|abs|sign|ceil|floor|round|trunc|frac|rad|deg|len|size|range|sort|format|repr|random|binary|all|any|byte|char|word|sint|long|lint|dword|dint|addr|rta|int|float|str|bits|bytes|bool|type|dict)\\s*\\("
+				}
+			]
+		},
+
+		"tass-builtin-constants": {
+			"patterns": [
+				{
+					"name": "constant.language",
+					"match": "\\b(true|false|pi)\\b"
+				}
+			]
+		},
+
+		"tass-assignment": {
+			"patterns": [
+				{
+					"name": "keyword.operator.assignment",
+					"match": "(:?:=|::=|:\\?=)"
+				}
+			]
+		}
+
+	},
+	"scopeName": "source.asm.64tass"
+}
