@@ -1,2 +1,2 @@
 @ECHO OFF
-python test/server.py 8080
+python tools/webdbg.py 8080

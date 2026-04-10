@@ -122,6 +122,16 @@
             ]
         },
         {
+            "name": "Run Web Debug Server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/webdbg.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "args": ["--help"]
+        },
+        {
             "name": "Run SpriteEd in Chrome",
             "request": "launch",
             "type": "chrome",
@@ -131,9 +141,10 @@
             "name": "Run Custom Views in Browser",
             "request": "launch",
             "type": "chrome",
-            "url": "http://localhost:8080/resources/views/test.html",
-            "webRoot": "${workspaceFolder}"
-
+            "url": "http://localhost:8080/web/mediaview.html",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Bundle Extension",
+            "sourceMaps": true
         }
     ]
 }

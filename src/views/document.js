@@ -6,7 +6,6 @@
 BIND(module);
 
 const fs = require('fs');
-const path = require('path');
 const vscode = require('vscode');
 
 const { Constants } = require('settings/settings');
@@ -167,7 +166,9 @@ class Document {
      * @param {vscode.Uri} uri - Uri of the file to read.
      */
     async #readBinaryFile(uri) {
-        return await vscode.workspace.fs.readFile(uri);
+        const buffer = await vscode.workspace.fs.readFile(uri);
+        const u8array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        return u8array;
     }
 
     /**

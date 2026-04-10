@@ -14,10 +14,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { DebugInterface, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
-const CPU6502 = require('./cpu');
-
-const ENABLE_6510_MODE = true;
+const { DebugInterface, DebugInterruptReason, DebugStepType, MemoryType, CpuState } = require('debugger/debug');
+const { CPU6502 } = require('cpu/cpu');
 
 function getTime() {
     const t = process.hrtime();
@@ -35,6 +33,49 @@ const EmulatorConstants = {
 };
 
 //-----------------------------------------------------------------------------------------------//
+// EmulatedCpu
+//-----------------------------------------------------------------------------------------------//
+
+class EmulatedCpu extends CPU6502 {
+    getState() {
+        const cpuState = new CpuState();
+
+        cpuState.cpuRegisters.set(
+            this.PC,
+            this.A,
+            this.X,
+            this.Y,
+            this.S
+        );
+
+        cpuState.cpuFlags.set(
+            this.N,
+            this.Z,
+            this.B,
+            this.C,
+            this.V,
+            this.I
+        );
+
+        cpuState.cpuInfo.set(
+            this.irq,
+            this.nmi,
+            this._opcode,
+            this.cycleCounter,
+            this._callStack,
+            0,  // (TODO) not supported: raster line
+            0,  // (TODO) not supported: raster cycle
+            0,  // (TODO) not supported: zero0
+            0,  // (TODO) not supported: zero1
+        );
+
+        return cpuState;
+    }
+
+}
+
+
+//-----------------------------------------------------------------------------------------------//
 // Emulator
 //-----------------------------------------------------------------------------------------------//
 
@@ -42,30 +83,9 @@ class Emulator extends DebugInterface {
 
     constructor(session) {
         super(session);
-
-        const instance = this;
-
         this._memory = new Uint8Array(65536);
-
-        this._cpu = new CPU6502(
-            instance.readSync.bind(instance),
-            instance.writeSync.bind(instance)
-        );
-
-        if (ENABLE_6510_MODE) {
-            this._roms = {
-                kernal: require('./roms/kernal'),
-                basic: require('./roms/basic'),
-                char: require('./roms/char'),
-                d1541: require('./roms/1541')
-            };
-
-            // patch kernal ROM
-            this._roms.kernal[0xffd2 - 0xe000] = 0x60;
-        }
-
+        this._cpu = new EmulatedCpu(this._memory);
         this.reset();
-
     }
 
     getCpuState() {
@@ -306,18 +326,6 @@ class Emulator extends DebugInterface {
 
         cpu.reset();
 
-        this._memory.fill(0);
-
-        if (ENABLE_6510_MODE) {
-            // initialize some zeropage values
-            this._memory[0x0] = 0xFF; // I/O port register
-            this._memory[0x1] = 0xFF; // bankswitching
-        } else if (null != startAddress) {
-            // set reset vector to start address
-            this.writeSync(0xFFFD, (startAddress>>8) & 0xFF);
-            this.writeSync(0xFFFC, (startAddress & 0xFF));
-        }
-
         cpu.S = 0xFF; // initialize stack pointer
         if (startAddress) {
             cpu.PC = startAddress;
@@ -328,31 +336,8 @@ class Emulator extends DebugInterface {
     }
 
     readSync(addr) {
-        if (addr < 0 || addr > 0xFFFF) {
-            throw new Error('Illegal memory read at address: ' + addr.toString(16).toLowerCase());
-        }
-
-        if (ENABLE_6510_MODE) {
-
-            /*
-                Bit 0 - LORAM: Configures RAM or ROM at $A000-$BFFF (see bankswitching)
-                Bit 1 - HIRAM: Configures RAM or ROM at $E000-$FFFF (see bankswitching)
-                Bit 2 - CHAREN: Configures I/O or ROM at $D000-$DFFF (see bankswitching)
-            */
-
-            let bankswitching = (this._memory[0x0001] & 0xFF);
-
-            if ((bankswitching & 0x02) && addr >= 0xE000) {
-                return this._roms.kernal[addr-0xE000] & 0xFF;
-            } else if (0 == (bankswitching & 0x04) && addr >= 0xD000) {
-                return this._roms.char[addr-0xD000] & 0xFF;
-            } else if ((bankswitching & 0x01) && addr >= 0xA000 && addr <= 0xBFFF) {
-                return this._roms.basic[addr-0xA000] & 0xFF;
-            }
-
-        }
-
-        return this._memory[addr] & 0xFF;
+        const cpu = this._cpu;
+        return cpu.readMem(addr);
     }
 
     readMemory(startAddress, endAddress, memoryType) {
@@ -381,10 +366,8 @@ class Emulator extends DebugInterface {
     }
 
     writeSync(addr, value) {
-        if (addr < 0 || addr > 0xFFFF) {
-            throw new Error('Illegal memory read at address: ' + addr.toString(16).toLowerCase());
-        }
-        this._memory[addr] = (value & 0xFF);
+        const cpu = this._cpu;
+        cpu.writeMem(addr, value);
     }
 
     async write(addr, value) {

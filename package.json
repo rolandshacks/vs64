@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.0",
+	"version": "2.7.1",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -20,6 +20,11 @@
 		"type": "git",
 		"url": "https://github.com/rolandshacks/vs64"
 	},
+	"workspaces": [
+		"packages/disassembler",
+		"packages/d64disk",
+		"packages/cpu"
+	],
 	"scripts": {
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./test/jest.config.js",
@@ -30,16 +35,18 @@
 		"esbuild-dev": "node ./esbuild --sourcemap"
 	},
 	"dependencies": {
+		"@fluentui/tokens": "^1.0.0-alpha.23",
+		"@fluentui/web-components": "^2.6.1",
 		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
 		"fast-xml-parser": "^5.5.9"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@types/node": "25.5.0",
+		"@types/node": "25.6.0",
 		"@types/vscode": "^1.87.0",
-		"@vscode/vsce": "3.7.1",
-		"esbuild": "^0.27.5",
+		"@vscode/vsce": "3.8.0",
+		"esbuild": "^0.28.0",
 		"eslint": "^10.1.0",
 		"globals": "^17.4.0",
 		"jest": "^30.3.0",

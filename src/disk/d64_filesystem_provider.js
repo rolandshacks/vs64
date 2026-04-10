@@ -15,7 +15,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 const { Logger } = require('utilities/logger');
 
-const { Disk } = require('disk/disk');
+const { Disk } = require('d64disk/disk');
 
 const logger = new Logger("D64DiskFs");
 

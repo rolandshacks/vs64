@@ -2,6 +2,10 @@
 
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.7.1 Minor Update
+
+- Bug-fixes and minor improvements
+
 ## 2.7.0 Major Update
 
 - Added viewers for C64 SID, CharPad and SpritePad files

@@ -14,4 +14,6 @@ dist/*.map
 examples
 esbuild.js
 src/**
+resources/views/src/**
 node_modules/**
+devnotes.md

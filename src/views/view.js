@@ -178,7 +178,7 @@ class AbstractViewProvider {
      * @returns {Object}
      */
     #loadResourceFile(filename) {
-        const absFilename = path.resolve(this._context.extensionPath, 'resources', 'views', filename);
+        const absFilename = path.resolve(this._context.extensionPath, 'web', filename);
 
         let data = null;
 
@@ -236,6 +236,7 @@ class AbstractViewProvider {
         const title = (options && options.title) ? options.title : name;
         const indexFile = (options && options.index) ? options.index : name + ".html";
         const nonce = this.#getNonce();
+        const dist = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'dist'));
 
         const dict = {
             NAME: name,
@@ -243,10 +244,14 @@ class AbstractViewProvider {
             INDEX: indexFile,
             NONCE: nonce,
             CSP_SOURCE: webview.cspSource,
-            RES: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'resources', 'views')),
+            RES: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'web')),
+            SRC: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'web', 'src')),
             MODULES: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'node_modules')),
             EXT: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri)),
-            SRC: webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, 'resources', 'views', 'src')),
+            DIST: dist,
+            BUNDLEIMPORT: 'import { main } from "' + dist + '/web.js";',
+            BUNDLEENTRY: 'main(config);',
+            TESTSTYLE: ''
         };
 
         const html = this.#resolveMacros(this.#loadResourceFile(indexFile), dict);

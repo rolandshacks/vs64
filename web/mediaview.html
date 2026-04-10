@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src ${CSP_SOURCE}; font-src 'self' data:; img-src ${CSP_SOURCE}; style-src ${CSP_SOURCE} 'unsafe-inline'; script-src 'nonce-${NONCE}';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    ${TESTSTYLE}
+    <link href="${RES}/vscode.css" rel="stylesheet" />
+    <link href="${RES}/theme.css" rel="stylesheet" />
+    <link href="${RES}/default.css" rel="stylesheet" />
+    <link href="${RES}/${NAME}.css" rel="stylesheet" />
+    <script type="module" nonce="${NONCE}" language="javascript">
+        ${BUNDLEIMPORT}
+        const config = {
+            name: "${NAME}",
+            viewclass: "view.media"
+        };
+        ${BUNDLEENTRY}
+    </script>
+    <title>${TITLE}</title>
+</head>
+<body>
+    <fluent-badge id="idBadge" appearance="accent">Unknown Media Type</fluent-badge>
+    <div id="idHeader" class="page_header"></div>
+    <!-- <fluent-data-grid id="idDataGrid" class="properties" style="max-height: 30em; overflow-y: auto;"></fluent-data-grid> -->
+    <div id="idToggleContent">
+        <div id="idProperties" class="properties"></div>
+        <!-- <fluent-accordion><fluent-accordion-item></fluent-accordion-item></fluent-accordion>-->
+        <fluent-slider id="idSliderScale" style="display: none; padding-top: 2em; padding-bottom: 1em; padding-left: 1em; padding-right: 1em;" tabindex="0" min="1" max="8" value="2" step="1" mode="single-value"></fluent-slider>
+        <canvas id="idContent" class="content test"></canvas>
+    </div>
+</body>
+</html>

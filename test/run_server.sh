@@ -1,1 +1,2 @@
-python3 test/server.py 8080
+#/!bin/bash
+python3 tools/webdbg.py 8080

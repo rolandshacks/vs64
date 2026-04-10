@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src *; style-src * 'unsafe-inline'; font-src 'self' data:;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="test.css" rel="stylesheet" />
+    <link href="vscode.css" rel="stylesheet" />
+    <link href="theme.css" rel="stylesheet" />
+    <link href="default.css" rel="stylesheet" />
+    <link href="mediaview.css" rel="stylesheet" />
+    <script type="module" language="javascript">
+        import { testmain } from "./src/testbench.js";
+        const config = {
+            name: "test",
+            viewclass: "view.media"
+        };
+        testmain(config);
+    </script>
+    <title>Test</title>
+</head>
+<body>
+    <fluent-badge id="idBadge" appearance="accent">Unknown Media Type</fluent-badge>
+    <div id="idProperties" class="properties test"></div>
+    <fluent-button appearance="accent" id="idButtonResetScale">Reset Zoom</fluent-button>
+    <fluent-slider tabindex="0" min="1" max="16" value="2" step="1" mode="single-value"></fluent-slider>
+    <canvas id="idContent"></canvas>
+</body>
+</html>

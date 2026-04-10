@@ -1,0 +1,848 @@
+//
+// Emulator MOS 6502
+//
+
+//-----------------------------------------------------------------------------------------------//
+// Init module
+//-----------------------------------------------------------------------------------------------//
+// eslint-disable-next-line
+
+//-----------------------------------------------------------------------------------------------//
+// Required Modules
+//-----------------------------------------------------------------------------------------------//
+const CPU6502op = require('./opcodes');
+const CallStackSize = 128;
+
+const ENABLE_6510_MODE = true;
+
+const ROMS = (ENABLE_6510_MODE) ? {
+	kernal: Uint8Array.fromBase64(require('cpu/roms/kernal')),
+	basic: Uint8Array.fromBase64(require('cpu/roms/basic')),
+	char: Uint8Array.fromBase64(require('cpu/roms/char')),
+	d1541: Uint8Array.fromBase64(require('cpu/roms/1541'))
+} : null;
+
+class CPU6502 {
+    constructor(mem, mem_read_fn=null, mem_write_fn=null) {
+
+		const instance = this;
+
+		this._roms = ROMS;
+		if (null != this._roms) {
+            // patch kernal ROM
+            this._roms.kernal[0xffd2 - 0xe000] = 0x60;
+		}
+
+		if (null == mem) mem = new Uint8Array(65536);
+		this._memory = mem;
+
+		this.read = mem_read_fn || instance.readMem; 		// Memory read access function
+		this.write = mem_write_fn || instance.writeMem;		// Memory write access function
+
+		this.PC = 0;										// Program counter
+	    this.A = 0; this.X = 0; this.Y = 0; this.S = 0; 	// Registers
+	    this.N = 0; this.Z = 1; this.C = 0; this.V = 0;		// ALU flags
+	    this.I = 0; this.D = 0; this.B = 0; 				// Other flags
+	    this.irq = 0; this.nmi = 0; 						// IRQ lines
+
+	    this._tmp = 0; this._addr = 0; 						// Temporary registers
+        this._returnReached = false; 						// called RTS at end of program
+	    this._opcode = 0; 									// Current opcode
+
+	    this._cycleCounter = 0; 							// Cycles counter
+		this.resetCycleCounter();
+
+		this._callStack = [];								// Call stack buffer
+		this.clearCallStack();
+    }
+
+	is6510ModeEnabled() {
+		return ENABLE_6510_MODE;
+	}
+
+	readMem(addr) {
+        if (addr < 0 || addr > 0xFFFF) {
+            throw new Error('Illegal memory read at address: ' + addr.toString(16).toLowerCase());
+        }
+
+        if (ENABLE_6510_MODE) {
+
+            /*
+                Bit 0 - LORAM: Configures RAM or ROM at $A000-$BFFF (see bankswitching)
+                Bit 1 - HIRAM: Configures RAM or ROM at $E000-$FFFF (see bankswitching)
+                Bit 2 - CHAREN: Configures I/O or ROM at $D000-$DFFF (see bankswitching)
+            */
+
+            let bankswitching = (this._memory[0x0001] & 0xFF);
+
+            if ((bankswitching & 0x02) && addr >= 0xE000) {
+                return this._roms.kernal[addr-0xE000] & 0xFF;
+            } else if (0 == (bankswitching & 0x04) && addr >= 0xD000) {
+                return this._roms.char[addr-0xD000] & 0xFF;
+            } else if ((bankswitching & 0x01) && addr >= 0xA000 && addr <= 0xBFFF) {
+                return this._roms.basic[addr-0xA000] & 0xFF;
+            }
+
+        }
+
+        return this._memory[addr] & 0xFF;
+    }
+
+	writeMem(addr, value) {
+		if (addr < 0 || addr > 0xFFFF) {
+            throw new Error('Illegal memory read at address: ' + addr.toString(16).toLowerCase());
+        }
+        this._memory[addr] = (value & 0xFF);
+	}
+
+	get cycleCounter() {
+		return this._cycleCounter;
+	}
+
+	resetCycleCounter() {
+		this._cycleCounter = 0;
+	}
+
+	incCycleCounter(cycles) {
+		this._cycleCounter += cycles;
+	}
+
+	dumpCallStack() {
+		const callStack = this._callStack;
+		console.log("CALL STACK: " + callStack.length + " entries -------");
+		for (let entry of this._callStack) {
+			console.log("CALL STACK:    - " + entry);
+		}
+		console.log("CALL STACK: END --------");
+	}
+
+	clearCallStack() {
+		this._callStack.length = 0;
+	}
+
+	pushCallStack() {
+		const callStack = this._callStack;
+		if (callStack.length >= CallStackSize) return;
+		callStack.push(this.PC);
+	}
+
+	popCallStack() {
+		const callStack = this._callStack;
+		let pc = null;
+		if (callStack.length > 0) {
+			pc = callStack[callStack.length-1];
+			callStack.pop();
+		}
+		return pc;
+	}
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // CPU control
+    ////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Reset the processor
+     */
+    reset() {
+
+        this._returnReached = false;
+
+	    this.A = 0; this.X = 0; this.Y = 0; this.S = 0;
+	    this.N = 0; this.Z = 1; this.C = 0; this.V = 0;
+	    this.I = 0; this.D = 0; this.B = 0;
+
+        this.PC = (this.read(0xFFFD) << 8) | this.read(0xFFFC);
+        this._opcode = this.read( this.PC );
+
+		this.clearCallStack();
+
+		if (this._memory) {
+			this._memory.fill(0);
+		}
+
+		if (ENABLE_6510_MODE) {
+            // initialize some zeropage values
+            this.writeMem(0x0, 0xFF); // I/O port register
+            this.writeMem(0x1, 0xFF); // bankswitching
+        } else if (null != startAddress) {
+            // set reset vector to start address
+            this.writeMem(0xFFFD, (startAddress>>8) & 0xFF);
+            this.writeMem(0xFFFC, (startAddress & 0xFF));
+        }
+    }
+
+	/**
+	 * Set program counter
+	 */
+	setPC(pc) {
+		this.PC = pc;
+        this._opcode = this.read( this.PC );
+	}
+
+    /**
+     * Execute a single opcode
+     */
+    step() {
+		const opcode = this.read( this.PC );
+        if (opcode == 0x20) this.pushCallStack(); // JSR
+        this.PC++;
+	    CPU6502op[ opcode ]( this );
+        if (opcode == 0x60) this.popCallStack(); // RTS
+		this._opcode = this.read( this.PC );
+    }
+
+    fmt(value) {
+        let s = "00"+value.toString(16).toUpperCase();
+        return "$" + s.substring(s.length-2);
+    }
+
+    /**
+     * Log the current cycle count and all registers to console.log
+     */
+    log(){
+        let opcode = this.read( this.PC );
+	    let msg = "nPC=" + this.PC.toString(16);
+	    msg += " cyc=" + this.cycleCounter;
+	    msg += " [" + this.fmt(opcode) + "] ";
+	    msg += ( this.C ? "C" : "-");
+	    msg += ( this.N ? "N" : "-");
+	    msg += ( this.Z ? "Z" : "-");
+	    msg += ( this.V ? "V" : "-");
+	    msg += ( this.D ? "D" : "-");
+	    msg += ( this.I ? "I" : "-");
+	    msg += " A=" + this.A.toString(16);
+	    msg += " X=" + this.X.toString(16);
+	    msg += " Y=" + this.Y.toString(16);
+	    msg += " S=" + this.S.toString(16);
+	    console.log(msg);
+    }
+
+    /**
+     * Read a memory location. This function must be overridden with a custom implementation.
+     * @param {number} addr - The address to read from.
+     */
+     //read(addr) { throw new Error('The read method must be overridden'); }
+
+     /**
+     * Writa a value to a memory location. This function must be overridden with a custom implementation.
+     * @param {number} addr - The address to write to.
+     * @param {number} value - The value to write.
+     */
+     //write(addr, value) { throw new Error('The read method must be overridden'); }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Subroutines - addressing modes & flags
+    ////////////////////////////////////////////////////////////////////////////////
+
+    izx() {
+	    let a = (this.read(this.PC++) + this.X) & 0xFF;
+	    this._addr = (this.read(a+1) << 8) | this.read(a);
+	    this.incCycleCounter(6);
+    }
+
+	izyp() {
+	    let a = this.read(this.PC++);
+	    let paddr = (this.read((a+1) & 0xFF) << 8) | this.read(a);
+	    this._addr = (paddr + this.Y);
+		this.incCycleCounter(6);
+	}
+
+    izy() {
+	    let a = this.read(this.PC++);
+	    let paddr = (this.read((a+1) & 0xFF) << 8) | this.read(a);
+	    this._addr = (paddr + this.Y);
+	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
+		    this.incCycleCounter(6);
+	    } else {
+		    this.incCycleCounter(5);
+	    }
+    }
+
+    ind() {
+	    let a = this.read(this.PC++);
+	    a |= (this.read(this.PC++) << 8);
+	    this._addr = this.read(a);
+	    this._addr |= (this.read( (a & 0xFF00) | ((a + 1) & 0xFF) ) << 8);
+	    this.incCycleCounter(6);
+    }
+
+    zp() {
+	    this._addr = this.read(this.PC++);
+	    this.incCycleCounter(3);
+    }
+
+    zpx() {
+	    this._addr = (this.read(this.PC++) + this.X) & 0xFF;
+	    this.incCycleCounter(4);
+    }
+
+    zpy() {
+	    this._addr = (this.read(this.PC++) + this.Y) & 0xFF;
+	    this.incCycleCounter(4);
+    }
+
+    imp() {
+	    this.incCycleCounter(2);
+    }
+
+    imm() {
+	    this._addr = this.PC++;
+	    this.incCycleCounter(2);
+    }
+
+    abs() {
+	    this._addr = this.read(this.PC++);
+	    this._addr |= (this.read(this.PC++) << 8);
+	    this.incCycleCounter(4);
+    }
+
+	abxp() {
+	    let paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this._addr = (paddr + this.X);
+		  this.incCycleCounter(5);
+    }
+
+    abx() {
+	    let paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this._addr = (paddr + this.X);
+	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
+		    this.incCycleCounter(5);
+	    } else {
+		    this.incCycleCounter(4);
+	    }
+    }
+
+    aby() {
+	    let paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this._addr = (paddr + this.Y);
+	    if ( (paddr & 0x100) != (this._addr & 0x100) ) {
+		    this.incCycleCounter(5);
+	    } else {
+		    this.incCycleCounter(4);
+	    }
+    }
+
+	abyp() {
+	    let paddr = this.read(this.PC++);
+	    paddr |= (this.read(this.PC++) << 8);
+	    this._addr = (paddr + this.Y);
+      this.incCycleCounter(5);
+    }
+
+    rel() {
+	    this._addr = this.read(this.PC++);
+	    if (this._addr & 0x80) {
+		    this._addr -= 0x100;
+	    }
+	    this._addr += this.PC;
+	    this.incCycleCounter(2);
+    }
+
+    rmw() {
+	    this.write(this._addr, this._tmp & 0xFF);
+	    this.incCycleCounter(2);
+    }
+
+    fnz(v) {
+	    this.Z = ((v & 0xFF) == 0) ? 1 : 0;
+	    this.N = ((v & 0x80) != 0) ? 1 : 0;
+    }
+
+    // Borrow
+    fnzb(v) {
+	    this.Z = ((v & 0xFF) == 0) ? 1 : 0;
+	    this.N = ((v & 0x80) != 0) ? 1 : 0;
+	    this.C = ((v & 0x100) != 0) ? 0 : 1;
+    }
+
+    // Carry
+    fnzc(v) {
+	    this.Z = ((v & 0xFF) == 0) ? 1 : 0;
+	    this.N = ((v & 0x80) != 0) ? 1 : 0;
+	    this.C = ((v & 0x100) != 0) ? 1 : 0;
+    }
+
+    branch(v) {
+	    if (v) {
+		    if ( (this._addr & 0x100) != (this.PC & 0x100) ) {
+			    this.incCycleCounter(2);
+		    } else {
+			    this.incCycleCounter(1);
+		    }
+		    this.PC = this._addr;
+	    }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Subroutines - instructions
+    ////////////////////////////////////////////////////////////////////////////////
+    adc() {
+	    let v = this.read(this._addr);
+	    let c = this.C;
+	    let r = this.A + v + c;
+	    if (this.D) {
+		    let al = (this.A & 0x0F) + (v & 0x0F) + c;
+		    if (al > 9) al += 6;
+		    let ah = (this.A >> 4) + (v >> 4) + ((al > 15) ? 1 : 0);
+		    this.Z = ((r & 0xFF) == 0) ? 1 : 0;
+		    this.N = ((ah & 8) != 0) ? 1 : 0;
+		    this.V = ((~(this.A ^ v) & (this.A ^ (ah << 4)) & 0x80) != 0) ? 1 : 0;
+		    if (ah > 9) ah += 6;
+		    this.C = (ah > 15) ? 1 : 0;
+		    this.A = ((ah << 4) | (al & 15)) & 0xFF;
+	    } else {
+		    this.Z = ((r & 0xFF) == 0) ? 1 : 0;
+		    this.N = ((r & 0x80) != 0) ? 1 : 0;
+		    this.V = ((~(this.A ^ v) & (this.A ^ r) & 0x80) != 0) ? 1 : 0;
+		    this.C = ((r & 0x100) != 0) ? 1 : 0;
+		    this.A = r & 0xFF;
+	    }
+    }
+
+    ahx() {
+	    this._tmp = ((this._addr >> 8) + 1) & this.A & this.X;
+	    this.write(this._addr, this._tmp & 0xFF);
+    }
+
+    alr() {
+	    this._tmp = this.read(this._addr) & this.A;
+	    this._tmp = ((this._tmp & 1) << 8) | (this._tmp >> 1);
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    anc() {
+	    this._tmp = this.read(this._addr);
+	    this._tmp |= ((this._tmp & 0x80) & (this.A & 0x80)) << 1;
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    and() {
+	    this.A &= this.read(this._addr);
+	    this.fnz(this.A);
+    }
+
+    ane() {
+	    this._tmp = this.read(this._addr) & this.A & (this.A | 0xEE);
+	    this.fnz(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    arr() {
+	    this._tmp = this.read(this.adfdr) & this.A;
+	    this.C = ((this._tmp & 0x80) != 0);
+	    this.V = ((((this._tmp >> 7) & 1) ^ ((this._tmp >> 6) & 1)) != 0);
+	    if (this.D) {
+		    let al = (this._tmp & 0x0F) + (this._tmp & 1);
+		    if (al > 5) al += 6;
+		    let ah = ((this._tmp >> 4) & 0x0F) + ((this._tmp >> 4) & 1);
+		    if (ah > 5) {
+			    al += 6;
+			    this.C = true;
+		    } else {
+			    this.C = false;
+		    }
+		    this._tmp = (ah << 4) | al;
+	    }
+	    this.fnz(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    asl() {
+	    this._tmp = this.read(this._addr) << 1;
+	    this.fnzc(this._tmp);
+	    this._tmp &= 0xFF;
+    }
+    asla() {
+	    this._tmp = this.A << 1;
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    bit() {
+	    this._tmp = this.read(this._addr);
+	    this.N = ((this._tmp & 0x80) != 0) ? 1 : 0;
+	    this.V = ((this._tmp & 0x40) != 0) ? 1 : 0;
+	    this.Z = ((this._tmp & this.A) == 0) ? 1 : 0;
+    }
+
+    brk() {
+	    this.PC++;
+	    this.write(this.S + 0x100, this.PC >> 8);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.write(this.S + 0x100, this.PC & 0xFF);
+        this.S = (this.S - 1) & 0xFF;
+        this.B = 1; // set break flag
+	    let v = this.N << 7;
+	    v |= this.V << 6;
+	    v |= 1 << 5;
+	    v |= this.B << 4;
+	    v |= this.D << 3;
+	    v |= this.I << 2;
+	    v |= this.Z << 1;
+	    v |= this.C;
+	    this.write(this.S + 0x100, v);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.I = 1;
+	    this.D = 0;
+	    this.PC = (this.read(0xFFFF) << 8) | this.read(0xFFFE);
+	    this.incCycleCounter(5);
+    }
+
+    bcc() { this.branch( this.C == 0 ); }
+    bcs() { this.branch( this.C == 1 ); }
+    beq() { this.branch( this.Z == 1 ); }
+    bne() { this.branch( this.Z == 0 ); }
+    bmi() { this.branch( this.N == 1 ); }
+    bpl() { this.branch( this.N == 0 ); }
+    bvc() { this.branch( this.V == 0 ); }
+    bvs() { this.branch( this.V == 1 ); }
+
+    clc() { this.C = 0; }
+    cld() { this.D = 0; }
+    cli() { this.I = 0; }
+    clv() { this.V = 0; }
+
+    cmp() {
+	    this.fnzb( this.A - this.read(this._addr) );
+    }
+
+    cpx() {
+	    this.fnzb( this.X - this.read(this._addr) );
+    }
+
+    cpy() {
+	    this.fnzb( this.Y - this.read(this._addr) );
+    }
+
+    dcp() {
+	    this._tmp = (this.read(this._addr) - 1) & 0xFF;
+	    this._tmp = this.A - this._tmp;
+	    this.fnz(this._tmp);
+    }
+
+    dec() {
+	    this._tmp = (this.read(this._addr) - 1) & 0xFF;
+	    this.fnz(this._tmp);
+    }
+
+    dex() {
+	    this.X = (this.X - 1) & 0xFF;
+	    this.fnz(this.X);
+    }
+
+    dey() {
+	    this.Y = (this.Y - 1) & 0xFF;
+	    this.fnz(this.Y);
+    }
+
+    eor() {
+	    this.A ^= this.read(this._addr);
+	    this.fnz(this.A);
+    }
+
+    inc() {
+	    this._tmp = (this.read(this._addr) + 1) & 0xFF;
+	    this.fnz(this._tmp);
+    }
+
+    inx() {
+	    this.X = (this.X + 1) & 0xFF;
+	    this.fnz(this.X);
+    }
+
+    iny() {
+	    this.Y = (this.Y + 1) & 0xFF;
+	    this.fnz(this.Y);
+    }
+
+    isc() {
+	    let v = (this.read(this._addr) + 1) & 0xFF;
+	    let c = 1 - (this.C ? 1 : 0);
+	    let r = this.A - v - c;
+	    if (this.D) {
+		    let al = (this.A & 0x0F) - (v & 0x0F) - c;
+		    if (al > 0x80) al -= 6;
+		    let ah = (this.A >> 4) - (v >> 4) - ((al > 0x80) ? 1 : 0);
+		    this.Z = ((r & 0xFF) == 0);
+		    this.N = ((r & 0x80) != 0);
+		    this.V = (((this.A ^ v) & (this.A ^ r) & 0x80) != 0);
+		    this.C = ((this.r & 0x100) != 0) ? 0 : 1;
+		    if (ah > 0x80) ah -= 6;
+		    this.A = ((ah << 4) | (al & 15)) & 0xFF;
+	    } else {
+		    this.Z = ((r & 0xFF) == 0);
+		    this.N = ((r & 0x80) != 0);
+		    this.V = (((this.A ^ v) & (this.A ^ r) & 0x80) != 0);
+		    this.C = ((r & 0x100) != 0) ? 0 : 1;
+		    this.A = r & 0xFF;
+	    }
+    }
+
+    jmp() {
+	    this.PC = this._addr;
+	    this.incCycleCounter(-1);
+    }
+
+    jsr() {
+	    this.write(this.S + 0x100, (this.PC - 1) >> 8);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.write(this.S + 0x100, (this.PC - 1) & 0xFF);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.PC = this._addr;
+	    this.incCycleCounter(2);
+    }
+
+    las() {
+	    this.S = this.X = this.A = this.read(this._addr) & this.S;
+	    this.fnz(this.A);
+    }
+
+    lax() {
+	    this.X = this.A = this.read(this._addr);
+	    this.fnz(this.A);
+    }
+
+    lda() {
+	    this.A = this.read(this._addr);
+	    this.fnz(this.A);
+    }
+
+    ldx() {
+	    this.X = this.read(this._addr);
+	    this.fnz(this.X);
+    }
+
+    ldy() {
+	    this.Y = this.read(this._addr);
+	    this.fnz(this.Y);
+    }
+
+    ora() {
+	    this.A |= this.read(this._addr);
+	    this.fnz(this.A);
+    }
+
+    rol() {
+	    this._tmp = (this.read(this._addr) << 1) | this.C;
+	    this.fnzc(this._tmp);
+	    this._tmp &= 0xFF;
+    }
+    rla() {
+	    this._tmp = (this.A << 1) | this.C;
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    ror() {
+	    this._tmp = this.read(this._addr);
+	    this._tmp = ((this._tmp & 1) << 8) | (this.C << 7) | (this._tmp >> 1);
+	    this.fnzc(this._tmp);
+	    this._tmp &= 0xFF;
+    }
+    rra() {
+	    this._tmp = ((this.A & 1) << 8) | (this.C << 7) | (this.A >> 1);
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+
+    lsr() {
+	    this._tmp = this.read(this._addr);
+	    this._tmp = ((this._tmp & 1) << 8) | (this._tmp >> 1);
+	    this.fnzc(this._tmp);
+	    this._tmp &= 0xFF;
+    }
+    lsra() {
+	    this._tmp = ((this.A & 1) << 8) | (this.A >> 1);
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+
+    nop() { }
+
+    pha() {
+	    this.write(this.S + 0x100, this.A);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.incCycleCounter(1);
+    }
+
+    php() {
+	    let v = this.N << 7;
+	    v |= this.V << 6;
+	    v |= 1 << 5;
+	    v |= this.B << 4;
+	    v |= this.D << 3;
+	    v |= this.I << 2;
+	    v |= this.Z << 1;
+	    v |= this.C;
+	    this.write(this.S + 0x100, v);
+	    this.S = (this.S - 1) & 0xFF;
+	    this.incCycleCounter(1);
+    }
+
+    pla() {
+	    this.S = (this.S + 1) & 0xFF;
+	    this.A = this.read(this.S + 0x100);
+	    this.fnz(this.A);
+	    this.incCycleCounter(2);
+    }
+
+    plp() {
+	    this.S = (this.S + 1) & 0xFF;
+	    this._tmp = this.read(this.S + 0x100);
+	    this.N = ((this._tmp & 0x80) != 0) ? 1 : 0;
+	    this.V = ((this._tmp & 0x40) != 0) ? 1 : 0;
+	    this.B = ((this._tmp & 0x10) != 0) ? 1 : 0;
+	    this.D = ((this._tmp & 0x08) != 0) ? 1 : 0;
+	    this.I = ((this._tmp & 0x04) != 0) ? 1 : 0;
+	    this.Z = ((this._tmp & 0x02) != 0) ? 1 : 0;
+	    this.C = ((this._tmp & 0x01) != 0) ? 1 : 0;
+	    this.incCycleCounter(2);
+    }
+
+    rti() {
+	    this.S = (this.S + 1) & 0xFF;
+	    this._tmp = this.read(this.S + 0x100);
+	    this.N = ((this._tmp & 0x80) != 0) ? 1 : 0;
+        this.V = ((this._tmp & 0x40) != 0) ? 1 : 0;
+        this.B = 0; // clear break flag
+	    this.D = ((this._tmp & 0x08) != 0) ? 1 : 0;
+	    this.I = ((this._tmp & 0x04) != 0) ? 1 : 0;
+	    this.Z = ((this._tmp & 0x02) != 0) ? 1 : 0;
+	    this.C = ((this._tmp & 0x01) != 0) ? 1 : 0;
+	    this.S = (this.S + 1) & 0xFF;
+	    this.PC = this.read(this.S + 0x100);
+	    this.S = (this.S + 1) & 0xFF;
+	    this.PC |= this.read(this.S + 0x100) << 8;
+	    this.incCycleCounter(4);
+    }
+
+    rts() {
+        if (this.S == 0xFF) this._returnReached = true;
+	    this.S = (this.S + 1) & 0xFF;
+	    this.PC = this.read(this.S + 0x100);
+	    this.S = (this.S + 1) & 0xFF;
+	    this.PC |= this.read(this.S + 0x100) << 8;
+	    this.PC++;
+	    this.incCycleCounter(4);
+    }
+
+    sbc() {
+	    let v = this.read(this._addr);
+	    let c = 1 - this.C;
+	    let r = this.A - v - c;
+	    if (this.D) {
+		    let al = (this.A & 0x0F) - (v & 0x0F) - c;
+		    if (al < 0) al -= 6;
+		    let ah = (this.A >> 4) - (v >> 4) - ((al < 0) ? 1 : 0);
+		    this.Z = ((r & 0xFF) == 0) ? 1 : 0;
+		    this.N = ((r & 0x80) != 0) ? 1 : 0;
+		    this.V = (((this.A ^ v) & (this.A ^ r) & 0x80) != 0) ? 1 : 0;
+		    this.C = ((r & 0x100) != 0) ? 0 : 1;
+		    if (ah < 0) ah -= 6;
+		    this.A = ((ah << 4) | (al & 15)) & 0xFF;
+	    } else {
+		    this.Z = ((r & 0xFF) == 0) ? 1 : 0;
+		    this.N = ((r & 0x80) != 0) ? 1 : 0;
+		    this.V = (((this.A ^ v) & (this.A ^ r) & 0x80) != 0) ? 1 : 0;
+		    this.C = ((r & 0x100) != 0) ? 0 : 1;
+		    this.A = r & 0xFF;
+	    }
+    }
+
+    sbx() {
+	    this._tmp = this.read(this._addr) - (this.A & this.X);
+	    this.fnzb(this._tmp);
+	    this.X = (this._tmp & 0xFF);
+    }
+
+    sec() { this.C = 1; }
+    sed() { this.D = 1; }
+    sei() { this.I = 1; }
+
+    shs() {
+	    this._tmp = ((this._addr >> 8) + 1) & this.A & this.X;
+	    this.write(this._addr, this._tmp & 0xFF);
+	    this.S = (this._tmp & 0xFF);
+    }
+
+    shx() {
+	    this._tmp = ((this._addr >> 8) + 1) & this.X;
+	    this.write(this._addr, this._tmp & 0xFF);
+    }
+
+    shy() {
+	    this._tmp = ((this._addr >> 8) + 1) & this.Y;
+	    this.write(this._addr, this._tmp & 0xFF);
+    }
+
+    slo() {
+	    this._tmp = this.read(this._addr) << 1;
+	    this._tmp |= this.A;
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    sre() {
+	    let v = this.read(this._addr);
+	    this._tmp = ((v & 1) << 8) | (v >> 1);
+	    this._tmp ^= this.A;
+	    this.fnzc(this._tmp);
+	    this.A = this._tmp & 0xFF;
+    }
+
+    sta() {
+	    this.write(this._addr, this.A);
+    }
+
+    stx() {
+	    this.write(this._addr, this.X);
+    }
+
+    sty() {
+	    this.write(this._addr, this.Y);
+    }
+
+    tax() {
+	    this.X = this.A;
+	    this.fnz(this.X);
+    }
+
+    tay() {
+	    this.Y = this.A;
+	    this.fnz(this.Y);
+    }
+
+    tsx() {
+	    this.X = this.S;
+	    this.fnz(this.X);
+    }
+
+    txa() {
+	    this.A = this.X;
+	    this.fnz(this.A);
+    }
+
+    txs() {
+	    this.S = this.X;
+    }
+
+    tya() {
+	    this.A = this.Y;
+	    this.fnz(this.A);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CPU instantiation
+////////////////////////////////////////////////////////////////////////////////
+
+module.exports = {
+	CPU6502
+};

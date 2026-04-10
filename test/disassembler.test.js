@@ -2,6 +2,7 @@
 // Test disassembler
 //
 
+const fs = require('fs');
 const path = require('path');
 
 //-----------------------------------------------------------------------------------------------//
@@ -25,13 +26,28 @@ const { Disassembler } = require('disassembler/disassembler');
 // Tests
 //-----------------------------------------------------------------------------------------------//
 
+function disassembleFile(filename) {
+
+    const ext = path.extname(filename).toLowerCase();
+    if (ext != ".prg") {
+        throw("unsupported file format: " + ext);
+    }
+
+    if (!fs.existsSync(filename)) {
+        throw ("" + filename + "does not exist or is invalid");
+    }
+
+    const binary = fs.readFileSync(filename);
+    const disassembler = new Disassembler();
+
+    return disassembler.disassemble(binary);
+}
+
 describe('disassembler', () => {
 
 test("disassembler", () => {
-    const disassembler = new Disassembler();
-
     // eslint-disable-next-line no-undef
-    const _result = disassembler.disassembleFile(__context.resolve("data/test.prg"));
+    const _result = disassembleFile(__context.resolve("data/test.prg"));
 });
 
 });

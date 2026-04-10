@@ -5,8 +5,10 @@
 
 BIND(module);
 
+const path = require('path');
+
 const { AbstractViewProvider } = require('views/view');
-const { BinaryDocument } = require('views/document');
+const { Document } = require('views/document');
 
 /**
  * Media View Provider
@@ -22,7 +24,12 @@ class MediaViewProvider extends AbstractViewProvider {
     }
 
     async createDocument(uri, options) {
-        return new BinaryDocument(uri, options);
+
+        const filePath = uri.fsPath;
+        const ext = path.extname(filePath).toLowerCase();
+        const isBinary = (ext != ".spm");
+
+        return new Document(uri, options, null, isBinary);
     }
 }
 

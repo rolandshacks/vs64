@@ -1,0 +1,31 @@
+/*
+	Normalize and mock-up for testing
+*/
+
+:root {
+    --vscode-font-family: "Segoe WPC", "Segoe UI", sans-serif;
+    --vscode-font-weight: normal;
+    --vscode-font-size: 13px;
+
+    --vscode-editor-font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+    --vscode-editor-font-weight: normal;
+    --vscode-editor-font-size: 16px;
+
+    --vscode-foreground:#f3eff5;
+    --vscode-errorForeground:#f48771;
+    --vscode-descriptionForeground:rgba(243, 239, 245, 0.7);
+    --vscode-icon-foreground:#c5c5c5;
+
+    --vscode-button-foreground:#F2FFFF;
+    --vscode-button-background:#297AA0;
+    --vscode-button-hoverBackground:#297AA0;
+
+    --vscode-editor-background: #121314;
+    --vscode-editor-foreground: #bbbebf;
+    --vscode-editorWidget-background: #202122;
+    --vscode-editorWidget-foreground: #bfbfbf;
+}
+
+body {
+    margin: 0;
+}

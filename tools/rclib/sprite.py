@@ -151,7 +151,7 @@ class SpriteMateResource(SpriteResource):
 
         self.col_background = colors['0'] if len(colors) >= 1 else 0
         self.col_multi1 = colors['2'] if len(colors) >= 2 else 0
-        self.col_multi1 = colors['3'] if len(colors) >= 3 else 0
+        self.col_multi2 = colors['3'] if len(colors) >= 3 else 0
 
         #### store meta data
 
