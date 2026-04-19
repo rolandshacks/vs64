@@ -24,7 +24,21 @@ class Factory {
 
     static createInstance(classname, ...args) {
 
-        const createInstanceFn = Factory.classMap.get(classname);
+        if (null == classname) return null;
+
+        let createInstanceFn = null;
+
+        let tryName = classname;
+        while (tryName.length > 0) {
+            createInstanceFn = Factory.classMap.get(tryName);
+            if (null != createInstanceFn) break;
+
+            const separator = tryName.lastIndexOf('.');
+            if (separator < 0) break;
+
+            tryName = tryName.substring(0, separator);
+        }
+
         if (null == createInstanceFn) {
             throw "Unknown class '" + classname + "'";
         }

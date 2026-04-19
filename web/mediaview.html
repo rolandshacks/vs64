@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src ${CSP_SOURCE}; font-src 'self' data:; img-src ${CSP_SOURCE}; style-src ${CSP_SOURCE} 'unsafe-inline'; script-src 'nonce-${NONCE}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src ${CSP_SOURCE}; font-src ${CSP_SOURCE} 'unsafe-inline'; img-src ${CSP_SOURCE}; style-src ${CSP_SOURCE} 'unsafe-inline'; script-src 'nonce-${NONCE}';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     ${TESTSTYLE}
     <link href="${RES}/vscode.css" rel="stylesheet" />
@@ -24,9 +24,21 @@
     <div id="idHeader" class="page_header"></div>
     <!-- <fluent-data-grid id="idDataGrid" class="properties" style="max-height: 30em; overflow-y: auto;"></fluent-data-grid> -->
     <div id="idToggleContent">
-        <div id="idProperties" class="properties"></div>
+        <table><tr valign="top">
+            <td width="99%">
+                <div id="idProperties" class="properties"></div>
+            </td>
+            <td>
+                <div id="idC64TextBox" style="display: none;">
+                <p>Directory Listing:</p>
+                <pre class="c64text" id="idC64Text" style="max-height: 16.0em;"></pre>
+                </div>
+            </td>
+        </tr></table>
         <!-- <fluent-accordion><fluent-accordion-item></fluent-accordion-item></fluent-accordion>-->
-        <fluent-slider id="idSliderScale" style="display: none; padding-top: 2em; padding-bottom: 1em; padding-left: 1em; padding-right: 1em;" tabindex="0" min="1" max="8" value="2" step="1" mode="single-value"></fluent-slider>
+        <div class="top-slider-container">
+            <fluent-slider class="top-slider" id="idSliderScale" style="display: none; " tabindex="0" min="1" max="8" value="2" step="1" mode="single-value"></fluent-slider>
+        </div>
         <canvas id="idContent" class="content test"></canvas>
     </div>
 </body>

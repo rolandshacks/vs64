@@ -22,7 +22,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { LanguageServer } = require('language/language_server');
+//const { LanguageServer } = require('language/language_server');
 
 //-----------------------------------------------------------------------------------------------//
 // Test implementation

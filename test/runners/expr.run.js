@@ -19,8 +19,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
-const { Expression } = require('utilities/expression');
+const { Logger, LogLevel } = require('logger/logger');
+const { Expression } = require('algorithm/expression');
 
 function run() {
 

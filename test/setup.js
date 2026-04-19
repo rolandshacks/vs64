@@ -15,8 +15,8 @@ class TestContext {
 
         this.cwd = process.cwd();
         this.rootDir = rootDir;
-        this.tempDir = path.resolve(this.rootDir, "temp");
-        this.dataDir = path.resolve(this.rootDir, "data");
+        this.tempDir = path.resolve(this.rootDir, "test/temp");
+        this.dataDir = path.resolve(this.rootDir, "test/data");
 
         this.#exportInterface();
     }
@@ -26,9 +26,9 @@ class TestContext {
             if (!relPath) return relPath;
 
             let resolvedPath = null;
-            if (relPath.startsWith("/temp/")) {
+            if (relPath.startsWith("temp:/")) {
                 resolvedPath = path.resolve(this.tempDir, relPath.substring(6));
-            } else if (relPath.startsWith("/data/")) {
+            } else if (relPath.startsWith("data:/")) {
                 resolvedPath = path.resolve(this.dataDir, relPath.substring(6));
             } else {
                 resolvedPath = path.resolve(this.rootDir, relPath);

@@ -1,0 +1,16 @@
+{
+  "name": "grammars",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^30.3.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "jest --runInBand",
+    "coverage": "jest --coverage --runInBand"
+  }
+}

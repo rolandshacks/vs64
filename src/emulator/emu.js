@@ -344,7 +344,9 @@ class Emulator extends DebugInterface {
 
         const ramOnly = (memoryType == MemoryType.Ram);
 
-        if (ramOnly || !ENABLE_6510_MODE || endAddress < 0xa000) {
+        const cpu = this._cpu;
+
+        if (ramOnly || !cpu.is6510ModeEnabled() || endAddress < 0xa000) {
             return this._memory.slice(startAddress, endAddress+1);
         }
 

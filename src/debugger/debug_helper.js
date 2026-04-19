@@ -14,7 +14,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const logger = new Logger("DebugHelper");
 
 //-----------------------------------------------------------------------------------------------//

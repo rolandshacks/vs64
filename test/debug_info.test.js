@@ -18,11 +18,11 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
+const { Logger, LogLevel } = require('logger/logger');
 const { DebugInfo } = require('debugger/debug_info');
 
 const { Project } = require('project/project');
-const { Settings } = require('settings/settings');
+const { Settings } = require('common/settings');
 
 //-----------------------------------------------------------------------------------------------//
 // Tests
@@ -48,7 +48,7 @@ test("test debug info acme", async () => {
     };
 
     project.fromJson(JSON.stringify(projectConfig));
-    const debugInfo = new DebugInfo(__context.resolve("/data/acmedebug.report"), project);
+    const debugInfo = new DebugInfo(__context.resolve("data:/acmedebug.report"), project);
     expect(debugInfo).not.toBeNull();
 
     const _addressInfo = debugInfo.getAddressInfo(2070);
@@ -79,7 +79,7 @@ test("test debug info cc65", async () => {
         return true;
     }
 
-    const debugInfo = new DebugInfo(__context.resolve("/data/cc65debug.dbg"), project);
+    const debugInfo = new DebugInfo(__context.resolve("data:/cc65debug.dbg"), project);
     expect(debugInfo).not.toBeNull();
 
     const _addressInfo = debugInfo.getAddressInfo(2070);

@@ -17,11 +17,10 @@ const fs = require('fs');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Constants } = require('settings/settings');
+const { Constants } = require('common/settings');
 const { FileCache } = require('utilities/cache');
-const { TokenType, StatementType } = require('language/language_base');
-const { AsmParser, AsmGrammar } = require('language/language_asm');
-const { BasicParser, BasicGrammar } = require('language/language_basic');
+const { AsmParser, AsmGrammar } = require('grammars/language_asm');
+const { BasicParser, BasicGrammar } = require('grammars/language_basic');
 
 //-----------------------------------------------------------------------------------------------//
 // LanguageServer
@@ -126,7 +125,7 @@ class Parser {
         if (filename && source == null) {
             try {
                 source = fs.readFileSync(filename, "utf8");
-            } catch (err) {
+            } catch (_err) {
                 return null;
             }
             parser = Parser.fromFile(filename);

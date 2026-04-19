@@ -19,10 +19,10 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
+const { Logger, LogLevel } = require('logger/logger');
 const { Utils } = require('utilities/utils');
 const { Project } = require('project/project');
-const { Settings } = require('settings/settings');
+const { Settings } = require('common/settings');
 const { Build } = require('builder/builder');
 
 //-----------------------------------------------------------------------------------------------//

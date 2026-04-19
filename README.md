@@ -27,10 +27,11 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for the VICE emulator using the binary monitor protocol
 * Launch support for the X16 emulator
-* Preview of C64 media files (SID, sprites, charsets)
+* Viewer of C64 media files (SID, sprites, charsets)
+* Graphical inspector for C64 virtual disk and tape files (d64, t64)
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
-* Direct access to D64 disks as virtual workspace folders
+* Direct access to D64 disks and T64 tapes as virtual workspace folders
 * On-the-fly disassembly of C64 program files for assembly and BASIC code
 
 ## Quick and Start (TL;DR)
@@ -611,25 +612,29 @@ Optional arguments to be added to the resource compiler command. Use this to for
 VS64 supports on-the-fly disassembly of .prg files containing either machine code or BASIC programs.
 In order to use it, just open a `.prg` file in the Visual Studio Code editor.
 
-### D64 File System Provider
+### Mounting Virtual Disk (d64) and Tape (t64) Files
 
-VS64 allows mounting D64 files as virtual folders of the Visual Studio Code workspace tree.
+VS64 allows mounting D64 disk or T64 tape files as virtual folders of the Visual Studio Code workspace tree.
 
-To add a D64 file to the workspace, simply select a .d64 disk file, then right-click and select "Mount".
-In case the disk was successfully opened, there should be a new folder at the root level of the project workspace.
+To add a D64 or T64 file to the workspace, simply select a .d64 or .t64 file, then right-click and select "Mount".
+In case the file was successfully mounted, there should be a new folder at the root level of the project workspace.
 
-In order to unmount a virtual D64 folder, simple select the workspace folder and choose "Remove from workspace".
+In order to unmount a virtual the folder, simple select the workspace folder and choose "Remove from workspace".
 
-Supported actions:
+Supported actions for disks:
 
 - Open and edit files
 - Copy files to and from disk
 - Delete files
 - Rename files
 
+Tapes are currently read-only. Supported actions:
+- Open files
+- Copy files from tape
+
 Some additional notes:
 
-- Be careful about what you do, you will actually modify your D64 file
+- Be careful about what you do with disks, you will actually modify your D64 file
 - To create a new disk, just create a new .d64 file and mount it. VS64 will automatically create, format and mount the disk file.
 
 ### IntelliSense Support

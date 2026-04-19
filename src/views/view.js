@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const vscode = require('vscode');
 
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const { Document } = require('views/document');
 
 const logger = new Logger("AbstractViewProvider");

@@ -19,7 +19,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
+const { Logger, LogLevel } = require('logger/logger');
 const { Utils } = require('utilities/utils');
 
 function findPython() {

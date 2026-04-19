@@ -14,10 +14,10 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-//const { Logger } = require('utilities/logger');
+//const { Logger } = require('logger/logger');
 
 const { Utils } = require('utilities/utils');
-const { SortedArray } = require('utilities/sorted_array');
+const { SortedArray } = require('algorithm/sorted_array');
 const { DebugSymbol } = require('debugger/debug_info_types');
 const { BasicDebugInfo } = require('debugger/debug_info_basic');
 const { Cc65DebugInfo } = require('debugger/debug_info_cc65');

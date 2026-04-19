@@ -1,3 +1,39 @@
 /*
   Default style sheet
 */
+
+:root {
+    --c64-color-0: #000000;
+    --c64-color-1: #ffffff;
+    --c64-color-2: #924A40;
+    --c64-color-3: #84C5CC;
+    --c64-color-4: #9351B6;
+    --c64-color-5: #72B14B;
+    --c64-color-6: #483AAA;
+    --c64-color-7: #D5DF7C;
+    --c64-color-8: #99692D;
+    --c64-color-9: #675200;
+    --c64-color-10: #C18178;
+    --c64-color-11: #606060;
+    --c64-color-12: #8A8A8A;
+    --c64-color-13: #B3EC91;
+    --c64-color-14: #867ADE;
+    --c64-color-15: #B3B3B3;
+
+    --c64-color-black: var(--c64-color-0);
+    --c64-color-white: var(--c64-color-1);
+    --c64-color-red: var(--c64-color-2);
+    --c64-color-cyan: var(--c64-color-3);
+    --c64-color-purple: var(--c64-color-4);
+    --c64-color-green: var(--c64-color-5);
+    --c64-color-blue: var(--c64-color-6);
+    --c64-color-yellow: var(--c64-color-7);
+    --c64-color-orange: var(--c64-color-8);
+    --c64-color-brown: var(--c64-color-9);
+    --c64-color-light-red: var(--c64-color-10);
+    --c64-color-dark-grey: var(--c64-color-11);
+    --c64-color-grey: var(--c64-color-12);
+    --c64-color-light-green: var(--c64-color-13);
+    --c64-color-light-blue: var(--c64-color-14);
+    --c64-color-light-grey: var(--c64-color-15);
+}

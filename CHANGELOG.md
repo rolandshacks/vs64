@@ -2,6 +2,12 @@
 
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## v2.7.2 Major Update
+- Improved media viewers
+- Added inspectors for disks and tapes
+- Massive refactoring of code base
+- Bug-fixes and minor improvements
+
 ## 2.7.1 Minor Update
 
 - Bug-fixes and minor improvements

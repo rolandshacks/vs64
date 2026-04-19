@@ -16,9 +16,9 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 const { Utils } = require('utilities/utils');
-const { Arguments, ArgumentList } = require('utilities/args');
-const { Logger } = require('utilities/logger');
-const { Constants } = require('settings/settings');
+const { Arguments, ArgumentList } = require('algorithm/args');
+const { Logger } = require('logger/logger');
+const { Constants } = require('common/constants');
 const { Scanner } = require('project/scanner');
 const { Toolkit } = require('project/toolkit');
 const { Ninja, NinjaArgs } = require('project/ninja');

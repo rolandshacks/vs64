@@ -4,7 +4,7 @@
  */
 
 import { Factory } from "./factory.js";
-import { WebView, WebUi, WebElement, $, $$ } from "./webview.js";
+import { WebView, $$ } from "./webview.js";
 
 const HTML_VIEW_CLASSNAME = "view.html";
 

@@ -18,11 +18,11 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Constants } = require('settings/settings');
+const { Constants } = require('common/constants');
 const { Utils } = require('utilities/utils');
 const { Formatter } = require('utilities/formatter');
-const { Expression } = require('utilities/expression');
-const { Logger } = require('utilities/logger');
+const { Expression } = require('algorithm/expression');
+const { Logger } = require('logger/logger');
 const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 const { Emulator } = require('emulator/emu');
 const { ViceProcess } = require('debugger/debug_vice');

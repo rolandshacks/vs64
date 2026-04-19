@@ -21,7 +21,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
+const { Logger, LogLevel } = require('logger/logger');
 const { StopWatch } = require('utilities/stop_watch');
 const { Parser } = require('language/language_server');
 
@@ -29,7 +29,7 @@ const { Parser } = require('language/language_server');
 // Tests
 //-----------------------------------------------------------------------------------------------//
 
-function runAsmLanguage2() {
+function _runAsmLanguage2() {
 
     let src = "";
 
@@ -103,13 +103,13 @@ function runAsmLanguage() {
         console.log(`${token.text}`);
     }
 
-    const definition = ast.findDefinition("hck");
+    const _definition = ast.findDefinition("hck");
 
     console.log("DONE");
 
 }
 
-function runBasicLanguage() {
+function _runBasicLanguage() {
     const source = "printLine:\n";
 
     const parser = Parser.fromType("bas")._impl;
@@ -125,7 +125,7 @@ function runBasicLanguage() {
         console.log(`${token.text}`);
     }
 
-    const definition = ast.findDefinition("a");
+    const _definition = ast.findDefinition("a");
 
     console.log("DONE");
 

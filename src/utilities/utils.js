@@ -18,7 +18,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const logger = new Logger("Utils");
 
 //-----------------------------------------------------------------------------------------------//
@@ -435,16 +435,6 @@ let Utils = {
         } catch (_err) {}
 
         return false;
-    },
-
-
-    getEnumKey: function(enumDef, enumValue) {
-        for (const element of Object.entries(enumDef)) {
-            if (element[1] == enumValue) {
-                return element[0];
-            }
-        }
-        return null;
     },
 
     findFiles: function(folder, filterFn, skipList) {

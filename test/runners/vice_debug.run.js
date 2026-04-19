@@ -20,7 +20,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const { ViceProcess } = require('debugger/debug_vice');
 const { Breakpoint, Breakpoints, DebugInterruptReason } = require('debugger/debug');
 
@@ -122,10 +122,10 @@ class Application {
 
         logger.info("create emulator process");
 
-        let emuProcess = null;
+        let _emuProcess = null;
 
         if (!attachToRunningEmulator) {
-            emuProcess = await this.#createEmulatorProcess();
+            _emuProcess = await this.#createEmulatorProcess();
         }
 
         const emu = ViceProcess.createDebugInterface(this);

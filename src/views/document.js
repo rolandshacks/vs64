@@ -8,9 +8,6 @@ BIND(module);
 const fs = require('fs');
 const vscode = require('vscode');
 
-const { Constants } = require('settings/settings');
-
-
 /**
  * Custom Document.
  * @implements {vscode.CustomDocument}

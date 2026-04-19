@@ -14,7 +14,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const { DebugProcess, DebugInterface, CpuState, Breakpoint, DebugInterruptReason, DebugStepType, MemoryType } = require('debugger/debug');
 
 const logger = new Logger("ViceDebug");

@@ -16,8 +16,7 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { LanguageServer } = require('language/language_server');
-const { TokenType, StatementType } = require('language/language_base');
+const { TokenType, StatementType } = require('grammars/language_base');
 
 //-----------------------------------------------------------------------------------------------//
 // LanguageProvider

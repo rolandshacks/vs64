@@ -16,7 +16,7 @@ const { Formatter } = require('utilities/formatter');
 const { DebugDataType } = require('debugger/debug_info_types');
 const { MemoryType } = require('debugger/debug');
 
-//const { Logger } = require('utilities/logger');
+//const { Logger } = require('logger/logger');
 //const logger = new Logger("DebugVariables");
 
 //-----------------------------------------------------------------------------------------------//

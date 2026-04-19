@@ -21,8 +21,8 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel } = require('utilities/logger');
-const { Disk, File, Position } = require('disk/disk');
+const { Logger, LogLevel } = require('logger/logger');
+const { Disk, Position } = require('disk/disk');
 
 function testTrackIterator() {
     const numTracks = 35;

@@ -222,7 +222,7 @@ class KickAssemblerInfo {
 
         try {
             kickInfo.#parse(filename);
-        } catch (err) {
+        } catch (_err) {
             //logger.error(err);
             return null;
         }

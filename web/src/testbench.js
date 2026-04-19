@@ -7,12 +7,17 @@
 import { Application } from "./app.js";
 
 const TestData = {
-    //PRG_FILE: "test/data/test.prg",
+    PRG_FILE: "test/data/test.prg",
+
     //MEDIA_FILE: "test/res/spritemate.spm",
     //MEDIA_FILE: "test/res/spritepad1.spd",
-    MEDIA_FILE: "test/res/charset.ctm",
+    //MEDIA_FILE: "test/res/charset4.ctm",
     //MEDIA_FILE: "test/res/charset_big.ctm",
-    //MEDIA_FILE: "test/res/testmusic.sid"
+    //MEDIA_FILE: "test/res/testmusic.sid",
+    //MEDIA_FILE: "test/data/disk_35.d64",
+    //MEDIA_FILE: "test/data/disk_40.d64",
+    MEDIA_FILE: "test/data/choplifter.t64",
+    //MEDIA_FILE: "test/data/tape.t64"
 };
 
 /**
@@ -68,7 +73,6 @@ class TestBench extends Application {
 
     run() {
         const name = this.name.toLowerCase();
-        let filename = null;
         if (name == "mediaview") {
             this.loadFile(TestData.MEDIA_FILE);
         } else if (name == "disassembly") {

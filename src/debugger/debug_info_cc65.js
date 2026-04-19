@@ -14,7 +14,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { SortedArray } = require('utilities/sorted_array');
+const { SortedArray } = require('algorithm/sorted_array');
 const { DebugSymbol, DebugAddressInfo, DebugLineTypes, DebugDataType } = require('debugger/debug_info_types');
 
 class Cc65DebugInfo {

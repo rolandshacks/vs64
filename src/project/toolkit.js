@@ -12,8 +12,6 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Constants } = require('settings/settings');
-
 class Toolkit {
     constructor(name) {
 

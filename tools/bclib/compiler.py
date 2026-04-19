@@ -483,7 +483,7 @@ class BasicCompiler:
                 (_, _, _, err) = self.fetch_line_info(module, line, True, line_index)
                 if err:
                     return err
-                    
+
 
         return None
 
@@ -556,7 +556,7 @@ class BasicCompiler:
 
                 # set next line number
                 self.state.next_line = ((self.last_line // next_line_multiple) + 1) * next_line_multiple
-                
+
             else:
                 return CompileError(
                     filename, "invalid or missing value for #lineskip", line_index
@@ -755,8 +755,8 @@ class BasicCompiler:
                             c = line[ofs]
                         if last_was_jump == 0xA7 and len(label) >= 2:
                             # handle 'THEN TOKEN' instead of 'THEN label'
-                            tmp_token, _, _ = self.match_token(label)
-                            if tmp_token: break # found BASIC token, stop parsing label
+                            tmp_token, tmp_token_code, _ = self.match_token(label)
+                            if tmp_token and tmp_token_code != 0xCB: break # found BASIC token, stop parsing label
                     else:
                         ofs_old = ofs # backup position after identifier
 

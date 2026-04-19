@@ -9,7 +9,7 @@
 BIND(module);
 
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const { DebugAddressInfo } = require('debugger/debug_info_types');
 const { BufferedMemory } = require('debugger/debug_memory');
 const { Profiler } = require('debugger/profiler');

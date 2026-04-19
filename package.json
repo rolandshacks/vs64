@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.1",
+	"version": "2.7.2",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -13,7 +13,7 @@
 	"homepage": "https://github.com/rolandshacks/vs64",
 	"private": true,
 	"engines": {
-		"vscode": "^1.87.0"
+		"vscode": "^1.116.0"
 	},
 	"main": "./dist/vs64.js",
 	"repository": {
@@ -21,36 +21,41 @@
 		"url": "https://github.com/rolandshacks/vs64"
 	},
 	"workspaces": [
+		"packages/lang",
+		"packages/algorithm",
+		"packages/logger",
+		"packages/graphics",
+		"packages/grammars",
+		"packages/elf",
 		"packages/disassembler",
-		"packages/d64disk",
+		"packages/media",
 		"packages/cpu"
 	],
 	"scripts": {
 		"lint": "eslint .",
-		"test": "jest --runInBand --config ./test/jest.config.js",
-		"coverage": "jest --coverage --runInBand --config ./test/jest.config.js",
+		"test": "jest --runInBand --config ./jest.config.js",
+		"coverage": "jest --coverage --runInBand --config ./jest.config.js",
 		"vsix": "vsce package --no-yarn --dependencies",
 		"publish": "vsce publish",
 		"esbuild": "node ./esbuild --production",
 		"esbuild-dev": "node ./esbuild --sourcemap"
 	},
 	"dependencies": {
-		"@fluentui/tokens": "^1.0.0-alpha.23",
 		"@fluentui/web-components": "^2.6.1",
 		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "^5.5.9"
+		"fast-xml-parser": "^5.8.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@types/node": "25.6.0",
-		"@types/vscode": "^1.87.0",
-		"@vscode/vsce": "3.8.0",
+		"@types/node": "25.8.0",
+		"@types/vscode": "^1.116.0",
+		"@vscode/vsce": "3.9.1",
 		"esbuild": "^0.28.0",
-		"eslint": "^10.1.0",
+		"eslint": "^10.2.1",
 		"globals": "^17.4.0",
 		"jest": "^30.3.0",
-		"typescript": "^6.0.2"
+		"typescript": "^6.0.3"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -92,6 +97,11 @@
 			{
 				"command": "vs64.mountD64FileSystem",
 				"title": "Mount Disk",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.mountT64FileSystem",
+				"title": "Mount Tape",
 				"category": "VS64"
 			},
 			{
@@ -160,6 +170,11 @@
 				{
 					"when": "resourceLangId == d64",
 					"command": "vs64.mountD64FileSystem",
+					"group": "navigation"
+				},
+				{
+					"when": "resourceLangId == t64",
+					"command": "vs64.mountT64FileSystem",
 					"group": "navigation"
 				}
 			]
@@ -379,6 +394,16 @@
 				]
 			},
 			{
+				"id": "t64",
+				"aliases": [
+					"T64 Tape",
+					"t64"
+				],
+				"extensions": [
+					".t64"
+				]
+			},
+			{
 				"id": "prg",
 				"aliases": [
 					"program",
@@ -436,7 +461,7 @@
 				"displayName": "C64 Media",
 				"selector": [
 					{
-						"filenamePattern": "*.{sid,spd,ctm,spm}"
+						"filenamePattern": "*.{sid,spd,ctm,spm,d64,t64}"
 					}
 				]
 			}

@@ -18,9 +18,10 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Logger, LogLevel, LogLevelChars } = require('utilities/logger');
+const { Logger, LogLevel, LogLevelChars } = require('logger/logger');
 const { Utils } = require('utilities/utils');
-const { Constants, AnsiColors, Settings } = require('settings/settings');
+const { Constants, AnsiColors } = require('common/constants');
+const { Settings } = require('common/settings');
 const { Project } = require('project/project');
 const { DebugContext } = require('debugger/debug_context');
 const { Build, BuildResult } = require('builder/builder');
@@ -29,8 +30,7 @@ const { TaskProvider } = require('extension/task_provider');
 const { StatusBar, StatusBarNotifier, StatusBarButton } = require('extension/statusbar');
 const { LanguageServer } = require('language/language_server');
 const { LanguageFeatureProvider } = require('language/language_provider');
-const { D64FileSystemProvider } = require('disk/d64_filesystem_provider');
-
+const { D64FileSystemProvider } = require('extension/filesystem_provider');
 const { MediaViewProvider } = require('views/mediaview');
 const { DisassemblyViewProvider } = require('views/disassembly');
 
@@ -60,7 +60,7 @@ class Extension {
         this._languageServer = new LanguageServer();
         this._languageFeatureProvider = null;
         this._statusBar = null;
-        this._d64FileSystemProvider = null;
+        this._fileSystemProvider = null;
     }
 
     isActivated() {
@@ -155,9 +155,10 @@ class Extension {
         }
 
         { // register file system providers
-            const d64FileSystemProvider = new D64FileSystemProvider();
-            subscriptions.push(vscode.workspace.registerFileSystemProvider('d64', d64FileSystemProvider, { isCaseSensitive: true }));
-            this._d64FileSystemProvider = d64FileSystemProvider;
+            const fileSystemProvider = new D64FileSystemProvider();
+            subscriptions.push(vscode.workspace.registerFileSystemProvider('d64', fileSystemProvider, { isCaseSensitive: true }));
+            subscriptions.push(vscode.workspace.registerFileSystemProvider('t64', fileSystemProvider, { isCaseSensitive: true }));
+            this._fileSystemProvider = fileSystemProvider;
         }
 
         { // create status bar items
@@ -228,7 +229,10 @@ class Extension {
         // register "create project" commands
         {
             subscriptions.push(vscode.commands.registerCommand("vs64.mountD64FileSystem", function(uri) {
-                thisInstance.onCommandMountD64FileSystem(uri);
+                thisInstance.onCommandMountFileSystem(uri, "d64");
+            }));
+            subscriptions.push(vscode.commands.registerCommand("vs64.mountT64FileSystem", function(uri) {
+                thisInstance.onCommandMountFileSystem(uri, "t64");
             }));
             subscriptions.push(vscode.commands.registerCommand("vs64.createProjectAcme", function() {
                 thisInstance.onCommandCreateProject("acme");
@@ -436,33 +440,33 @@ class Extension {
     onDidChangeActiveTextEditor(_textEditor_) {
     }
 
-    async onCommandMountD64FileSystem(_uri) {
-        if (null == this._d64FileSystemProvider) {
+    async onCommandMountFileSystem(_uri, deviceType) {
+        if (null == this._fileSystemProvider) {
             return null;
         }
 
         const hash = Utils.md5(_uri.path);
-        const d64Uri = vscode.Uri.parse(`d64:/${hash}/?${_uri}`);
+        const fsUri = vscode.Uri.parse(`${deviceType}:/${hash}/?${_uri}`);
 
-        const ws = vscode.workspace.getWorkspaceFolder(d64Uri);
+        const ws = vscode.workspace.getWorkspaceFolder(fsUri);
         if (ws === undefined) {
 
-            let disk = null;
+            let mountedImage = null;
             try {
-                disk = await this._d64FileSystemProvider.openFile(d64Uri);
+                mountedImage = await this._fileSystemProvider.openFile(fsUri);
             } catch (e) {
-                logger.error("failed to mount d64 file: " + e);
+                logger.error("failed to mount " + deviceType + " file: " + e);
             }
 
-            if (null == disk) {
+            if (null == mountedImage) {
                 return null;
             }
 
-            let name = disk.name;
+            let name = mountedImage.name;
             if (name == null || name.length < 1) name = "UNNAMED";
-            const label = "D64: " + name + " (" + vscode.workspace.asRelativePath(_uri, false) + ")";
+            const label = deviceType.toUpperCase() + ": " + name + " (" + vscode.workspace.asRelativePath(_uri, false) + ")";
             const index = vscode.workspace.workspaceFolders?.length || 0;
-            const workspaceFolder = { uri: d64Uri, name: label, index };
+            const workspaceFolder = { uri: fsUri, name: label, index };
 
             vscode.workspace.updateWorkspaceFolders(index, 0, workspaceFolder);
         }

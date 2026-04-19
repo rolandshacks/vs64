@@ -5,7 +5,7 @@
 
 /* global document window */
 
-import { Point, Size } from "./geometry.js";
+import { Point, Size } from "./imports.js";
 import { Factory } from "./factory.js";
 
 const WEB_VIEW_CLASSNAME = "view.web";
@@ -32,7 +32,7 @@ function $(id) {
         return element;
     }
 
-    element = document.getElementById(id); // eslint-disable-line no-undef
+    element = document.getElementById(id);
     if (element) {
         m.set(id, element);
     }
@@ -92,10 +92,12 @@ class WebElement {
     get min() { return this._element.min; }
     set min(v) { this._element.min = v; }
     get max() { return this._element.max; }
-    set max(v) { this._element.max = h; }
+    set max(v) { this._element.max = v; }
     get innerHTML() { return this._element.innerHTML; }
     set innerHTML(h) { this._element.innerHTML = h; }
     get style() { return this._element.style; }
+    get innerText() { return this._element.innerText; }
+    set innerText(t) { this._element.innerText = t; }
 
     // event handlers
     set onclick(f) { this._element.onclick = f; }
@@ -110,6 +112,7 @@ class WebElement {
             const element = this._element;
             if (null != element && element.tagName == "CANVAS") {
                 this._ctx = element.getContext("2d");
+                this._ctx.imageSmoothingEnabled = false;
             }
         }
         return this._ctx;
@@ -155,7 +158,7 @@ class WebUi {
  * Abstract view.
  */
 class WebView {
-    constructor(app) {
+    constructor(app, ..._args) {
         this._app = app;
         this._options = app.options;
         this._document = null;
@@ -240,12 +243,24 @@ class WebView {
         return new Size(scrollElement.clientWidth, scrollElement.clientHeight);
     }
 
+    getScaledViewSize() {
+        const sz = this.getViewSize();
+        if (null == sz) return sz;
+
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        sz.x *= devicePixelRatio;
+        sz.y *= devicePixelRatio;
+
+        return sz;
+    }
+
     getScrollableElement() {
         return document.documentElement;
     }
 
     handleWheel(position, deltaY) {
 
+        /*
         const scrollElement = this.getScrollableElement();
         const scrollPos = Point.from(scrollElement.scrollLeft, scrollElement.scrollTop);
         //const scrollSize = Point.from(scrollElement.scrollWidth, scrollElement.scrollHeight);
@@ -255,6 +270,7 @@ class WebView {
 
         const oldScale = this.scale;
         const logAbsPos = Point.from(absMousePos.x / oldScale, absMousePos.y / oldScale);
+        */
 
         if (0 != deltaY) {
             this.changeScale(deltaY);

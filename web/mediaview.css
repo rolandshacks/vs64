@@ -1,4 +1,10 @@
 
+@font-face {
+	font-family: "c64font";
+	font-style: normal;
+	font-weight: 400;
+	src: url("C64_Pro_Mono-STYLE.woff2") format('woff2');
+}
 
 canvas, img {
     image-rendering: optimizeSpeed;             /* Older versions of FF          */
@@ -27,6 +33,17 @@ canvas, img {
 
 .properties {
 	background: transparent;
+	padding-bottom: 1em;
+}
+
+.c64text {
+	font-family: "c64font";
+	font-size: var(--vscode-font-size);
+	background: var(--c64-color-blue);
+	color: var(--c64-color-light-blue);
+	line-height: 1.2em;
+	padding: 8px 8px 8px 8px;
+	overflow: auto;
 }
 
 .content {
@@ -62,4 +79,18 @@ canvas, img {
 	padding-right: 1.0em;
 	padding-top: 0.3em;
 	padding-top: 0.3em;
+}
+
+.top-slider-container {
+	background-color: color-mix(in srgb, var(--vscode-editor-background) 50%, transparent);
+    position: sticky;
+  	top: 1em;
+	box-shadow: 0 2px 6px color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
+}
+
+.top-slider {
+	padding-top: 1.25em;
+	padding-bottom: 0.0em;
+	padding-left: 1em;
+	padding-right: 1em;
 }

@@ -21,7 +21,7 @@ BIND(module);
 let VSCodePluginHost = null;
 try {
     VSCodePluginHost = require("vscode");
-} catch (e) { ; }
+} catch (_e) { ; }
 
 if (null == VSCodePluginHost) {
     console.log("running outside vscode is not supported.");

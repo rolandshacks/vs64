@@ -12,7 +12,7 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { ArgumentList } = require('utilities/args');
+const { ArgumentList } = require('algorithm/args');
 
 function _firstCharIndexOf_(str, chars, pos) {
     if (!str || str.length < 1) return null;

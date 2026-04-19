@@ -68,7 +68,7 @@
                 "--include", "${workspaceFolder}/test/basic",
                 "-I", "${workspaceFolder}/test/temp",
                 "--output", "${workspaceFolder}/test/temp/build/out.prg",
-                "${workspaceFolder}/test/basic/main8.bas"
+                "${workspaceFolder}/test/basic/main9.bas"
             ]
         },
         {
@@ -98,9 +98,18 @@
             "args": [
                 "--runInBand",
                 "--config",
-                "${workspaceFolder}/test/jest.config.js",
-                "-t", "debug_info_cc65"
+                "${workspaceFolder}/jest.config.js",
+                "-t", "tape"
             ]
+        },
+        {
+            "name": "Run Package Unit Tests",
+            "type": "node",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
+            "cwd": "${workspaceFolder}/packages/algorithm",
+            "args": ["--runInBand"]
         },
         {
             "name": "Run Bundle Builder",

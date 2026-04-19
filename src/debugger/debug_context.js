@@ -15,9 +15,9 @@ BIND(module);
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Constants } = require('settings/settings');
+const { Constants } = require('common/constants');
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const { DebugSession } = require('debugger/debug_session');
 
 const logger = new Logger("DebugContext");

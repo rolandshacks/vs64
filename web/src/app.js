@@ -10,9 +10,9 @@ const vscode = (typeof acquireVsCodeApi !== "undefined") ? acquireVsCodeApi() : 
 import { UI } from "./ui.js";
 import { WebDocument } from "./document.js";
 import { Factory } from "./factory.js";
-import { WebView } from "./webview.js";
-import { HtmlView } from "./htmlview.js";
-import { MediaView } from "./mediaview.js";
+import {} from "./webview.js";
+import {} from "./htmlview.js";
+import {} from "./mediaview.js";
 
 /**
  * Abstract application.

@@ -15,7 +15,7 @@ BIND(module);
 //-----------------------------------------------------------------------------------------------//
 
 const { Utils } = require('utilities/utils');
-const { Logger } = require('utilities/logger');
+const { Logger } = require('logger/logger');
 const logger = new Logger("Net");
 
 //-----------------------------------------------------------------------------------------------//

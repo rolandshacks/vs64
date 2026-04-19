@@ -629,11 +629,9 @@ function iterate_binary(binary, load_addr, ofs, jump_table, visitor) {
     let jump_table_idx = 0;
     let next_jump_addr = (null != jump_table && jump_table.length > 0 ? jump_table[0] : null);
 
-    let last_addr = null;
     let addr = null;
 
     while (ofs < ofs_end) {
-        last_addr = addr;
         addr = load_addr + ofs - 2;
 
         if (null != jump_table) {

@@ -77,7 +77,7 @@ class Application {
 
         try {
             fs.writeFileSync(outfilename, s);
-        } catch (err) {
+        } catch (_err) {
             throw("unable to write file '" + outfilename + "'");
         }
     }
