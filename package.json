@@ -110,11 +110,6 @@
 				"category": "VS64"
 			},
 			{
-				"command": "vs64.createProjectTmpx",
-				"title": "Create TMPx Assembler Project",
-				"category": "VS64"
-			},
-			{
 				"command": "vs64.createProjectKick",
 				"title": "Create KickAssembler Project",
 				"category": "VS64"
