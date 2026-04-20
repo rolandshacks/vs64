@@ -49,6 +49,8 @@ class Project {
     get description() { return this._description_; }
     get basedir() { return this._basedir; }
     get builddir() { return this._builddir; }
+    get main() { return this._main; }
+    get cwd() { return this._cwd; }
     get dependencies() { return this._dependencies||[]; }
     get outname() { return this._outname; }
     get outfile() { return this._outfile; }
@@ -223,6 +225,14 @@ class Project {
             const filename = path.resolve(this._basedir, data.main);
             srcFilenames.push(filename);
             srcs.push(new ProjectItem(filename));
+            this._main = filename;
+        }
+
+        if (data.cwd) {
+            const dir = path.resolve(this._basedir, data.cwd);
+            this._cwd = dir;
+        } else {
+            this._cwd = this._basedir;
         }
 
         if (data.sources) {
@@ -258,8 +268,8 @@ class Project {
 
         }else if (toolkit.isTmpx) {
             const asmSources = this.querySourceByExtension(Constants.AsmFileFilter);
-            if (asmSources && asmSources.length > 1) {
-                logger.warn("Tmpx assembler does not support more than one input file directly. Please add includes via .include statements. Additional assembler sources from the project file will be ignored.");
+            if (this.main === undefined && asmSources.length > 1) {
+                logger.warn("Tmpx assembler does not support more than one input file directly. Please specify the main file in project-config.json.");
             }
         }
 
@@ -912,7 +922,7 @@ class Project {
         } else if (toolkit.isTmpx) {
             // generate one dependency list for all compilation units
             const dependencies = asmFiles.clone();
-            
+            depFiles.add(thisInstance.outfile, dependencies);
         }
 
         const buildTree = {
@@ -1187,18 +1197,9 @@ class Project {
             script.push("");
 
         } else if (toolkit.isTmpx) {
+            script.push(Ninja.keyValue("asm_dir", project.cwd));
             script.push(Ninja.keyValue("asm_exe", (project.assembler || settings.tmpxExecutable)));
             script.push("");
-            let cpu = "6510";
-            if (project.machine) {
-                cpu = (project.machine != "none") ? project.machine : null;
-            }
-
-            const flags = new NinjaArgs(
-                "--msvc",
-                "--maxerrors", "99"
-            );
-            let input_path = path.join("$basedir", "src", "main.asm");
             script.push("");
 
             script.push("rule res");
@@ -1208,7 +1209,7 @@ class Project {
             script.push("rule asm");
             script.push("   depfile = $out.d");
             script.push("   deps = gcc");
-            script.push('   command = $asm_exe -i $in -o $out -l "$dbg_out"');
+            script.push('   command = cd $asm_dir && $asm_exe -i $in -o $out -l "$dbg_out"');
             script.push("");
 
             buildTree.gen.forEach((to, from) => {
@@ -1218,7 +1219,8 @@ class Project {
 
             script.push("");
 
-            script.push("build $target | $dbg_out : asm " + Ninja.join(buildTree.asm.array()))
+            let main = this.main ?? (buildTree.asm.empty() ? "" : buildTree.asm.get(0));
+            script.push(`build $target | $dbg_out : asm ${main}`)
         } else if (toolkit.isCC65) {
 
             const flags = new NinjaArgs();

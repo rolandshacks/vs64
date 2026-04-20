@@ -21,7 +21,6 @@ class Toolkit {
 
         this.isAcme = (name == "acme");
         this.isKick = (name == "kick");
-        this.isTmpx = (name == "tmpx");
         this.isCC65 = (name == "cc65");
         this.isOscar64 = (name == "oscar64");
         this.isLLVM = (name == "llvm");
@@ -66,6 +65,11 @@ class Toolkit {
                 break;
             case "basic":
                 this.builtInDefines = [ "__basic__"];
+                break;
+            case "tmpx":
+                this.builtInDefines = [ "__tmp__"];
+                this.languageId = "asm";
+                this.languageIdOverride = "tmpx";
                 break;
             default:
                 break;

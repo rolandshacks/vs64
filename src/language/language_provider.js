@@ -18,6 +18,8 @@ const vscode = require('vscode');
 //-----------------------------------------------------------------------------------------------//
 const { LanguageServer } = require('language/language_server');
 const { TokenType, StatementType } = require('language/language_base');
+const { Constants } = require('../settings/settings');
+const { TmpFormatter } = require('../formatter/tmp_formatter');
 
 //-----------------------------------------------------------------------------------------------//
 // LanguageProvider
@@ -27,7 +29,8 @@ class LanguageFeatureProvider {
     constructor(project, languageServer) {
         this._project = project;
         this._languageServer = languageServer;
-
+        this._formatter = new Map();
+        this._formatter["tmpx"] = new TmpFormatter();
     }
 
     // CompletionProvider
@@ -37,7 +40,8 @@ class LanguageFeatureProvider {
         const identifier = lang.getTokenAtDocumentPos(document, position, true, true);
         if (!identifier) return null;
 
-        const completedItems = lang.fuzzySearch(document.languageId, identifier);
+        const toolkit = this._project.toolkit;
+        const completedItems = lang.fuzzySearch(document.languageId, toolkit, identifier);
         if (!completedItems || completedItems.length < 1) return null;
 
         const startPosition = new vscode.Position(position.line, position.character - identifier.length);
@@ -265,6 +269,14 @@ class LanguageFeatureProvider {
         return locations;
     }
 
+    // Edit Format Provider
+    provideDocumentFormattingEdits(document) {
+        const project = this._project;
+        if (!project.isValid()) return null;
+        if (!document.languageId) return null;
+        const formatter = this._formatter[document.languageId];
+        return formatter ? formatter.format(document) : null;
+    }
 
 }
 

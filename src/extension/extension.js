@@ -143,6 +143,7 @@ class Extension {
                 subscriptions.push(vscode.languages.registerReferenceProvider(languageId, languageFeatureProvider));
                 subscriptions.push(vscode.languages.registerCompletionItemProvider(languageId, languageFeatureProvider));
                 subscriptions.push(vscode.languages.registerDocumentSymbolProvider(languageId, languageFeatureProvider));
+                subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider(languageId, languageFeatureProvider));
             }
 
             // BASIC
@@ -150,6 +151,7 @@ class Extension {
             subscriptions.push(vscode.languages.registerReferenceProvider(Constants.BasicLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerCompletionItemProvider(Constants.BasicLanguageId, languageFeatureProvider));
             subscriptions.push(vscode.languages.registerDocumentSymbolProvider(Constants.BasicLanguageId, languageFeatureProvider));
+            subscriptions.push(vscode.languages.registerDocumentFormattingEditProvider(Constants.BasicLanguageId, languageFeatureProvider));
 
             this._languageFeatureProvider = languageFeatureProvider;
         }
@@ -263,9 +265,8 @@ class Extension {
         }
 
         //Register tmpx specifics
-        //TODO do something about magic numbers
-        const maxCodeLineLength = 31;
-        const maxCommentLineLength = 40;
+        const maxCodeLineLength = this.settings.maxCodeLineLength;
+        const maxCommentLineLength = this.settings.maxCommentLineLength;
         if(this._settings.tmp06CompatibilityMode){
             this._tmpxDiagnostics = vscode.languages.createDiagnosticCollection('vs64-tmpx');
             subscriptions.push(this._tmpxDiagnostics);
@@ -366,12 +367,11 @@ class Extension {
     }
 
     adjustDocumentLanguageId(document) {
-
         if (!Constants.RemapLanguageIds) return;
-
+        
         const project = this._project;
         if (null == document || !project.isValid()) return;
-
+        
         const toolkit = project.toolkit;
         if (null == toolkit || null == toolkit.languageIdOverride) return;
 
@@ -928,7 +928,7 @@ class Extension {
     }
 
     placeTmp06CompatibilityWarnings(document, maxCodeLineLength, maxCommentLineLength) {
-        if (document.languageId != "asm") return;
+        if (document.languageId != "tmpx") return;
         const diagnostics = []
         for (let lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
             const lineStart = new vscode.Position(lineIndex, 0);

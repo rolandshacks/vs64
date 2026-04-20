@@ -30,8 +30,8 @@ const Constants = {
     ViceBinaryMonitorPort: 6502,                    // connectino port to VICE binary monitor interface
     ViceConnectTimeoutSec: 10,                      // connection timeout (in seconds) for VICE binary monitor
     ProjectConfigFile: "project-config.json",       // name of project config file
-    SupportedLanguageIds: [ "asm", "acme", "kickass", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
-    AssemblerLanguageIds: [ "asm", "acme", "kickass" ],
+    SupportedLanguageIds: [ "asm", "acme", "kickass", "tmpx", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
+    AssemblerLanguageIds: [ "asm", "acme", "kickass", "tmpx" ],
     BasicLanguageId: "bas",
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
@@ -135,6 +135,13 @@ const BasicTSBKeywords = [
 
 const BasicKeywords = BasicV2Keywords.concat(BasicTSBKeywords).sort((a, b) => b.length - a.length);
 
+class TurboMacroProSettings {
+    constructor() {
+        this.maxCodeLineLength = null;
+        this.maxCommentLineLength = null;
+    }
+}
+
 //-----------------------------------------------------------------------------------------------//
 // Settings
 //-----------------------------------------------------------------------------------------------//
@@ -159,6 +166,7 @@ class Settings {
         this.resourceCompiler = null;
         this.basicCompiler = null;
         this.basicCharset = null;
+        this.tmpSettings = new TurboMacroProSettings();
     }
 
     disableWelcome(workspaceConfig) {
@@ -284,7 +292,10 @@ class Settings {
             this.tmpxExecutable = "tmpx"
         }
         //To be removed when tmpx output format is updated and wrapper no longer required.
-        this.tmpxExecutable = this.pythonExecutable + " " + path.resolve(this.extensionPath, "tools", "tmpw.py") + " " + this.tmpxExecutable;
+        this.tmpxExecutable = `${this.pythonExecutable} ${path.resolve(this.extensionPath, "tools", "tmpw.py")} ${this.tmpxExecutable}`;
+
+        this.tmpSettings.maxCodeLineLength = workspaceConfig.get("vs64.tmp06.maxCodeLineLength");
+        this.tmpSettings.maxCommentLineLength = workspaceConfig.get("vs64.tmp06.maxCommentLineLength");
     }
 
     setupCC65(workspaceConfig) {
@@ -529,5 +540,5 @@ module.exports = {
     AssemblerOpcodes: AssemblerOpcodes,
     BasicKeywords: BasicKeywords,
     BasicV2Keywords: BasicV2Keywords,
-    BasicTSBKeywords: BasicTSBKeywords
+    BasicTSBKeywords: BasicTSBKeywords,
 };

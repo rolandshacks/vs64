@@ -13,7 +13,7 @@
 	"homepage": "https://github.com/rolandshacks/vs64",
 	"private": true,
 	"engines": {
-		"vscode": "^1.87.0"
+		"vscode": "^1.116.0"
 	},
 	"main": "./dist/vs64.js",
 	"repository": {
@@ -37,8 +37,8 @@
 	"devDependencies": {
 		"@eslint/js": "^9.24.0",
 		"@types/node": "22.15.30",
-		"@types/vscode": "^1.87.0",
-		"@vscode/vsce": "3.6.0",
+		"@types/vscode": "^1.116.0",
+		"@vscode/vsce": "3.9.1",
 		"esbuild": "^0.25.2",
 		"eslint": "^9.24.0",
 		"globals": "^16.0.0",
@@ -358,6 +358,18 @@
 				"configuration": "./language/asm.language.json"
 			},
 			{
+				"id": "tmpx",
+				"aliases": [
+					"6502 Assembler (Turbo Macro Pro)"
+				],
+				"extensions": [
+					".asm",
+					".s",
+					".a"
+				],
+				"configuration": "./language/tmpx.language.json"
+			},
+			{
 				"id": "bas",
 				"aliases": [
 					"BASIC"
@@ -404,6 +416,11 @@
 				"path": "./language/asm.grammar.json"
 			},
 			{
+				"language": "tmpx",
+				"scopeName": "source.asm.tmpx",
+				"path": "./language/tmpx.grammar.json"
+			},
+			{
 				"language": "bas",
 				"scopeName": "source.bas",
 				"path": "./language/bas.grammar.json"
@@ -413,6 +430,10 @@
 			{
 				"language": "asm",
 				"path": "./language/asm.snippets.json"
+			},
+			{
+				"language": "tmpx",
+				"path": "./language/tmpx.snippets.json"
 			},
 			{
 				"language": "json",
@@ -605,6 +626,23 @@
 				}
 			},
 			{
+				"id": "tmpx",
+				"title": "Turbo Macro Pro",
+				"order": 13,
+				"properties": {
+					"vs64.tmp06.maxCodeLineLength": {
+						"type": "number",
+						"default": 31,
+						"description": "Max Code Line Length"
+					},
+					"vs64.tmp06.maxCommentLineLength": {
+						"type": "number",
+						"default": 40,
+						"description": "Max Comment Line Length"
+					}
+				}
+			},
+			{
 				"id": "deprecated",
 				"title": "Deprecated",
 				"order": 99,
@@ -630,9 +668,18 @@
 				}
 			}
 		],
+		"jsonValidation": [
+			{
+				"fileMatch": "project-config.json",
+				"url": "./resources/schemas/project-config.schema.json"
+			}
+		],
 		"breakpoints": [
 			{
 				"language": "asm"
+			},
+			{
+				"language": "tmpx"
 			},
 			{
 				"language": "acme"

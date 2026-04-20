@@ -118,8 +118,9 @@ describe('project', () => {
             name: "name",
             toolkit: "tmpx",
             sources: [
-                "main.asm"
-            ]
+                "src/main.asm"
+            ],
+            cwd: "src"
         };
 
         const project = setupProject(config);
@@ -127,6 +128,8 @@ describe('project', () => {
         expect(project.isValid()).toBeTruthy();
         expect(project.name).toBe("name");
         expect(project.toolkit.name).toBe("tmpx");
+        expect(project.sources).toBe(["src/main.asm"]);
+        expect(project.cwd).toBe("src");
 
         project.updateBuildTree();
         const buildTree = project.buildTree;

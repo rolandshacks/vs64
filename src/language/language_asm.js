@@ -45,34 +45,29 @@ const AsmGrammar = {
         "segment", "offs", "pron", "proff", "hidemac", "showmac", ".eor", "end","bounce"
     ],
 
-    fuzzySearch: function(query) {
+    appendCandidates: function(query, prefix, words, result) {
+        for (let item of words) {
+            const token = prefix + item;
+            if (token.startsWith(query)) {
+                result.push(token);
+            }
+        }
+    },
 
-        if (!query || query.length < 1) return null;
+    fuzzySearch: function(query, toolkit) {
+
+        if (!query || query.length < 1 || !toolkit) return null;
 
         const items = [];
 
-        if (query.charCodeAt(0) == CharCode.Exclamation) {
-            for (let item of AsmGrammar.acmePseudoOpcodes) {
-                const token = "!" + item;
-                if (token.startsWith(query)) {
-                    items.push(token);
-                }
-            }
-        } else if  (query.charCodeAt(0) == CharCode.Period) {
-            //Not ideal because now both tmpx and kickass show suggestions they do not support. Gotta figure out what assembler we are using somehow.
-            for (let item of new Set(AsmGrammar.kickAssemblerDirectives.concat(AsmGrammar.tmpxPseudoOpcodes))) {
-                const token = "." + item;
-                if (token.startsWith(query)) {
-                    items.push(token);
-                }
-            }
-        } else if  (query.charCodeAt(0) == CharCode.NumberSign) {
-            for (let item of AsmGrammar.kickPreprocessorDirective) {
-                const token = "#" + item;
-                if (token.startsWith(query)) {
-                    items.push(token);
-                }
-            }
+        if (query.charCodeAt(0) == CharCode.Exclamation && toolkit.isAcme) {
+            this.appendCandidates(query, "!", AsmGrammar.acmePseudoOpcodes, items);
+        } else if  (query.charCodeAt(0) == CharCode.Period && toolkit.isKick) {
+            this.appendCandidates(query, ".", AsmGrammar.kickAssemblerDirectives, items);
+        } else if (query.charCodeAt(0) == CharCode.Period && toolkit.isTmpx) {
+            this.appendCandidates(query, ".", AsmGrammar.tmpxPseudoOpcodes, items);
+        } else if  (query.charCodeAt(0) == CharCode.NumberSign && toolkit.isKick) {
+            this.appendCandidates(query, "#", AsmGrammar.kickPreprocessorDirective, items);
         }
 
         if (items.length < 1) return null;
@@ -217,7 +212,7 @@ class AsmParser extends ParserBase {
 
             } else if (
                 (c == CharCode.Exclamation && isAcme) ||
-                (c == CharCode.Period && (isKickAss || isLLVM))
+                (c == CharCode.Period && (isKickAss || isLLVM)) ||
                 (c == CharCode.Hashtag && isTmpx)) { // directive or macro
 
                 const range = new Range(it.ofs, it.row, it.col);

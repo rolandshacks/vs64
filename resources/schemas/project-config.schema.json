@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Project Configuration Schema",
+  "description": "VS64 project configuration",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the project."
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the project."
+    },
+    "toolkit": {
+      "type": "string",
+      "description": "The assembler toolkit to be used for the build process.",
+      "enum": [
+        "acme",
+        "basic",
+        "cc65",
+        "kick",
+        "llvm",
+        "tmpx"
+      ],
+      "markdownEnumDescriptions": [
+        "**acme**: ACME assembler.",
+        "**basic**: BASIC V2 and Tuned Simon's BASIC",
+        "**cc65**: CC65 C compiler.",
+        "**kick**: KickAssembler.",
+        "**llvm**: LLVM-MOS C/C++ compiler.",
+        "**tmpx**: A high-performance multi-pass assembler."
+      ]
+    },
+    "main": {
+      "type": "string",
+      "description": "The optional main source file."
+    },
+    "sources": {
+      "type": "array",
+      "description": "List of source files.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "build": {
+      "type": "string",
+      "description": "Build mode.",
+      "enum": ["debug", "release"],
+      "default": "debug"
+    },
+    "definitions": {
+      "type": "array",
+      "description": "Global defines.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "includes": {
+      "type": "array",
+      "description": "The list of include directories.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "args": {
+      "type": "array",
+      "description": "Additional command line arguments.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compiler": {
+      "type": "string",
+      "description": "The path to the compiler (optional)."
+    },
+    "cwd": {
+        "type": "string",
+        "description": "The current working directory."
+    }
+  },
+  "required": ["name", "toolkit", "sources"],
+  "additionalProperties": false
+}

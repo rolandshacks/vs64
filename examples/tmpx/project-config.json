@@ -7,5 +7,6 @@
     ],
     "build": "debug",
     "definitions": [],
-    "includes": []
+    "includes": [],
+    "cwd": "src"
 }
