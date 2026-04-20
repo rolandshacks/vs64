@@ -3,10 +3,10 @@
 	"name": "Turbo Macro Pro 6502 Assembler Language Grammar",
 	"patterns": [
 		{
-			"include": "#tmpx"
+			"include": "#generic"
 		},
 		{
-			"include": "#generic"
+			"include": "#tmpx"
 		}
 	],
 	"repository": {
@@ -20,6 +20,9 @@
 				},
 				{
 					"include": "#generic-numbers"
+				},
+				{
+					"include": "#tmpx-label-macro-call"
 				},
 				{
 					"include": "#generic-labels"
@@ -161,9 +164,6 @@
 					"include": "#tmpx-directives"
 				},
 				{
-					"include": "#tmpx-label-macro-call"
-				},
-				{
 					"include": "#tmpx-macro-parameter"
 				},
 				{
@@ -282,7 +282,7 @@
 		"tmpx-label-macro-call": {
 			"patterns": [
 				{
-					"match": "^\\s*(?i)(?:([_a-z][_a-z0-9]*)\\s*)?(#[_a-z][_a-z0-9]*)\\b",
+					"match": "^([_a-zA-Z0-9]*[ \\t]+)?(#[_a-z][_a-zA-Z0-9]*)",
 					"captures": {
 						"1": {
 							"name": "emphasis"
@@ -291,10 +291,6 @@
 							"name": "entity.name.function.macro"
 						}
 					}
-				},
-				{
-					"match": "\\b(?i)[_a-z][_a-z0-9]*\\b",
-					"name": "emphasis"
 				}
 			]
 		},
