@@ -266,7 +266,7 @@ class Project {
                 logger.warn("KickAssembler does not support more than one input file. Additional assembler sources from the project file will be ignored.");
             }
 
-        }else if (toolkit.isTmpx) {
+        } else if (toolkit.isTmpx) {
             const asmSources = this.querySourceByExtension(Constants.AsmFileFilter);
             if (this.main === undefined && asmSources.length > 1) {
                 logger.warn("Tmpx assembler does not support more than one input file directly. Please specify the main file in project-config.json.");

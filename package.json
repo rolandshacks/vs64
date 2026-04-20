@@ -322,7 +322,22 @@
 					"column": 3,
 					"message": 5
 				}
-			}
+			},
+			{
+				"name": "tmpx",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^([a-zA-Z0-9\\\\/\\.]+)\\((\\d+)\\) : ([a-zA-Z]+) (\\d+): (.*)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"message": 5
+				}
+			}			
 		],
 		"languages": [
 			{
