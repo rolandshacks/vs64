@@ -32,6 +32,89 @@
         "**tmpx**: A high-performance multi-pass assembler."
       ]
     },
+    "format": {
+      "type": "string",
+      "description": "The binary format.",
+      "enum": [
+        "prg",
+        "crt",
+        "crt8",
+        "crt16"
+      ],
+      "markdownEnumDescriptions": [
+        "**prg**: Program.",
+        "**crt**: Easyflash cartridge with common code expanded from bank 0 into memory.",
+        "**crt8**: Generic 8KB cartridge from 0x8000-0xa000 with autostart header.",
+        "**crt16**: Generic 16KB cartridge from 0x8000-0xc000 with autostart header."
+      ]
+    },
+    "machine": {
+      "type": "string",
+      "description": "The target machine.",
+      "enum": [
+        "c64", "c128", "6502", "nmos6502", "6510", "65c02", "r65c02", "w65c02", "65816", "65ce02", "4502", "m65", "c64dtv2",
+        "atari2600-4k", "atari2600-3e", "atari8", "atari8-stdcart", "vic20", "cx16", "pet", "mega65", "cpm65", "nes", "nes-action53", "nes-cnrom", "nes-gtrom", "nes-mmc1", "nes-mmc3", "nes-nrom", "nes-unrom", "nes-unrom-512", "osi-c1p", "dodo", "eater", "pce", "pce-cd", "rpc8e", "sim",
+        "apple2", "apple2enh", "atari", "atarixl", "atmos", "c16", "cbm510", "cbm610", "geos-apple", "geos-cbm", "lunix", "lynx", "osic1p", "plus4", "sim6502", "sim65c02", "supervision", "telestrat"
+      ],
+      "markdownEnumDescriptions": [
+        "**4502**: ACME",
+        "**6502**: ACME",
+        "**6510**: ACME",
+        "**65816**: ACME",
+        "**65c02**: ACME",
+        "**65ce02**: ACME",
+        "**apple2**: CC65",
+        "**apple2enh**: CC65",
+        "**atari**: CC65",
+        "**atari2600-3e**: LLVM",
+        "**atari2600-4k**: LLVM",
+        "**atari8**: LLVM",
+        "**atari8-stdcart**: LLVM",
+        "**atarixl**: CC65",
+        "**atmos**: CC65",
+        "**c128**: ACME, LLVM, CC65",
+        "**c16**: CC65",
+        "**c64**: ACME, LLVM, CC65",
+        "**c64dtv2**: ACME",
+        "**cbm510**: CC65",
+        "**cbm610**: CC65",
+        "**cpm65**: LLVM",
+        "**cx16**: LLVM",
+        "**dodo**: LLVM",
+        "**eater**: LLVM",
+        "**geos-apple**: CC65",
+        "**geos-cbm**: CC65",
+        "**lunix**: CC65",
+        "**lynx**: CC65",
+        "**m65**: ACME",
+        "**mega65**: LLVM",
+        "**nes**: LLVM, CC65",
+        "**nes-action53**: LLVM",
+        "**nes-cnrom**: LLVM",
+        "**nes-gtrom**: LLVM",
+        "**nes-mmc1**: LLVM",
+        "**nes-mmc3**: LLVM",
+        "**nes-nrom**: LLVM",
+        "**nes-unrom**: LLVM",
+        "**nes-unrom-512**: LLVM",
+        "**nmos6502**: ACME",
+        "**osi-c1p**: LLVM",
+        "**osic1p**: CC65",
+        "**pce**: LLVM",
+        "**pce-cd**: LLVM",
+        "**pet**: LLVM, CC65",
+        "**plus4**: CC65",
+        "**r65c02**: ACME",
+        "**rpc8e**: LLVM",
+        "**sim**: LLVM",
+        "**sim6502**: CC65",
+        "**sim65c02**: CC65",
+        "**supervision**: CC65",
+        "**telestrat**: CC65",
+        "**vic20**: LLVM, CC65",
+        "**w65c02**: ACME"
+      ]
+    },
     "main": {
       "type": "string",
       "description": "The optional main source file."
@@ -41,6 +124,44 @@
       "description": "List of source files.",
       "items": {
         "type": "string"
+      }
+    },
+    "resources": {
+      "type": "object",
+      "description": "Resource compilation properties.",
+      "properties": {
+        "sampleFrequency": {
+          "type": "number",
+          "description": "(WAV): resampling target frequency for the PCM wave form compiler (e.g. 4000 or 8000, default is 4000 Hz)"
+        },
+        "sampleBits": {
+          "type": "number",
+          "description": "(WAV): target samples per bit for the PCM wave form compiler (can be 4 or 8, default is 4 bits/sample)"
+        },
+        "sampleLoudness": {
+          "type": "number",
+          "description": "(WAV): target RMS loudness in dB for sample output (e.g. -9.0)"
+        },
+        "sampleNormalizationMax": {
+          "type": "number",
+          "description": "(WAV): maximum normalization factor for sample output (e.g. 5.0)"
+        },
+        "bitmapWidth": {
+          "type": "number",
+          "description": "(PNG): scale PNG bitmaps to target size (e.g. scale larger bitmap to 160 pixels or less width, must be multiples of 4 pixels)"
+        },
+        "bitmapHeight": {
+          "type": "number",
+          "description": "(PNG): scale PNG bitmaps to (e.g. scale larger bitmap to 200 pixels or less height, must be multiples of 8 pixels)"
+        },
+        "bitmapDithering": {
+          "type": "number",
+          "description": "(PNG): enable dithering for PNG bitmaps during color palette reduction (default is 'false')"
+        },
+        "rcFlags": {
+          "type": "string",
+          "description": "Optional arguments to be added to the resource compiler command. Use this to force the resource compiler to produce a specific output format, where format can be 'cpp', 'cc', 'acme' or 'kick'."
+        }
       }
     },
     "build": {
@@ -66,6 +187,27 @@
     "args": {
       "type": "array",
       "description": "Additional command line arguments.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assemblerFlags": {
+      "type": "array",
+      "description": "The assembler flags (optional).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "compilerFlags": {
+      "type": "array",
+      "description": "The compiler flags (optional).",
+      "items": {
+        "type": "string"
+      }
+    },
+    "linkerFlags": {
+      "type": "array",
+      "description": "The linker flags (optional).",
       "items": {
         "type": "string"
       }
