@@ -14,13 +14,14 @@
     },
     "toolkit": {
       "type": "string",
-      "description": "The assembler toolkit to be used for the build process.",
+      "description": "The toolkit to be used for the build process.",
       "enum": [
         "acme",
         "basic",
         "cc65",
         "kick",
         "llvm",
+        "oscar64",
         "tmpx"
       ],
       "markdownEnumDescriptions": [
@@ -29,6 +30,7 @@
         "**cc65**: CC65 C compiler.",
         "**kick**: KickAssembler.",
         "**llvm**: LLVM-MOS C/C++ compiler.",
+        "**oscar64**: Oscar64 is a C/C++ cross compiler running on a modern system.",
         "**tmpx**: A high-performance multi-pass assembler."
       ]
     },
