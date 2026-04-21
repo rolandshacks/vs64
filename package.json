@@ -324,6 +324,21 @@
 				}
 			},
 			{
+				"name": "cc65",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^([^:]+):(\\d+):( \\w+):(.+)$",
+					"file": 1,
+					"line": 2,
+					"severity": 3,
+					"message": 4
+				}
+			},
+			{
 				"name": "llvm",
 				"owner": "vs64",
 				"fileLocation": [
