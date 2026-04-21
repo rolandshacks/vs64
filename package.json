@@ -324,6 +324,22 @@
 				}
 			},
 			{
+				"name": "llvm",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": {
+					"regexp": "^([^:]+):(\\d+):(\\d+):( \\w+):(.+)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5
+				}
+			},
+			{
 				"name": "tmpx",
 				"owner": "vs64",
 				"fileLocation": [

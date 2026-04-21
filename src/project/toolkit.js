@@ -30,7 +30,7 @@ class Toolkit {
         this.isCpp = (this.isLLVM || this.isCC65 || this.isOscar64);
         this.isAssembler = (this.isAcme || this.isKick || this.txmpx);
 
-        this.hasProblemMatcher = (this.isOscar64 || this.isKick || this.isTmpx);
+        this.hasProblemMatcher = (this.isOscar64 || this.isKick || this.isLLVM || this.isTmpx);
 
         this.builtInDefines = null;
 
