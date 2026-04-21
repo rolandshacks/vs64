@@ -362,7 +362,7 @@
 					"${workspaceFolder}"
 				],
 				"pattern": {
-					"regexp": "^([a-zA-Z0-9\\\\/\\.]+)\\((\\d+)\\) : ([a-zA-Z]+) (\\d+): (.*)$",
+					"regexp": "^([^\\(]+)\\((\\d+)\\) : ([a-zA-Z]+) (\\d+): (.*)$",
 					"file": 1,
 					"line": 2,
 					"severity": 3,
