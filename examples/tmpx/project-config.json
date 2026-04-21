@@ -3,10 +3,12 @@
     "description": "Example project",
     "toolkit": "tmpx",
     "sources": [
+        "src/include.asm",
         "src/main.asm"
     ],
     "build": "debug",
     "definitions": [],
     "includes": [],
+    "main": "src/main.asm",
     "cwd": "src"
 }
