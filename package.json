@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.6.2",
+	"version": "2.7.0",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -32,18 +32,18 @@
 	"dependencies": {
 		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "5.2.5"
+		"fast-xml-parser": "^5.5.9"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.24.0",
-		"@types/node": "22.15.30",
-		"@types/vscode": "^1.116.0",
-		"@vscode/vsce": "3.9.1",
-		"esbuild": "^0.25.2",
-		"eslint": "^9.24.0",
-		"globals": "^16.0.0",
-		"jest": "^30.0.4",
-		"typescript": "^5.4.5"
+		"@eslint/js": "^10.0.1",
+		"@types/node": "25.5.0",
+		"@types/vscode": "^1.87.0",
+		"@vscode/vsce": "3.7.1",
+		"esbuild": "^0.27.5",
+		"eslint": "^10.1.0",
+		"globals": "^17.4.0",
+		"jest": "^30.3.0",
+		"typescript": "^6.0.2"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -443,6 +443,16 @@
 				"extensions": [
 					".d64"
 				]
+			},
+			{
+				"id": "prg",
+				"aliases": [
+					"program",
+					"prg"
+				],
+				"extensions": [
+					".prg"
+				]
 			}
 		],
 		"grammars": [
@@ -493,6 +503,15 @@
 				"selector": [
 					{
 						"filenamePattern": "*.prg"
+					}
+				]
+			},
+			{
+				"viewType": "vs64.media",
+				"displayName": "C64 Media",
+				"selector": [
+					{
+						"filenamePattern": "*.{sid,spd,ctm,spm}"
 					}
 				]
 			}

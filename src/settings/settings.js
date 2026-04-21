@@ -48,6 +48,7 @@ const Constants = {
     AsmFileFilter: "|s|asm|a|",
     BasicFileFilter: "|bas|",
     ObjFileFilter: "|o|obj|",
+    BinaryFileFilter: "|prg|bin|dat|res|raw|spm|spd|ctm|sid|wav|png|jpg|koa|kla|",
     BasicInterpreterLoopRoutine: 0xa7e4,            // default adress of vector $308-309
     BasicInterpreterBreakRoutine: 0xa84b,           // when END is called
     BasicInterpreterErrorRoutine: 0xa437,

@@ -40,7 +40,7 @@
 				},
 				{
 					"name": "meta.preprocessor",
-					"begin": "^\\s*#\\s*(include|lowercase|lower|uppercase|upper|cset0|cset1)\\b",
+					"begin": "^\\s*#\\s*(include|lowercase|lower|uppercase|upper|cset0|cset1|lineskip|linestep)\\b",
 					"end": "$",
 					"comment": "preprocessor directives"
 				},

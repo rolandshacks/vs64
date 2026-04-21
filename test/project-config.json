@@ -1,6 +1,6 @@
 {
     "name": "testprog",
-    "toolkit": "cc65",
+    "toolkit": "oscar64",
     "description": "",
     "sources": [
       "data/ctest.c",
@@ -14,4 +14,4 @@
     "definitions": [],
     "includes": ["data"],
     "args": []
-  }
+}

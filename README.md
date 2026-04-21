@@ -27,6 +27,7 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * Debugging and launch support for integrated 6502 emulation
 * Debugging and launch support for the VICE emulator using the binary monitor protocol
 * Launch support for the X16 emulator
+* Preview of C64 media files (SID, sprites, charsets)
 * Integrated MOS 6502 cpu emulation, support for C64 memory model and startup behavior
 * Extended introspection for 6502 cpu states, C64 custom chips state information and memory contents
 * Direct access to D64 disks as virtual workspace folders
@@ -116,20 +117,6 @@ To enable the BASIC extensions, just add the compiler argument '-t' or '--tsb' t
 
 ```
 "args": ["--tsb"]
-```
-
-### Crunching BASIC Code
-
-The basic compiler supports crunching of BASIC code:
-
-* Removal of spaces
-* Line number re-ordering
-* Removal of REM statements
-
-To enable this feature, just set the build mode in the project file to "release":
-
-```
-"build": "release"
 ```
 
 ### Upper/Lower Case Character Set
@@ -234,6 +221,83 @@ A control token within a string is either a {mnemonic}, {number}, {$hex}, {0xhex
 For more details, please refer to the PETCAT user manual. In addition, control codes as seen in Compute! magazine are supported.  This includes repeating control codes of the format `{count code}`.  For example, `{12 right}`.  Compute! also supported a number of other aliases for the control codes shown above that are supported including:
 
 >{down}, {right}, {spaces}, {up}, {left}, {shift-space}, {rvs}, {off}
+
+### Crunched BASIC Code
+
+The basic compiler supports crunching of BASIC code:
+
+* Removal of spaces
+* Line number re-ordering
+* Removal of REM statements
+
+To enable this feature, just set the build mode in the project file to "release":
+
+```
+"build": "release"
+```
+
+### Auto-Numbering and Formatting of BASIC Code
+
+The BASIC compiler supports auto-numbering and formatting of BASIC lines:
+
+* `#linestep N` - Sets the step size for auto-generated line numbers (default: 1)
+* `#lineskip N` - Jumps to the next multiple of N for the next line number
+* Empty colon lines (`:`) - Creates visual spacing in your code
+
+These directives work when NOT in crunch mode. If you want formatted output, use "debug" build mode:
+
+```
+"build": "debug"
+```
+
+In "release" mode (crunched), these directives are ignored for better performance.
+
+Example of a highly formatted program:
+
+```
+#lowercase
+#linestep 10
+
+50 rem *** basic program ***
+:
+:
+
+mainloop:
+#lineskip 500
+rem *** main loop ***
+PRINT "hello world!     ";
+gosub flashborder:
+goto mainloop
+:
+:
+
+flashborder:
+#lineskip 500
+rem *** flash border ***
+poke 53280,rnd(0)*255
+return
+:
+:
+```
+
+BASIC listing after being compiled in non-crunched "debug" mode:
+
+```
+50 REM *** BASIC PROGRAM ***
+60 :
+70 :
+500 REM *** MAIN LOOP ***
+510 PRINT "HELLO WORLD!     ";
+520 GOSUB 1000
+530 GOTO 500
+540 :
+550 :
+1000 REM *** FLASH BORDER ***
+1010 POKE 53280,RND(0)*255
+1020 RETURN
+1030 :
+1040 :
+```
 
 ### Resource Compilation
 
