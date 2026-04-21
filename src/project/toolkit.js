@@ -28,7 +28,7 @@ class Toolkit {
         this.isTmpx = (name == "tmpx");
 
         this.isCpp = (this.isLLVM || this.isCC65 || this.isOscar64);
-        this.isAssembler = (this.isAcme || this.isKick || this.txmpx);
+        this.isAssembler = (this.isAcme || this.isKick || this.isTmpx);
 
         this.hasProblemMatcher = (this.isKick || this.isCC65 || this.isOscar64 || this.isLLVM || this.isTmpx);
 
