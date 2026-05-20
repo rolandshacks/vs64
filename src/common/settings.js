@@ -19,6 +19,7 @@ BIND(module);
 const { Utils } = require('utilities/utils');
 const { Logger, LogLevel } = require('logger/logger');
 const { Constants } = require('common/constants');
+const { PackageManager } = require('packman/packman');
 
 const logger = new Logger("Settings");
 
@@ -38,6 +39,8 @@ class Settings {
         this.viceArgs = null;
         this.x16Executable = null;
         this.x16Args = null;
+        this.deniseExecutable = null;
+        this.deniseArgs = null;
         this.pythonExecutable = null;
         this.javaExecutable = null;
         this.ninjaExecutable = null;
@@ -46,6 +49,8 @@ class Settings {
         this.resourceCompiler = null;
         this.basicCompiler = null;
         this.basicCharset = null;
+        this.toolsRepo = null;
+        this.toolsInstallDir = PackageManager.getUserAppDir(Constants.ToolsRepoName);
     }
 
     disableWelcome(workspaceConfig) {
@@ -64,6 +69,8 @@ class Settings {
 
         settings.showWelcome = workspaceConfig.get("vs64.showWelcome");
         if (null == settings.showWelcome) settings.showWelcome = true;
+
+        settings.toolsRepo = workspaceConfig.get("vs64.toolsRepo")||Constants.ToolsRepoUrl;
 
         settings.logLevel = workspaceConfig.get("vs64.loglevel")||"info";
         Logger.setGlobalLevel(settings.logLevel);
@@ -88,6 +95,7 @@ class Settings {
         this.setupOscar64(workspaceConfig);
         this.setupVice(workspaceConfig);
         this.setupX16(workspaceConfig);
+        this.setupDenise(workspaceConfig);
 
         this.show();
     }
@@ -139,17 +147,34 @@ class Settings {
         }
     }
 
+    findApplicationBundle(bundleName, executableName=null) {
+        if (!this.toolsInstallDir) return null;
+        const bundlePath = path.resolve(this.toolsInstallDir, bundleName);
+        if (!bundlePath) return null;
+        if (!fs.existsSync(bundlePath)) return null;
+        if (!executableName) return bundlePath;
+
+        const bundleFilePath = path.resolve(bundlePath, Utils.normalizeExecutableName(executableName));
+        if (!bundleFilePath) return null;
+        if (!fs.existsSync(bundleFilePath)) return null;
+        return bundleFilePath;
+    }
+
     setupAcme(workspaceConfig) {
         const installDir = this.#getAbsDir(workspaceConfig.get("vs64.acmeInstallDir"));
         if (installDir) {
             this.acmeExecutable = path.resolve(installDir, Utils.normalizeExecutableName("acme"));
         } else {
-            this.acmeExecutable = "acme";
+            const bundledExecutable = this.findApplicationBundle("acme", Utils.normalizeExecutableName("acme"));
+            this.acmeExecutable = bundledExecutable || Utils.normalizeExecutableName("acme");
         }
     }
 
     setupKickAssembler(workspaceConfig) {
-        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.kickInstallDir"));
+        const installDir = this.#getAbsDir(
+            workspaceConfig.get("vs64.kickInstallDir") ||
+            this.findApplicationBundle("kickassembler")
+        );
         if (installDir) {
             this.kickExecutable = path.resolve(installDir, "KickAss.jar");
         } else {
@@ -158,7 +183,10 @@ class Settings {
     }
 
     setupCC65(workspaceConfig) {
-        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.cc65InstallDir"));
+        const installDir = this.#getAbsDir(
+            workspaceConfig.get("vs64.cc65InstallDir") ||
+            this.findApplicationBundle("cc65")
+        );
         if (installDir) {
             this.cc65Includes = [ path.resolve(installDir, "include") ];
             this.cc65Executable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cc65"));
@@ -176,7 +204,10 @@ class Settings {
     }
 
     setupOscar64(workspaceConfig) {
-        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.oscar64InstallDir"));
+        const installDir = this.#getAbsDir(
+            workspaceConfig.get("vs64.oscar64InstallDir") ||
+            this.findApplicationBundle("oscar64")
+        );
         if (installDir) {
             const oscar64IncludesDir = path.resolve(installDir);
             this.oscar64IncludesC64 = [
@@ -208,7 +239,10 @@ class Settings {
     }
 
     setupLLVM(workspaceConfig) {
-        const installDir = this.#getAbsDir(workspaceConfig.get("vs64.llvmInstallDir"));
+        const installDir = this.#getAbsDir(
+            workspaceConfig.get("vs64.llvmInstallDir") ||
+            this.findApplicationBundle("llvm-mos")
+        );
         if (installDir) {
             const llvmIncludesDir = path.resolve(installDir);
 
@@ -291,19 +325,20 @@ class Settings {
 
     setupVice(workspaceConfig) {
 
-        this.#migrateConfig(workspaceConfig, "vs64.emulatorExecutable", "vs64.viceExecutable")
-        this.#migrateConfig(workspaceConfig, "vs64.emulatorPort", "vs64.vicePort")
-        this.#migrateConfig(workspaceConfig, "vs64.emulatorArgs", "vs64.viceArgs")
+        //this.#migrateConfig(workspaceConfig, "vs64.emulatorExecutable", "vs64.viceExecutable")
+        //this.#migrateConfig(workspaceConfig, "vs64.emulatorPort", "vs64.vicePort")
+        //this.#migrateConfig(workspaceConfig, "vs64.emulatorArgs", "vs64.viceArgs")
 
-        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.viceExecutable")||workspaceConfig.get("vs64.emulatorExecutable")||"x64sc");
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.viceExecutable")||workspaceConfig.get("vs64.emulatorExecutable"));
         if (executablePath) {
             this.viceExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
-            this.viceExecutable = "x64sc";
+            const bundledExecutable = this.findApplicationBundle("gtk3vice", "bin/x64sc");
+            this.viceExecutable = bundledExecutable || Utils.normalizeExecutableName("x64sc");
         }
         this.vicePort = asInteger(workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort"))||Constants.ViceBinaryMonitorPort;
         this.viceTimeout = asInteger(workspaceConfig.get("vs64.viceTimeout"))||Constants.ViceConnectTimeoutSec;
-        this.viceArgs = workspaceConfig.    get("vs64.viceArgs")||workspaceConfig.get("vs64.emulatorArgs")||"";
+        this.viceArgs = workspaceConfig.get("vs64.viceArgs")||workspaceConfig.get("vs64.emulatorArgs")||"";
     }
 
     setupX16(workspaceConfig) {
@@ -311,9 +346,21 @@ class Settings {
         if (executablePath) {
             this.x16Executable = Utils.normalizeExecutableName(executablePath);
         } else {
-            this.x16Executable = "x16emu";
+            const bundledExecutable = this.findApplicationBundle("x16emu", Utils.normalizeExecutableName("x16emu"));
+            this.x16Executable = bundledExecutable || Utils.normalizeExecutableName("x16emu");
         }
         this.x16Args = workspaceConfig.get("vs64.x16Args")||"";
+    }
+
+    setupDenise(workspaceConfig) {
+        const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.deniseExecutable"));
+        if (executablePath) {
+            this.deniseExecutable = Utils.normalizeExecutableName(executablePath);
+        } else {
+            const bundledExecutable = this.findApplicationBundle("denise", Utils.normalizeExecutableName("denise"));
+            this.deniseExecutable = bundledExecutable || Utils.normalizeExecutableName("denise");
+        }
+        this.deniseArgs = workspaceConfig.get("vs64.deniseArgs")||"";
     }
 
     setupPython(workspaceConfig) {
@@ -343,7 +390,8 @@ class Settings {
         if (executablePath) {
             this.javaExecutable = Utils.normalizeExecutableName(executablePath)
         } else {
-            this.javaExecutable = "java";
+            const bundledExecutable = this.findApplicationBundle("jre", Utils.normalizeExecutableName("bin/java"));
+            this.javaExecutable = bundledExecutable || Utils.normalizeExecutableName("java");
         }
     }
 
@@ -374,6 +422,8 @@ class Settings {
         logger.debug("ninja executable: " + settings.ninjaExecutable);
         logger.debug("python executable: " + settings.pythonExecutable);
         logger.debug("java executable: " + settings.javaExecutable);
+        logger.debug("x16emu executable: " + settings.x16Executable);
+        logger.debug("denise executable: " + settings.deniseExecutable);
     }
 
 }

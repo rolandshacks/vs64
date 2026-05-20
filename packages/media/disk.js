@@ -31,7 +31,7 @@ function countBits(a) {
 class Disk extends Device {
     constructor(filename, filesystemIO=null) {
         super(filename, filesystemIO);
-        this._deviceType = Device.DEVICE_TYPE_TAPE;
+        this._deviceType = Device.DEVICE_TYPE_DISK;
     }
 
     init() {

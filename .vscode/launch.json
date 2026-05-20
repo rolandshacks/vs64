@@ -13,10 +13,10 @@
             "sourceMaps": true
         },
         {
-            "name": "Run Modules",
+            "name": "Run CLI Runners",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/test/runners/elf.run.js",
+            "program": "${workspaceFolder}/test/runners/packman.run.js",
             "cwd": "${workspaceFolder}/test"
         },
         {
@@ -99,7 +99,7 @@
                 "--runInBand",
                 "--config",
                 "${workspaceFolder}/jest.config.js",
-                "-t", "tape"
+                "-t", "packman"
             ]
         },
         {

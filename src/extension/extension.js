@@ -33,6 +33,7 @@ const { LanguageFeatureProvider } = require('language/language_provider');
 const { D64FileSystemProvider } = require('extension/filesystem_provider');
 const { MediaViewProvider } = require('views/mediaview');
 const { DisassemblyViewProvider } = require('views/disassembly');
+const { PackageManager } = require('packman/packman');
 
 const logger = new Logger("Extension");
 
@@ -210,6 +211,21 @@ class Extension {
 
         // register "show welcome" command (and "getting started" alias)
         {
+            subscriptions.push(vscode.commands.registerCommand("vs64.installDevTools", function() {
+                thisInstance.installDevTools(false);
+            }));
+
+            subscriptions.push(vscode.commands.registerCommand("vs64.updateDevTools", function() {
+                thisInstance.installDevTools(true);
+            }));
+
+            subscriptions.push(vscode.commands.registerCommand("vs64.uninstallDevTools", function() {
+                thisInstance.uninstallDevTools();
+            }));
+        }
+
+        // register "show welcome" command (and "getting started" alias)
+        {
             subscriptions.push(vscode.commands.registerCommand("vs64.showWelcome", function() {
                 thisInstance.showWelcome(true);
             }));
@@ -273,7 +289,7 @@ class Extension {
                 }
             );
 
-            vscode.tasks.registerTaskProvider(TaskProvider.Type, this._taskProvider);
+            subscriptions.push(vscode.tasks.registerTaskProvider(TaskProvider.Type, this._taskProvider));
         }
 
         // register disassembler editors / views
@@ -395,6 +411,115 @@ class Extension {
         vscode.commands
             .executeCommand('vscode.open', uri.with({scheme: 'prg-preview'}))
             .then(null, vscode.window.showErrorMessage);
+    }
+
+    async installDevTools(updateOnly) {
+        const toolsRepo = this._settings.toolsRepo;
+        if (!toolsRepo) {
+            const selection = await vscode.window.showWarningMessage(
+                "Developer tools repository not configured.",
+                "Open Settings...",
+                "Cancel"
+            );
+
+            if (selection != "Cancel") {
+                this.showSettings("toolsRepo");
+            }
+
+            return;
+        };
+
+        if (!updateOnly) {
+            const selection = await vscode.window.showWarningMessage(
+                "Do you want to download and install the VS64 developer tools?",
+                "Yes",
+                "Cancel"
+            );
+
+            if (selection != 'Yes') {
+                return;
+            }
+        }
+
+        const packageManager = new PackageManager(Constants.ToolsRepoName, toolsRepo);
+
+        const actionTitle = updateOnly ? "Updating" : "Installing";
+        const actionText = updateOnly ? "update" : "install";
+        const actionResult = updateOnly ? "updated" : "installed";
+
+        this.showStatus(`$(gear) ${actionTitle} developer tools...`);
+
+        try {
+            await this.installDevToolsImpl(packageManager, updateOnly);
+            if (!updateOnly) {
+                const workspaceConfig = vscode.workspace.getConfiguration();
+                const settings = this._settings;
+                if (settings) {
+                    settings.update(workspaceConfig);
+                }
+            }
+            this.showStatus(`$(pass) Developer tools ${actionResult}.`);
+        } catch (err) {
+            if (err && err.message === "cancelled") {
+                vscode.window.showWarningMessage("Operation cancelled");
+                return;
+            }
+            this.showStatus(`$(error) ${actionTitle} failed: ` + err);
+            vscode.window.showErrorMessage(`Failed to ${actionText} developer tools: ` + err);
+        }
+    }
+
+    async installDevToolsImpl(packageManager, updateOnly) {
+
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: (updateOnly ? "Updating" : "Installing") + " VS64 developer tools",
+                cancellable: true
+            },
+            async (progress, token) => {
+                const subscription = token.onCancellationRequested(() => packageManager.cancel());
+                try {
+                    if (token.isCancellationRequested) packageManager.cancel();
+                    await packageManager.connect((progressInfo, asset) => {
+
+                        if (token.isCancellationRequested) {
+                            return true;
+                        }
+
+                        const prefix = (null != asset) ? asset.name : "progress";
+
+                        progress.report({
+                            // increment: 1,
+                            message: prefix + " (" + Math.floor(progressInfo.percent)+"%)"
+                        });
+
+                        return false;
+                    });
+
+                    if (updateOnly) {
+                        await packageManager.update();
+                    } else {
+                        await packageManager.install();
+                    }
+                } finally {
+                    subscription.dispose();
+                }
+            }
+        );
+
+    }
+
+    async uninstallDevTools() {
+        const selection = await vscode.window.showWarningMessage('Do you want to uninstall the VS64 developer tools?', 'Yes', 'Cancel');
+        if (selection != 'Yes') return;
+
+        const packageManager = new PackageManager(Constants.ToolsRepoName, null);
+        this.showStatus("$(gear) Uninstalling developer tools...");
+        try {
+            packageManager.uninstallAll();
+        } catch (_err) {}
+        this.showStatus("$(pass) Developer tools uninstalled.");
     }
 
     showWelcome(forced) {

@@ -1,0 +1,15 @@
+{
+	"win": {
+		"packages": {
+			"acme": "0.97.0",
+			"exomizer": "3.1.2",
+			"gtk3vice": "3.10.0",
+			"jre": "26.0.1",
+			"kickassembler": "5.25.0",
+			"python": "3.14.5",
+			"sdl2vice": "3.10.0"
+		}
+	},
+	"common": {
+	}
+}

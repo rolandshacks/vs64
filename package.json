@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.2",
+	"version": "2.7.3",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -29,7 +29,8 @@
 		"packages/elf",
 		"packages/disassembler",
 		"packages/media",
-		"packages/cpu"
+		"packages/cpu",
+		"packages/packman"
 	],
 	"scripts": {
 		"lint": "eslint .",
@@ -44,15 +45,16 @@
 		"@fluentui/web-components": "^2.6.1",
 		"@vscode/debugadapter": "1.68.0",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "^5.8.0"
+		"fast-xml-parser": "^5.8.0",
+		"adm-zip": "0.5.17"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@types/node": "25.8.0",
+		"@types/node": "25.9.3",
 		"@types/vscode": "^1.116.0",
-		"@vscode/vsce": "3.9.1",
+		"@vscode/vsce": "3.9.2",
 		"esbuild": "^0.28.0",
-		"eslint": "^10.2.1",
+		"eslint": "^10.4.1",
 		"globals": "^17.4.0",
 		"jest": "^30.3.0",
 		"typescript": "^6.0.3"
@@ -82,6 +84,7 @@
 		"6510",
 		"vice",
 		"x16",
+		"denise",
 		"emulator",
 		"debugger",
 		"build"
@@ -94,6 +97,21 @@
 	],
 	"contributes": {
 		"commands": [
+			{
+				"command": "vs64.installDevTools",
+				"title": "Install Developer Tools",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.updateDevTools",
+				"title": "Update Developer Tools",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.uninstallDevTools",
+				"title": "Uninstall Developer Tools",
+				"category": "VS64"
+			},
 			{
 				"command": "vs64.mountD64FileSystem",
 				"title": "Mount Disk",
@@ -195,60 +213,22 @@
 						"completionEvents": []
 					},
 					{
-						"id": "setup_acme",
-						"title": "Setup ACME Cross-Assembler",
-						"description": "In order to use ACME, please download, install and add the ACME install directory to the VS64 preferences.\n\n[Visit ACME Home Page](https://sourceforge.net/projects/acme-crossass)\n\n[Customize ACME Setup](command:vs64.showSettings?%22acme%22)",
+						"id": "auto_setup",
+						"title": "Setup Development Tools",
+						"description": "VS64 comes with an integrated package manager that provides and configured bundled development tools for VS64.\n\n[Visit VS64 Dev Tools Repository](https://github.com/rolandshacks/vs64devtools)",
 						"media": {
-							"markdown": "resources/walkthroughs/acme.md"
+							"markdown": "resources/walkthroughs/auto_setup.md"
 						},
-						"completionEvents": [
-							"onSettingChanged:vs64.acmeInstallDir"
-						]
+						"completionEvents": []
 					},
 					{
-						"id": "setup_kick",
-						"title": "Setup Kick Assembler",
-						"description": "In order to use Kick Assembler, please download, install and add the Kick Assembler install directory to the VS64 preferences.\n\n[Visit Kick Assembler Home Page](http://theweb.dk/KickAssembler)\n\n[Customize Kick Assembler Setup](command:vs64.showSettings?%22kick%22)\n\n[Setup Java Runtime](command:vs64.showSettings?%22java%22)",
+						"id": "manual_setup",
+						"title": "Manual Configuration",
+						"description": "VS allows customized installations and configuration of tools.\n\n[Customize Settings](command:vs64.showSettings)",
 						"media": {
-							"markdown": "resources/walkthroughs/kick.md"
+							"markdown": "resources/walkthroughs/manual_setup.md"
 						},
-						"completionEvents": [
-							"onSettingChanged:vs64.kickInstallDir",
-							"onSettingChanged:vs64.javaExecutable"
-						]
-					},
-					{
-						"id": "setup_cc65",
-						"title": "Setup CC65 C-Compiler",
-						"description": "VS64 supports the CC65 C-compiler.\n\n[Visit CC65 Home Page](https://cc65.github.io)\n\n[Customize CC65 Setup](command:vs64.showSettings?%22cc65%22)",
-						"media": {
-							"markdown": "resources/walkthroughs/cc65.md"
-						},
-						"completionEvents": [
-							"onSettingChanged:vs64.cc65InstallDir"
-						]
-					},
-					{
-						"id": "setup_llvm",
-						"title": "Setup LLVM-MOS C/C++ Compiler",
-						"description": "VS64 supports the LLVM-MOS C++ Compiler.\n\n[Visit LLVM-MOS Home Page](https://github.com/llvm-mos/llvm-mos-sdk)\n\n[Customize LLVM Setup](command:vs64.showSettings?%22llvm%22)",
-						"media": {
-							"markdown": "resources/walkthroughs/llvm.md"
-						},
-						"completionEvents": [
-							"onSettingChanged:vs64.llvmInstallDir"
-						]
-					},
-					{
-						"id": "setup_vice",
-						"title": "Setup VICE Emulator",
-						"description": "VS64 supports the VICE Emulator.\n\n[Visit VICE Home Page](https://vice-emu.sourceforge.io)\n\n[Customize VICE Setup](command:vs64.showSettings?%22emulator%22)",
-						"media": {
-							"markdown": "resources/walkthroughs/vice.md"
-						},
-						"completionEvents": [
-							"onSettingChanged:vs64.viceExecutable"
-						]
+						"completionEvents": []
 					},
 					{
 						"id": "setup_resource_compiler",
@@ -571,13 +551,23 @@
 					},
 					"vs64.x16Executable": {
 						"type": "string",
-						"default": "x16emu",
+						"default": "",
 						"description": "Path to the X16 emulator executable"
 					},
 					"vs64.x16Args": {
 						"type": "string",
 						"default": "",
 						"description": "Additional X16 emulator command line options"
+					},
+					"vs64.deniseExecutable": {
+						"type": "string",
+						"default": "",
+						"description": "Path to the Denise emulator executable"
+					},
+					"vs64.deniseArgs": {
+						"type": "string",
+						"default": "",
+						"description": "Additional Denise emulator command line options"
 					}
 				}
 			},
@@ -590,6 +580,11 @@
 						"type": "boolean",
 						"default": true,
 						"description": "Show welcome page"
+					},
+					"vs64.toolsRepo": {
+						"type": "string",
+						"default": "https://github.com/rolandshacks/vs64devtools",
+						"description": "Developer Tools Repository"
 					},
 					"vs64.loglevel": {
 						"type": "string",
@@ -816,6 +811,42 @@
 				"variables": {}
 			},
 			{
+				"type": "denise",
+				"label": "Debugger for Denise Emulator",
+				"runtime": "node",
+				"configurationAttributes": {
+					"launch": {
+						"required": [],
+						"properties": {
+							"program": {
+								"type": "string",
+								"description": "Path to executable program",
+								"default": ""
+							},
+							"args": {
+								"type": "string",
+								"description": "Custom launch command line options",
+								"default": ""
+							}
+						}
+					}
+				},
+				"initialConfigurations": [],
+				"configurationSnippets": [
+					{
+						"label": "VS64: Launch in Denise Emulator",
+						"description": "A new configuration for the Denise debugger.",
+						"body": {
+							"type": "denise",
+							"name": "Launch Denise",
+							"request": "launch",
+							"preLaunchTask": "${defaultBuildTask}"
+						}
+					}
+				],
+				"variables": {}
+			},
+			{
 				"type": "x16",
 				"label": "Debugger for X16 Emulator",
 				"runtime": "node",
@@ -851,6 +882,7 @@
 				],
 				"variables": {}
 			}
+
 		]
 	}
 }

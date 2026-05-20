@@ -55,7 +55,7 @@ function activate(context) {
 
 function deactivate() {
     return new Promise(function(resolve /*, reject*/) {
-        if (null == extensionInstance) {
+        if (null != extensionInstance) {
             extensionInstance.deactivate();
             extensionInstance = null;
         }

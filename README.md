@@ -21,6 +21,7 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
 * Task and build system integration to vscode
+* Embedded package manager for tool bundles
 * Resource compiler for sprites, charsets, tiles, maps, bitmaps, music and binary blobs (SpritePad/Pro, CharPad/Pro, SpriteMate, Koala Paint, PNG, SID, PCM Wave)
 * BASIC to PRG compiler and debugger (original BASIC V2 and Tuned Simons Basic NEO "TSBneo")
 * Syntax highlighting for assembler and BASIC files
@@ -36,9 +37,22 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 
 ## Quick and Start (TL;DR)
 
-### Getting Started
+### Getting Started and Package Management
 
 The quickest start is by opening the command palette and run the **"VS64: Getting Started"** command.
+
+While all assemblers, compilers and other tools can be installed and configured individually,
+on Windows, there is a more convenient package manager available.
+
+Just run the **"VS64: Install Developer Tools"** command to get the most relevant tool
+bundles installed locally. Auto-installed bundles are then the fallback if no other
+custom configurations are made in the settings (which means, by clearing settings,
+you can always switch back to bundels installed by the package manager).
+
+The amount of tool bundles differs between Windows, Linux and MacOS because
+of individual availability for the different platforms.
+
+### Customizing the Installation
 
 If you want to do some manual steps or adjustments, these are the individual things to look at:
 
@@ -333,6 +347,13 @@ VS64 provides launch integration for the Commander X16 emulator.
 
 Please make sure you update the VS64 settings with the correct x16emu executable.
 
+### Denise Emulator
+
+VS64 provides launch integration for the Denise emulator.
+
+* Manual installation: Download and install from https://sourceforge.net/projects/deniseemu/
+
+Please make sure you update the VS64 settings with the correct Denise executable.
 
 ## General Usage
 
@@ -727,8 +748,7 @@ In order to debug a compiled C64 program (`.prg`) you have to create a launch co
 
 > `type`: Launch type
 
-Can be either "6502" to run the integrated 6502 cpu emulator, "vice" to run a VICE emulator based debugging session or "x16"
-to launch the Commander X16 emulator.
+Can be either "6502" to run the integrated 6502 cpu emulator, "vice" to run a VICE emulator based debugging session, "x16" to launch the Commander X16 emulator or "denise" to launch the Denise emulator.
 
 > `request`: Request type
 
@@ -868,6 +888,14 @@ Path to X16 emulator executable. Example: `C:\Tools\x16emu\x16emu.exe`.
 
 Additional X16 emulator command line options.
 
+> VS64: Denuse Executable
+
+Path to Denise emulator executable. Example: `C:\Tools\denise\denise.exe`.
+
+> VS64: Denise Arguments
+
+Additional Denise emulator command line options.
+
 ### Misc Settings
 
 > VS64: Log Level
@@ -913,3 +941,4 @@ This package includes open source from other developers and I would like to than
 * SpriteMate: https://www.spritemate.com
 * GoatTracker2: https://sourceforge.net/projects/goattracker2
 * Commander X16 Emulator: https://github.com/X16Community/x16-emulator
+* Denise Emulator: https://bitbucket.org/piciji/denise

@@ -2,6 +2,12 @@
 
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.7.3 Minor Update
+
+- Added package manager for development tool bundles
+- Added denise emulator debugging type
+- Bug-fixes and minor improvements
+
 ## v2.7.2 Major Update
 - Improved media viewers
 - Added inspectors for disks and tapes

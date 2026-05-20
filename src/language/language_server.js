@@ -17,7 +17,7 @@ const fs = require('fs');
 //-----------------------------------------------------------------------------------------------//
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
-const { Constants } = require('common/settings');
+const { Constants } = require('common/constants');
 const { FileCache } = require('utilities/cache');
 const { AsmParser, AsmGrammar } = require('grammars/language_asm');
 const { BasicParser, BasicGrammar } = require('grammars/language_basic');

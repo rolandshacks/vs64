@@ -31,6 +31,7 @@ class Project {
         this._error = null;
         this._settings = settings;
         this._modificationTime = null;
+        this._description = null;
         this._outputs = null;
         this._toolkit = null;
         this._machine = null;
@@ -45,7 +46,7 @@ class Project {
     get machine() { return this._machine; }
     get format() { return this._format; }
     get sources() { return this._sources; }
-    get description() { return this._description_; }
+    get description() { return this._description; }
     get basedir() { return this._basedir; }
     get builddir() { return this._builddir; }
     get dependencies() { return this._dependencies||[]; }

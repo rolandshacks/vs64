@@ -27,6 +27,7 @@ const { Breakpoint, Breakpoints, DebugInterruptReason, DebugStepType, MemoryType
 const { Emulator } = require('emulator/emu');
 const { ViceProcess } = require('debugger/debug_vice');
 const { X16Process } = require('debugger/debug_x16');
+const { DeniseProcess } = require('debugger/debug_denise');
 const { DebugDataType } = require('debugger/debug_info_types');
 const { DebugInfo } = require('debugger/debug_info');
 const { DebugStateProvider } = require('debugger/debug_state');
@@ -350,6 +351,28 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             }
 
 
+        } else if (debuggerType == Constants.DebuggerTypeDenise) {
+            this._emulatorProcess = new DeniseProcess(sessionInfo);
+
+            let args = []
+            if (settings.deniseArgs && settings.deniseArgs.length > 0) args.push(settings.deniseArgs);
+            if (options.args && options.args.length > 0) args.push(options.args);
+
+            const argsLine = args.join(' ');
+            const emulatorCommand = settings.deniseExecutable + " " + argsLine;
+
+            logger.trace(`launch Denise emulator: ${emulatorCommand}`)
+
+            try {
+                await this._emulatorProcess.spawn(
+                    settings.deniseExecutable,
+                    argsLine,
+                    options.prg,
+                    processOptions
+                );
+            } catch (err) {
+                throw(err);
+            }
         } else {
             return null;
         }
@@ -409,6 +432,22 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
                 }
 
                 emu = X16Process.createDebugInterface(this);
+
+            } catch (err) {
+                logger.error("debug error: " + err);
+                throw(err);
+            }
+
+        } else if (debuggerType == Constants.DebuggerTypeDenise) {
+
+            try {
+                if (!attachToProcess) {
+                    if (!this._emulatorProcess || !this._emulatorProcess.alive) {
+                        await this.#createEmulatorProcess();
+                    }
+                }
+
+                emu = DeniseProcess.createDebugInterface(this);
 
             } catch (err) {
                 logger.error("debug error: " + err);
@@ -480,7 +519,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         if (debuggerType != Constants.DebuggerType6502 &&
             debuggerType != Constants.DebuggerTypeVice &&
-            debuggerType != Constants.DebuggerTypeX16) {
+            debuggerType != Constants.DebuggerTypeX16 &&
+            debuggerType != Constants.DebuggerTypeDenise) {
             response.success = false;
             response.message ="invalid debugger type " + args.type;
             this.sendResponse(response);
@@ -532,7 +572,7 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
             options.hostname = args.hostname||"localhost";
             options.port = args.port||settings.vicePort;
             options.timeout = args.timeout||settings.viceTimeout;
-        } else if (debuggerType == Constants.DebuggerTypeX16) {
+        } else if (debuggerType == Constants.DebuggerTypeX16 || debuggerType == Constants.DebuggerTypeDenise) {
             options.prg = binaryPath;
         }
 
@@ -553,8 +593,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
             await this.#syncBreakpoints(true, breakpoints);
 
-            if (debuggerType != Constants.DebuggerTypeX16) {
-                // X16 does not support injection of binary
+            if (debuggerType != Constants.DebuggerTypeX16 && debuggerType != Constants.DebuggerTypeDenise) {
+                // X16 and Denise do not support injection of binary
                 await emu.loadProgram(binaryPath, Constants.ProgramAddressCorrection, forcedStartAddress);
             }
 
@@ -1071,8 +1111,8 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
 
         await this.#syncBreakpoints(true, breakpoints);
 
-        if (this._debuggerSessionInfo.type != Constants.DebuggerTypeX16) {
-            // X16 does not support injection of binary
+        if (this._debuggerSessionInfo.type != Constants.DebuggerTypeX16 && this._debuggerSessionInfo.type != Constants.DebuggerTypeDenise) {
+            // X16 and Denise do not support injection of binary
             try {
                 await emu.loadProgram(this._launchBinary, Constants.ProgramAddressCorrection, this._launchPC);
             } catch (err) {

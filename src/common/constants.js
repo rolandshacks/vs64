@@ -27,7 +27,10 @@ const Constants = {
     DebuggerType6502: "6502",
     DebuggerTypeVice: "vice",
     DebuggerTypeX16: "x16",
+    DebuggerTypeDenise: "denise",
     CppStandard: "c++20",
+    ToolsRepoName: "VS64DevTools",
+    ToolsRepoUrl: "https://github.com/rolandshacks/vs64devtools",
     AlwaysShowOutputChannel: false,
     ProgramAddressCorrection: true,
     RemapLanguageIds: true,                         // remap grammars based on project settings

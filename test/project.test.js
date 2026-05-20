@@ -33,7 +33,7 @@ function setupProject(config) {
     const projectName = config.name;
 
     // eslint-disable-next-line no-undef
-    const projectFolder = __context.resolve("/temp/" + projectName);
+    const projectFolder = __context.resolve("temp:/" + projectName);
     Utils.createFolder(projectFolder);
     const configJSON = JSON.stringify(config);
     const settings = new Settings(null);

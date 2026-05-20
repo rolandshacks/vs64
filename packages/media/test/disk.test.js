@@ -6,7 +6,8 @@
 // Required Modules
 //-----------------------------------------------------------------------------------------------//
 
-const { Disk, File } = require('../disk');
+const { Disk } = require('../disk');
+const { File } = require('../filesystem');
 const { Device } = require('../device');
 const { DeviceIO } = require('../device_io');
 
@@ -49,7 +50,7 @@ describe('disk', () => {
         const disk = new Disk();
         disk.create("EmptyDisk", "ABCDE", 35);
 
-        expect(disk.deviceTape).toBe(Device.DEVICE_TYPE_DISK);
+        expect(disk.deviceType).toBe(Device.DEVICE_TYPE_DISK);
 
         expect(disk.name).toBe("EmptyDisk");
         expect(disk.id).toBe("ABCDE");
