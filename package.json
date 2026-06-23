@@ -35,6 +35,7 @@
 	"scripts": {
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./jest.config.js",
+		"test:basic": "jest --runInBand --config ./jest.config.js test/basic_compiler.test.js",
 		"coverage": "jest --coverage --runInBand --config ./jest.config.js",
 		"vsix": "vsce package --no-yarn --dependencies",
 		"publish": "vsce publish",

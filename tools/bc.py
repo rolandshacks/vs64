@@ -24,6 +24,7 @@ def usage():
     print("-n, --noext        : Disable BASIC extensions")
     print("-l, --lower        : Enable lower-case mode")
     print("-m, --map          : Name of source map file to be generated")
+    print("-a, --aliases      : Enable @alias preprocessing")
     print("-I, --include      : Add include directory (multiple usage possible")
     print("-o, --output       : Name of file to be generated")
     print("-u, --unpack       : Unpack a .prg into BASIC source code")
@@ -37,7 +38,7 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvdtlumcp:I:o:", ["help", "verbose", "debug", "tsb", "lower", "unpack", "crunch", "pretty", "map=", "include=", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvdtlumcpa:I:o:", ["help", "verbose", "debug", "tsb", "aliases", "lower", "unpack", "crunch", "pretty", "map=", "include=", "output="])
     except getopt.GetoptError as err:
         print(err.msg)
         usage()
@@ -63,6 +64,8 @@ def main():
             options.append_include_path(arg)
         elif option in ("-t", "--tsb"):
             options.set_enable_tsb()
+        elif option in ("-a", "--aliases"):
+            options.set_enable_aliases()
         elif option in ("-v", "--verbose"):
             options.set_verbosity_level(1)
         elif option in ("-d", "--debug"):
@@ -84,6 +87,8 @@ def main():
     else:
         basic_compiler = BasicCompiler(options)
         err = basic_compiler.compile(args, output)
+        if not err and options.feature_aliases:
+            print(f"aliases mapped: {basic_compiler.alias_count}")
 
     if err:
         print(err.to_string())

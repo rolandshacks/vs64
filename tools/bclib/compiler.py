@@ -8,6 +8,39 @@ from typing import Optional
 from .constants import Constants
 from .common import CompileError, CompileOptions, CompileBuffer, CompileHelper
 
+BASIC_V2_RESERVED_ROOTS = {
+    "TI",
+    "ST",
+    "IF",
+    "TO",
+    "FN",
+    "ON",
+    "OR",
+    "GO",
+    "PI",
+}
+
+TSB_RESERVED_ROOTS = {
+    "AT",
+    "DO",
+    "HI",
+    "UP",
+    "ON",
+    "NO",
+    "RC",
+    "EL",
+    "TR",
+    "DI",
+    "PA",
+    "IN",
+    "TE",
+    "DE",
+    "KE",
+    "ME",
+    "ER",
+    "OU",
+}
+
 #############################################################################
 # Basic Module
 #############################################################################
@@ -353,6 +386,8 @@ class BasicCompiler:
         self.new_labels = []
         self.labels = {}
         self.modules = None
+        self.alias_map = {}
+        self.alias_count = 0
         self.repeat_pattern = re.compile("(\\d+)\\s(\\w+)")
         self.state = BasicCompilerState()
 
@@ -384,6 +419,11 @@ class BasicCompiler:
 
         # backup initial options (might be changed by preprocessor)
         initial_lower_case_settings = options.lower_case
+
+        # build alias map before preprocessing so aliased labels can be resolved
+        err = self.prepare_alias_map(inputs)
+        if err:
+            return err
 
         # run preprocessing steps
         err = self.preprocessor(inputs)
@@ -437,6 +477,286 @@ class BasicCompiler:
 
         return None
 
+    def prepare_alias_map(self, inputs: "list[str]") -> Optional[CompileError]:
+        """Collect aliases from full source/include set and build replacement map."""
+
+        self.alias_map = {}
+        self.alias_count = 0
+
+        if not self.options.feature_aliases:
+            return None
+
+        source_files = self.collect_source_files_with_includes(inputs)
+        if len(source_files) < 1:
+            return None
+
+        alias_order_keys = []
+        alias_canonical = {}
+
+        for filename in source_files:
+            try:
+                with open(filename, "r", encoding="utf-8") as src_file:
+                    lines = src_file.readlines()
+            except OSError:
+                return CompileError(filename, "could not read file")
+
+            for line in lines:
+                for token in self.tokenize_alias_tokens(line.rstrip("\n")):
+                    alias = token[1:]
+                    if not alias:
+                        continue
+
+                    alias_key = alias.lower()
+                    if alias_key in alias_canonical:
+                        continue
+
+                    alias_canonical[alias_key] = alias
+                    alias_order_keys.append(alias_key)
+
+        if len(alias_order_keys) < 1:
+            return None
+
+        pool = self.build_root_pool()
+        reserved = set(BASIC_V2_RESERVED_ROOTS)
+        if self.options.feature_tsb:
+            reserved.update(TSB_RESERVED_ROOTS)
+
+        alias_map = {}
+        for alias_key in alias_order_keys:
+            alias = alias_canonical[alias_key]
+
+            assigned_root = None
+            for root in pool:
+                if root not in reserved:
+                    assigned_root = root
+                    reserved.add(root)
+                    break
+
+            if assigned_root is None:
+                return CompileError(
+                    "",
+                    f"Could not allocate 2-character root for alias '@{alias}'. Too many aliases defined.",
+                )
+
+            suffix = ""
+            if alias.endswith("$") or alias.endswith("%"):
+                suffix = alias[-1]
+
+            alias_map[alias_key] = assigned_root + suffix
+
+        self.alias_map = alias_map
+        self.alias_count = len(alias_order_keys)
+
+        return None
+
+    def collect_source_files_with_includes(self, entry_files: "list[str]") -> "list[str]":
+        """Collect full source set by recursively following #include directives."""
+
+        queue = []
+        visited = set()
+        ordered_files = []
+
+        for filename in entry_files:
+            queue.append(os.path.abspath(filename))
+
+        while len(queue) > 0:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+
+            visited.add(current)
+            if not os.path.exists(current):
+                continue
+
+            ordered_files.append(current)
+
+            try:
+                with open(current, "r", encoding="utf-8") as src_file:
+                    lines = src_file.readlines()
+            except OSError:
+                continue
+
+            parent_dir = os.path.dirname(current)
+            for line in lines:
+                include_path = self.extract_include_path(line)
+                if not include_path:
+                    continue
+
+                resolved = self.lookup_file(include_path, parent_dir)
+                if not resolved:
+                    continue
+
+                if resolved not in visited:
+                    queue.append(resolved)
+
+        return ordered_files
+
+    def extract_include_path(self, line: str) -> Optional[str]:
+        """Extract include path from #include lines."""
+
+        trimmed = line.strip()
+        result = re.match(r'^#include\s+["\']([^"\']+)["\']', trimmed, re.IGNORECASE)
+        if not result:
+            return None
+
+        return result.group(1)
+
+    def is_letter(self, c: str) -> bool:
+        return bool(re.match(r"[a-zA-Z]", c))
+
+    def is_alphanumeric(self, c: str) -> bool:
+        return bool(re.match(r"[a-zA-Z0-9]", c))
+
+    def read_alias_token(self, line: str, start: int) -> tuple[str, int]:
+        """Read identifier token with optional @ prefix and type suffix."""
+
+        i = start
+        n = len(line)
+        text = ""
+
+        if i < n and line[i] == "@":
+            text += "@"
+            i += 1
+
+        if i >= n:
+            return text, i
+
+        text += line[i]
+        i += 1
+
+        while i < n and self.is_alphanumeric(line[i]):
+            text += line[i]
+            i += 1
+
+        if i < n and (line[i] == "$" or line[i] == "%"):
+            text += line[i]
+            i += 1
+
+        return text, i
+
+    def tokenize_alias_tokens(self, line: str) -> "list[str]":
+        """Extract @alias tokens outside strings/comments."""
+
+        trimmed = line.strip()
+        if trimmed.startswith("#") or trimmed.startswith(";"):
+            return []
+
+        tokens = []
+        i = 0
+        n = len(line)
+        in_string = False
+
+        while i < n:
+            ch = line[i]
+
+            if ch == '"':
+                in_string = not in_string
+                i += 1
+                continue
+
+            if not in_string:
+                if ch == "'":
+                    break
+
+                if ch == "@" and i + 1 < n and self.is_letter(line[i + 1]):
+                    token, next_i = self.read_alias_token(line, i)
+                    tokens.append(token)
+                    i = next_i
+                    continue
+
+                if self.is_letter(ch):
+                    token, next_i = self.read_alias_token(line, i)
+                    if token.upper() == "REM":
+                        break
+                    i = next_i
+                    continue
+
+            i += 1
+
+        return tokens
+
+    def replace_aliases_in_line(self, line: str) -> str:
+        """Replace @alias identifiers in a single line."""
+
+        if self.alias_count < 1:
+            return line
+
+        trimmed = line.strip()
+        if trimmed.startswith("#") or trimmed.startswith(";"):
+            return line
+
+        out = []
+        i = 0
+        n = len(line)
+        in_string = False
+
+        while i < n:
+            ch = line[i]
+
+            if ch == '"':
+                in_string = not in_string
+                out.append(ch)
+                i += 1
+                continue
+
+            if not in_string:
+                if ch == "'":
+                    out.append(line[i:])
+                    break
+
+                if ch == "@" and i + 1 < n and self.is_letter(line[i + 1]):
+                    token, next_i = self.read_alias_token(line, i)
+                    alias_name = token[1:]
+                    alias_key = alias_name.lower()
+                    if alias_key in self.alias_map:
+                        out.append(self.alias_map[alias_key])
+                    else:
+                        out.append(token)
+
+                    i = next_i
+                    continue
+
+                if self.is_letter(ch):
+                    token, next_i = self.read_alias_token(line, i)
+                    if token.upper() == "REM":
+                        out.append(line[i:])
+                        break
+                    out.append(token)
+                    i = next_i
+                    continue
+
+            out.append(ch)
+            i += 1
+
+        return "".join(out)
+
+    def build_root_pool(self) -> "list[str]":
+        """Build available 2-character roots from A0..ZZ."""
+
+        start = int("A0", 36)
+        end = int("ZZ", 36)
+        pool = []
+
+        for number in range(start, end + 1):
+            pool.append(self.to_base36(number))
+
+        return pool
+
+    def to_base36(self, value: int) -> str:
+        """Convert integer to upper-case base36 string."""
+
+        if value == 0:
+            return "0"
+
+        digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        out = ""
+        n = value
+        while n > 0:
+            n, rem = divmod(n, 36)
+            out = digits[rem] + out
+
+        return out
+
     def preprocessor(self, inputs: "list[str]") -> Optional[CompileError]:
         """Preprocess files."""
 
@@ -466,7 +786,7 @@ class BasicCompiler:
 
         line_index = -1
         for raw_line in data:
-            line = raw_line.strip()
+            line = self.replace_aliases_in_line(raw_line.rstrip("\n")).strip()
             line_index += 1
 
             if len(line) < 1:
@@ -580,7 +900,7 @@ class BasicCompiler:
 
         line_index = -1
         for raw_line in data:
-            line = raw_line.strip()
+            line = self.replace_aliases_in_line(raw_line.rstrip("\n")).strip()
             line_index += 1
 
             if len(line) < 1:
