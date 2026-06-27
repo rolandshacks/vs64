@@ -1073,10 +1073,6 @@ class BasicCompiler:
                         ofs += 1
                         if ofs < len(line):
                             c = line[ofs]
-                        if last_was_jump == 0xA7 and len(label) >= 2:
-                            # handle 'THEN TOKEN' instead of 'THEN label'
-                            tmp_token, tmp_token_code, _ = self.match_token(label)
-                            if tmp_token and tmp_token_code != 0xCB: break # found BASIC token, stop parsing label
                     else:
                         ofs_old = ofs # backup position after identifier
 
