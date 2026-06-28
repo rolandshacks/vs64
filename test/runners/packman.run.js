@@ -37,7 +37,7 @@ async function runPackman() {
 
     const appName = "VS64DevTools";
 
-    const userAppDir = PackageManager.getUserAppDir(appName);
+    // const userAppDir = PackageManager.getUserAppDir(appName);
 
     //const baseUrl = "http://192.168.2.2/vs64pack";
     const baseUrl = "https://github.com/rolandshacks/vs64devtools";

@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.3",
+	"version": "2.7.4",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -35,6 +35,7 @@
 	"scripts": {
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./jest.config.js",
+		"test:basic": "jest --runInBand --config ./jest.config.js test/basic_compiler.test.js",
 		"coverage": "jest --coverage --runInBand --config ./jest.config.js",
 		"vsix": "vsce package --no-yarn --dependencies",
 		"publish": "vsce publish",

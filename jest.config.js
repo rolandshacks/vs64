@@ -14,7 +14,7 @@ const config = {
         "<rootDir>/test/*.test.js",
         "<rootDir>/packages/**/test/*.test.js"
     ],
-    collectCoverageFrom: [ "<rootDir>/**/*.js" ],
+    collectCoverageFrom: [ "<rootDir>/src/**/*.js", "<rootDir>/packages/**/*.js" ],
     coverageDirectory: "build/coverage",
     coverageReporters: [ "text" ]
 };
