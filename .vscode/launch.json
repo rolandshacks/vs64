@@ -98,8 +98,8 @@
             "args": [
                 "--runInBand",
                 "--config",
-                "${workspaceFolder}/jest.config.js",
-                "-t", "packman"
+                "${workspaceFolder}/jest.config.js"
+
             ]
         },
         {
