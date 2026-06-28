@@ -24,6 +24,7 @@ class VirtualDeviceIO {
 class Device {
     constructor(filename, filesystemIO=null) {
         this._io = filesystemIO || new VirtualDeviceIO();
+        this._deviceType = Device.DEVICE_TYPE_UNKNOWN;
         this.init();
         if (filename != null) {
             this.open(filename);
@@ -34,7 +35,6 @@ class Device {
         this._buffer = null;
         this._filename = null;
         this._size = 0;
-        this._deviceType = Device.DEVICE_TYPE_UNKNOWN;
         this._name = null;
         this._version = null;
         this._directory = null;

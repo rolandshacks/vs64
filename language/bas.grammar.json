@@ -3,6 +3,9 @@
 	"name": "Commodore BASIC V2",
 	"patterns": [
 		{
+			"include": "#includes"
+		},
+		{
 			"include": "#comments"
 		},
 		{
@@ -21,6 +24,9 @@
 			"include": "#numbers"
 		},
 		{
+			"include": "#aliases"
+		},
+		{
 			"include": "#variables"
 		},
 		{
@@ -29,6 +35,22 @@
 	],
 
 	"repository": {
+
+		"includes": {
+			"patterns": [
+				{
+					"match": "^\\s*(#\\s*include)\\b\\s*([\"'][^\"']*[\"'])",
+					"captures": {
+						"1": {
+							"name": "keyword.control.include.bas"
+						},
+						"2": {
+							"name": "string.quoted.double.include.bas"
+						}
+					}
+				}
+			]
+		},
 
 		"comments": {
 			"patterns": [
@@ -62,7 +84,7 @@
 				},
 				{
 					"name": "emphasis",
-					"match": "(?i)^\\s*([A-Z|_]\\w*)\\:",
+					"match": "(?i)^\\s*([A-Z_]\\w*)\\:",
 					"comment": "label"
 				}
 			]
@@ -72,27 +94,27 @@
 			"patterns": [
 				{
 					"name": "keyword.instructions.general.abbr",
-					"match": "\\s*(cL|cM|cO|dA|dE|dI|gE|iN|lE|lI|lO|oP|pO|pR|rE|reS|rU|sA|sT|sU|sY|tO|vE|wA|\\?)"
+					"match": "(?i)(?<![A-Za-z0-9_])(cL|cM|cO|dA|dE|dI|gE|iN|lE|lI|lO|oP|pO|pR|rE|reS|rU|sA|sT|sU|sY|tO|vE|wA|\\?)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "keyword.control.abbr",
-					"match": "\\s*(rE|reS|gO|goS|eN|tH|fO|nE|stE)"
+					"match": "(?i)(?<![A-Za-z0-9_])(rE|reS|gO|goS|eN|tH|fO|nE|stE)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "support.function.string",
-					"match": "(?i)\\s*(RIGHT\\$|LEFT\\$|MID\\$|STR\\$|CHR\\$|\\$\\$|%%|NRM)"
+					"match": "(?i)(?<![A-Za-z0-9_])(RIGHT\\$|LEFT\\$|MID\\$|STR\\$|CHR\\$|\\$\\$|%%|NRM)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "support.variables",
-					"match": "(?i)\\s*(ST|TI|TI\\$)\\b"
+					"match": "(?i)(?<![A-Za-z0-9_])(ST|TI|TI\\$)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "keyword.control",
-					"match": "(?i)\\s*(END\\sPROC|END\\sLOOP|REPEAT|RESUME|RETURN|CGOTO|UNTIL|GOSUB|PROC|CALL|EXEC|EXIT|LOOP|ELSE|CONT|STEP|GOTO|GO\\s+TO|THEN|NEXT|STEP|RUN|CLR|SYS|SUB|END|FOR|DO|IF)"
+					"match": "(?i)(?<![A-Za-z0-9_])(END\\sPROC|END\\sLOOP|REPEAT|RESUME|RETURN|CGOTO|UNTIL|GOSUB|PROC|CALL|EXEC|EXIT|LOOP|ELSE|CONT|STEP|GOTO|GO\\s+TO|THEN|NEXT|STEP|RUN|CLR|SYS|SUB|END|FOR|DO|IF)(?![A-Za-z0-9_])"
 				},
 				{
 					"name": "keyword.instructions.general",
-					"match": "(?i)\\s*(ENVELOPE|END\\sPROC|END\\sLOOP|ON\\sERROR|NO\\sERROR|GRAPHICS|RENUMBER|MOB\\sSET|DISABLE|RETRACE|RLOCMOB|BCKGNDS|LOW\\sCOL|DISPLAY|RESTORE|HI\\sCOL|RIGHTB|RIGHTW|COLOUR|BFLASH|REPEAT|CENTRE|GLOBAL|ON\\sKEY|RESUME|SECURE|DISAPA|CIRCLE|OPTION|INSERT|DESIGN|HRDCPY|DETECT|INPUT#|PRINT#|VERIFY|RETURN|RIGHT\\$|HIRES|BLOCK|PLACE|LEFTW|LEFTB|DOWNB|DOWNW|MULTI|MUSIC|FLASH|CGOTO|FETCH|UNTIL|RESET|DELAY|LOCAL|RCOMP|TRACE|INKEY|SOUND|PAUSE|SCRSV|SCRLD|PAINT|MERGE|CHECK|ERROR|CLOSE|INPUT|PRINT|GOSUB|LEFT\\$|PLOT|LINE|FCHR|FCOL|FILL|DRAW|CHAR|MOVE|MMOB|PLAY|WAVE|PROC|CALL|EXEC|EXIT|LOOP|ELSE|PAGE|DUMP|FIND|AUTO|INST|TEST|PENX|PENY|CMOB|ANGL|COLD|TEXT|CSET|DISK|COPY|SAVE|CONT|OPEN|STOP|POKE|STEP|DATA|READ|LIST|LOAD|WAIT|PEEK|GET#|GOTO|GO\\s+TO|THEN|NEXT|STEP|EXOR|FRAC|CHR\\$|MID\\$|STR\\$|REC|ROT|INV|UPB|UPW|USE|CLS|MAP|DIR|OLD|JOY|DUP|LIN|POT|MOB|OFF|ARC|VOL|KEY|MEM|OUT|RUN|CLR|CMD|SYS|DEF|DIM|LET|GET|NEW|SUB|AND|NOT|ABS|ASC|POS|ATN|RND|COS|SGN|EXP|SIN|SQR|FRE|TAN|INT|USR|LEN|VAL|LOG|END|FOR|DIV|MOD|DO|AT|X!|D!|OR|TO|ON|FN|IF)"
+					"match": "(?i)(?<![A-Za-z0-9_])(ENVELOPE|END\\sPROC|END\\sLOOP|ON\\sERROR|NO\\sERROR|GRAPHICS|RENUMBER|MOB\\sSET|DISABLE|RETRACE|RLOCMOB|BCKGNDS|LOW\\sCOL|DISPLAY|RESTORE|HI\\sCOL|RIGHTB|RIGHTW|COLOUR|BFLASH|REPEAT|CENTRE|GLOBAL|ON\\sKEY|RESUME|SECURE|DISAPA|CIRCLE|OPTION|INSERT|DESIGN|HRDCPY|DETECT|INPUT#|PRINT#|VERIFY|RETURN|RIGHT\\$|HIRES|BLOCK|PLACE|LEFTW|LEFTB|DOWNB|DOWNW|MULTI|MUSIC|FLASH|CGOTO|FETCH|UNTIL|RESET|DELAY|LOCAL|RCOMP|TRACE|INKEY|SOUND|PAUSE|SCRSV|SCRLD|PAINT|MERGE|CHECK|ERROR|CLOSE|INPUT|PRINT|GOSUB|LEFT\\$|PLOT|LINE|FCHR|FCOL|FILL|DRAW|CHAR|MOVE|MMOB|PLAY|WAVE|PROC|CALL|EXEC|EXIT|LOOP|ELSE|PAGE|DUMP|FIND|AUTO|INST|TEST|PENX|PENY|CMOB|ANGL|COLD|TEXT|CSET|DISK|COPY|SAVE|CONT|OPEN|STOP|POKE|STEP|DATA|READ|LIST|LOAD|WAIT|PEEK|GET#|GOTO|GO\\s+TO|THEN|NEXT|STEP|EXOR|FRAC|CHR\\$|MID\\$|STR\\$|REC|ROT|INV|UPB|UPW|USE|CLS|MAP|DIR|OLD|JOY|DUP|LIN|POT|MOB|OFF|ARC|VOL|KEY|MEM|OUT|RUN|CLR|CMD|SYS|DEF|DIM|LET|GET|NEW|SUB|AND|NOT|ABS|ASC|POS|ATN|RND|COS|SGN|EXP|SIN|SQR|FRE|TAN|INT|USR|LEN|VAL|LOG|END|FOR|DIV|MOD|DO|AT|X!|D!|OR|TO|ON|FN|IF)(?![A-Za-z0-9_])"
 				}
 			]
 		},
@@ -101,7 +123,23 @@
 			"patterns": [
 				{
 					"name": "variable.other",
-					"match": "(?i)\\s*([A-Z][0-9]*[$%]?)"
+					"match": "(?i)(?<![A-Za-z0-9_])([A-Z][A-Za-z0-9]*[$%]?)(?![A-Za-z0-9_])"
+				}
+			]
+		},
+
+		"aliases": {
+			"patterns": [
+				{
+					"match": "(@)([A-Za-z][A-Za-z0-9]*[$%]?)",
+					"captures": {
+						"1": {
+							"name": "entity.name.variable.alias.bas"
+						},
+						"2": {
+							"name": "entity.name.variable.alias.bas"
+						}
+					}
 				}
 			]
 		},
