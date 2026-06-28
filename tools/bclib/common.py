@@ -151,6 +151,7 @@ class CompileOptions:
     def __init__(self):
         self.verbosity_level = 0
         self.feature_tsb = False
+        self.feature_aliases = False
         self.include_path = []
         self.map_file = None
         self.crunch = False
@@ -168,6 +169,10 @@ class CompileOptions:
     def set_enable_tsb(self):
         """Disable BASIC extensions."""
         self.feature_tsb = True
+
+    def set_enable_aliases(self):
+        """Enable BASIC @alias preprocessing."""
+        self.feature_aliases = True
 
     def set_verbosity_level(self, level):
         """Enable verbose outputs."""
