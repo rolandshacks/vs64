@@ -3,25 +3,19 @@
  * @module Web
  */
 
-import {
-    allComponents,
-    provideFluentDesignSystem,
-    baseLayerLuminance
-} from '../../node_modules/@fluentui/web-components/dist/web-components.js';
+import '@fluentui/web-components/web-components.js';
+import { setTheme } from '@fluentui/web-components';
+import { webLightTheme, webDarkTheme } from '@fluentui/tokens';
+//import document from '../../src/views/document';
 
 /**
  * UI.
  */
 export class UI {
     static init() {
-        provideFluentDesignSystem()
-            .withDesignTokenRoot(document.body)
-            .register(allComponents);
-
-        if (document.body.className == "vscode-light") {
-            baseLayerLuminance.setValueFor(document.body, 0.9); // light
-        } else {
-            baseLayerLuminance.setValueFor(document.body, 0.1); // dark
-        }
+        const theme = document.body.classList.contains('vscode-light')
+            ? webLightTheme
+            : webDarkTheme;
+        setTheme(theme, document.body);
     }
 }

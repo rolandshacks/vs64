@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.3",
+	"version": "2.7.4",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -35,6 +35,7 @@
 	"scripts": {
 		"lint": "eslint .",
 		"test": "jest --runInBand --config ./jest.config.js",
+		"test:basic": "jest --runInBand --config ./jest.config.js test/basic_compiler.test.js",
 		"coverage": "jest --coverage --runInBand --config ./jest.config.js",
 		"vsix": "vsce package --no-yarn --dependencies",
 		"publish": "vsce publish",
@@ -42,22 +43,23 @@
 		"esbuild-dev": "node ./esbuild --sourcemap"
 	},
 	"dependencies": {
-		"@fluentui/web-components": "^2.6.1",
+		"@fluentui/tokens": "^1.0.0-alpha.24",
+		"@fluentui/web-components": "^3.1.3",
 		"@vscode/debugadapter": "1.68.0",
+		"adm-zip": "0.6.1",
 		"await-notify": "^1.0.1",
-		"fast-xml-parser": "^5.8.0",
-		"adm-zip": "0.5.17"
+		"fast-xml-parser": "^5.8.0"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@types/node": "25.9.3",
+		"@types/node": "26.6.5",
 		"@types/vscode": "^1.116.0",
-		"@vscode/vsce": "3.9.2",
+		"@vscode/vsce": "4.0.0",
 		"esbuild": "^0.28.0",
 		"eslint": "^10.4.1",
 		"globals": "^17.4.0",
-		"jest": "^30.3.0",
-		"typescript": "^6.0.3"
+		"jest": "^30.5.2",
+		"typescript": "^7.0.2"
 	},
 	"galleryBanner": {
 		"color": "#6c9fd2",
@@ -882,7 +884,12 @@
 				],
 				"variables": {}
 			}
-
 		]
+	},
+	"allowScripts": {
+		"@parcel/watcher": false,
+		"@vscode/vsce-sign": false,
+		"esbuild": false,
+		"unrs-resolver": false
 	}
 }

@@ -134,6 +134,70 @@ To enable the BASIC extensions, just add the compiler argument '-t' or '--tsb' t
 "args": ["--tsb"]
 ```
 
+### BASIC Variable Name Aliases
+
+In BASIC V2, variable names are effectively identified by the first two characters (plus type suffix), so different long names can collide.
+
+For example, without aliases:
+
+```
+score = 0
+screen = 1024
+```
+
+both names are treated as `SC` by the interpreter.
+
+VS64 alias preprocessing lets you use readable names prefixed with `@`, then rewrites each alias to a unique two-character BASIC variable name before compiling.
+
+Using aliases:
+
+```
+@score = 0
+@screen = 1024
+```
+
+could be rewritten to:
+
+```
+A0 = 0
+A1 = 1024
+```
+
+Aliases preserve type suffixes (`$`, `%`) and also work for function names and function parameters.
+
+Example:
+
+```
+def fn @roll(@sides%) = int(rnd(0) * @sides%) + 1
+@playerName$ = "hero"
+@score% = 0
+@diceSides% = 6
+@gravity = 9.8
+@score% = fn @roll(@diceSides%)
+```
+
+could be rewritten to:
+
+```
+def fn A0(A1%) = int(rnd(0) * A1%) + 1
+A2$ = "hero"
+A3% = 0
+A4% = 6
+A5 = 9.8
+A3% = fn A0(A4%)
+```
+
+Enable alias preprocessing via project args:
+
+```
+"args": ["--aliases"]
+```
+
+Notes:
+
+- Generated output roots avoid reserved names (for example `TI`, `ST`, `IF`, `TO`, `FN`, etc.).
+- If `--tsb` is enabled, additional TSB-sensitive roots are also avoided.
+
 ### Upper/Lower Case Character Set
 
 In order to properly use the different ROM character sets in BASIC programs, remapping of upper/lower case character codes is needed. This can be achieved in two different ways:
@@ -545,6 +609,12 @@ Optional project include paths for the compiler. The project specific include pa
 
 Optional argument list to be added to the build tool command line arguments. For more fine grained setting, use the 'assemblerFlags', 'compilerFlags' and 'linkerFlags'
 attributes.
+
+For BASIC projects, relevant args include:
+
+- `--aliases` : enable alias preprocessing for `@name` variables.
+- `--tsb` : enable Tuned Simon's BASIC extensions.
+- `--lower` : use lower-case charset mapping.
 
 > assemblerFlags
 

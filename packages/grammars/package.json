@@ -6,11 +6,14 @@
   "author": "",
   "type": "commonjs",
   "devDependencies": {
-    "jest": "^30.3.0"
+    "jest": "^30.5.2"
   },
   "scripts": {
     "lint": "eslint .",
     "test": "jest --runInBand",
     "coverage": "jest --coverage --runInBand"
+  },
+  "dependencies": {
+    "adm-zip": "0.6.1"
   }
 }

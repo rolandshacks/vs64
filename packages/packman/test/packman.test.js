@@ -13,12 +13,13 @@ const { PackageManager } = require('packman/packman');
 
 describe('packman', () => {
     test("packman_basics", async () => {
-
         const appName = "TestVS64Pack";
-
         const userAppDir = PackageManager.getUserAppDir(appName);
         expect(userAppDir).not.toBe(null);
+    });
 
+    test.skip("packman_connect", async () => {
+        const appName = "TestVS64Pack";
         const baseUrl = "http://192.168.2.2/vs64pack";
         const packageManager = new PackageManager(appName, baseUrl);
 
@@ -27,7 +28,7 @@ describe('packman', () => {
         const assets = packageManager._remoteManifest.getGroupAssets(["win"]);
         expect(assets).not.toBe(null);
 
-        console.log("assets:" + assets);
+        //console.log("assets:" + assets);
 
         packageManager.uninstallAll();
         await packageManager.install();
