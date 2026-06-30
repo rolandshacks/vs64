@@ -67,6 +67,19 @@ function writeFile(filePath, content) {
     fs.writeFileSync(filePath, content, "utf8");
 }
 
+function hasBytePattern(buffer, pattern) {
+    outer: for (let i = 0; i <= buffer.length - pattern.length; i += 1) {
+        for (let j = 0; j < pattern.length; j += 1) {
+            if (buffer[i + j] !== pattern[j]) {
+                continue outer;
+            }
+        }
+        return true;
+    }
+
+    return false;
+}
+
 //-----------------------------------------------------------------------------------------------//
 // Tests
 //-----------------------------------------------------------------------------------------------//
@@ -263,5 +276,82 @@ describe("basic_compiler", () => {
 
         const stdout = result.stdout || "";
         expect(stdout.includes("aliases mapped: 1")).toBeTruthy();
+    });
+
+    test("tokenizes THENFORX as THEN + FOR token (regression for main7.bas case)", () => {
+        const projectDir = path.join(suiteTemp, "thenfor_tokenization");
+        const srcDir = path.join(projectDir, "src");
+        const buildDir = path.join(projectDir, "build");
+        const mainBas = path.join(srcDir, "main.bas");
+        const outPrg = path.join(buildDir, "out.prg");
+
+        writeFile(
+            mainBas,
+            [
+                '10 IF0=0THENFORX=1TO2:PRINT"X";:NEXT',
+                "20 PRINT",
+            ].join("\n") + "\n",
+        );
+
+        runBc(
+            pyExe,
+            [
+                bcScript,
+                "-o",
+                outPrg,
+                mainBas,
+            ],
+            projectDir,
+        );
+
+        expect(fs.existsSync(outPrg)).toBeTruthy();
+
+        const prgBytes = fs.readFileSync(outPrg);
+
+        // THEN token (0xA7) followed by FOR token (0x81) and variable X (0x58)
+        // proves THENFORX is parsed as THEN FOR X, not THEN + literal "FORX".
+        expect(hasBytePattern(prgBytes, [0xA7, 0x81, 0x58])).toBeTruthy();
+        expect(hasBytePattern(prgBytes, [0xA7, 0x46, 0x4F, 0x52, 0x58])).toBeFalsy();
+    });
+
+    test("resolves THEN listenForKey to numeric line target", () => {
+        const projectDir = path.join(suiteTemp, "then_label_resolution");
+        const srcDir = path.join(projectDir, "src");
+        const buildDir = path.join(projectDir, "build");
+        const mainBas = path.join(srcDir, "main.bas");
+        const outPrg = path.join(buildDir, "out.prg");
+
+        writeFile(
+            mainBas,
+            [
+                "listenForKey:",
+                '10 GET A$:IF A$="" THEN listenForKey',
+            ].join("\n") + "\n",
+        );
+
+        runBc(
+            pyExe,
+            [
+                bcScript,
+                "-o",
+                outPrg,
+                mainBas,
+            ],
+            projectDir,
+        );
+
+        const unpacked = runBc(
+            pyExe,
+            [
+                bcScript,
+                "-u",
+                outPrg,
+            ],
+            projectDir,
+        );
+
+        const listing = (unpacked.stdout || "").toLowerCase();
+        expect(listing.includes('if a$="" then 10')).toBeTruthy();
+        expect(listing.includes("then listenforkey")).toBeFalsy();
     });
 });
