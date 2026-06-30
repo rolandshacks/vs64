@@ -1073,6 +1073,10 @@ class BasicCompiler:
                         ofs += 1
                         if ofs < len(line):
                             c = line[ofs]
+                        # Keep THENFOR parsing support without short-circuiting
+                        # arbitrary partial label prefixes like LIST in listenForKey.
+                        if last_was_jump == 0xA7 and label.lower() == "for":
+                            break
                     else:
                         ofs_old = ofs # backup position after identifier
 
