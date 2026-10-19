@@ -85,10 +85,9 @@ class CompileHelper:
     @staticmethod
     def makedirs(filename):
         """Ensure output folder exists."""
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except FileExistsError:
-            pass
+        parent = os.path.dirname(filename)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
 
     @staticmethod
     def write_textfile(filename: Optional[str], content: str) -> Optional[CompileError]:
@@ -98,13 +97,12 @@ class CompileHelper:
             print(content)
             return
 
-        CompileHelper.makedirs(filename)
-
         try:
+            CompileHelper.makedirs(filename)
             with open(filename, "w", encoding="utf-8") as text_file:
                 text_file.write(content)
         except OSError:
-            return (CompileError(filename, "could not write file"), None)
+            return CompileError(filename, "could not write file")
 
         return None
 

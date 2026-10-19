@@ -333,7 +333,7 @@ class Settings {
         if (executablePath) {
             this.viceExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
-            const bundledExecutable = this.findApplicationBundle("gtk3vice", "bin/x64sc");
+            const bundledExecutable = this.findApplicationBundle("gtkvice", "bin/x64sc");
             this.viceExecutable = bundledExecutable || Utils.normalizeExecutableName("x64sc");
         }
         this.vicePort = asInteger(workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort"))||Constants.ViceBinaryMonitorPort;

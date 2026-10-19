@@ -23,9 +23,8 @@ class HtmlView extends WebView {
 
     onDocument(document) {
         console.log("onDocument");
-        if (document.html) {
-            this.ui.content.innerHTML = document.html;
-        }
+        const html = (document != null) ? document.html : undefined;
+        this.ui.content.innerHTML = (html != null) ? html : "<p>Content unavailable.</p>";
     }
 }
 

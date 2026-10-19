@@ -1,15 +1,73 @@
 {
-	"win": {
-		"packages": {
-			"acme": "0.97.0",
-			"exomizer": "3.1.2",
-			"gtk3vice": "3.10.0",
-			"jre": "26.0.1",
-			"kickassembler": "5.25.0",
-			"python": "3.14.5",
-			"sdl2vice": "3.10.0"
-		}
-	},
-	"common": {
-	}
+    "version": "1.0.0",
+    "generic": {
+        "kickassembler": {
+            "version": "5.25.0",
+            "url": "https://theweb.dk/KickAssembler/KickAssembler.zip",
+            "file": "KickAssembler.zip"
+        }
+    },
+    "win": {
+		"exomizer": "3.1.2",
+		"jre": "26.0.1",
+        "acme": {
+            "version": "0.97.0",
+            "url": "https://sourceforge.net/projects/acme-crossass/files/win32/acme0.97win.zip/download",
+            "file": "acme.zip"
+        },
+        "cc65": {
+            "version": "2.19.0",
+            "url": "https://sourceforge.net/projects/cc65/files/cc65-snapshot-win64.zip/download",
+            "file": "cc65.zip"
+        },
+        "denise": {
+            "version": "2.9.0",
+            "url": "https://sourceforge.net/projects/deniseemu/files/v2.9/denise_win64_v2.9.zip/download",
+            "file": "denise.zip"
+        },
+        "gtkvice": {
+            "version": "3.10.0",
+            "url": "https://sourceforge.net/projects/vice-emu/files/releases/binaries/windows/GTK3VICE-3.10-win64.zip/download",
+            "file": "gtkvice.zip"
+        },
+        "llvm-mos": {
+            "version": "23.4.0",
+            "url": "https://github.com/llvm-mos/llvm-mos-sdk/releases/download/v23.4.0/llvm-mos-windows.7z",
+            "file": "llvm-mos-windows.7z"
+        },
+        "oscar64": {
+            "version": "1.32.273",
+            "url": "https://github.com/drmortalwombat/oscar64/releases/download/v1.32.273/oscar64.zip",
+            "file": "oscar64.zip"
+        },
+        "sdlvice": {
+            "version": "3.10.0",
+            "url": "https://sourceforge.net/projects/vice-emu/files/releases/binaries/windows/SDL2VICE-3.10-win64.zip/download",
+            "file": "sdlvice.zip"
+        },
+        "x16emu": {
+            "version": "0.49.0",
+            "url": "https://github.com/X16Community/x16-emulator/releases/download/r49/x16emu_win64-r49.zip",
+            "file": "x16emu.zip"
+        }
+    },
+    "mac": {
+        "acme": {
+            "version": "0.97.0",
+            "url": "https://sourceforge.net/projects/acme-crossass/files/macOS/acme0.97mac.zip/download",
+            "file": "acme.zip"
+        },
+        "llvm-mos": {
+            "version": "23.4.0",
+            "url": "https://github.com/llvm-mos/llvm-mos-sdk/releases/download/v23.4.0/llvm-mos-macos.tar.xz",
+            "file": "llvm-mos-macos.tar.xz"
+        }
+    },
+    "linux": {
+        "llvm-mos": {
+            "version": "23.4.0",
+            "url": "https://github.com/llvm-mos/llvm-mos-sdk/releases/download/v23.4.0/llvm-mos-linux.tar.xz",
+            "file": "llvm-mos-linux.tar.xz"
+        }
+    }
 }

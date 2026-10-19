@@ -5,9 +5,6 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "dependencies": {
-    "adm-zip": "0.6.1"
-  },
   "devDependencies": {
     "jest": "^30.5.2"
   },

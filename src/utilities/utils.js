@@ -346,24 +346,20 @@ let Utils = {
             proc.stdout.setEncoding('utf8');
             proc.stdout.on('data', (data) => {
                 const lines = (data+"").split('\n');
-                for (let i=0, line; (line=lines[i]); i++) {
-                    if (null == line) continue;
-                    if (line.trim().length > 0) {
-                        procInfo.stdout.push(line);
-                        if (options && options.onstdout) options.onstdout(line);
-                    }
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    procInfo.stdout.push(line);
+                    options?.onstdout?.(line);
                 }
             });
 
             proc.stderr.setEncoding('utf8');
             proc.stderr.on('data', (data) => {
                 const lines = (data+"").split('\n');
-                for (let i=0, line; (line=lines[i]); i++) {
-                    if (null == line) continue;
-                    if (line.trim().length > 0) {
-                        procInfo.stderr.push(line);
-                        if (options && options.onstderr) options.onstderr(line);
-                    }
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    procInfo.stderr.push(line);
+                    options?.onstderr?.(line);
                 }
             });
 

@@ -38,7 +38,7 @@ def main():
     """Main entry."""
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hvdtlum:cpaI:o:", ["help", "verbose", "debug", "tsb", "aliases", "lower", "unpack", "crunch", "pretty", "map=", "include=", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "hvdtlunm:cpaI:o:", ["help", "verbose", "debug", "tsb", "noext", "aliases", "lower", "unpack", "crunch", "pretty", "map=", "include=", "output="])
     except getopt.GetoptError as err:
         print(err.msg)
         usage()
@@ -64,6 +64,8 @@ def main():
             options.append_include_path(arg)
         elif option in ("-t", "--tsb"):
             options.set_enable_tsb()
+        elif option in ("-n", "--noext"):
+            options.feature_tsb = False
         elif option in ("-a", "--aliases"):
             options.set_enable_aliases()
         elif option in ("-v", "--verbose"):

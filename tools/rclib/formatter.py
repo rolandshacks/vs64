@@ -328,6 +328,6 @@ class FormatterFactory:
         elif not format_str:
             formatter = BaseFormatter(OutputFormat.NONE)
         else:
-            raise TypeError(f"could create formatter instance for type {format_str}")
+            raise TypeError(f"could not create formatter instance for type {format_str}")
 
         return formatter

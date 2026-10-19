@@ -2,6 +2,10 @@
 
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.7.5 Minor Update
+
+- Bug-fixes and minor improvements
+
 ## 2.7.4 Minor Update
 
 - Added BASIC alias preprocessing option (Thanks to Steve Reuter)

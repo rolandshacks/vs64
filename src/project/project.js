@@ -317,7 +317,7 @@ class Project {
 
         { // libraries
             const libraries = [];
-            if (settings.buildDefines) {
+            if (settings.buildLibraries) {
                 const libs = settings.buildLibraries.split(",");
                 for (const lib of libs) {
                     libraries.push(lib.trim());
@@ -1253,8 +1253,8 @@ class Project {
             }
 
             let defaultTargetConf = targetName ? "-tm=" + targetName : null;
-            if (defaultTargetConf && !flags.hasArg("-tm=") == -1 && !c_flags.hasArg("-tm=") == -1) c_flags.add(defaultTargetConf);
-            if (defaultTargetConf && !flags.hasArg("-tm=") == -1 && !asm_flags.hasArg("-tm=") == -1) asm_flags.add(defaultTargetConf);
+            if (defaultTargetConf && !flags.hasArg("-tm=") && !c_flags.hasArg("-tm=")) c_flags.add(defaultTargetConf);
+            if (defaultTargetConf && !flags.hasArg("-tm=") && !asm_flags.hasArg("-tm=")) asm_flags.add(defaultTargetConf);
 
             if (!flags.hasArg("-tf=")) flags.add("-tf=" + project.format);
 

@@ -5,7 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const AdmZip = require("adm-zip");
+const { spawn } = require('child_process');
+const { ArchiveReader, libarchiveWasm } = require('libarchive-wasm');
 
 const Downloader = require('./downloader');
 
@@ -16,7 +17,6 @@ const PLATFORM_IDS = {
 };
 
 const MANIFEST_FILE = "packages.json";
-const TEMP_FILE = "_temp_pack.zip"
 const TEMP_FOLDER = "_temp_pack"
 const GITHUB_URL_PREFIX = "https://github.com/";
 const GITHUB_URL_SUFFIX = "raw/refs/heads/main/";
@@ -39,8 +39,207 @@ function fileExists(filename) {
     return fs.existsSync(filename) && fs.statSync(filename).isFile();
 }
 
-function _isZipFile(filename) {
-    return path.extname(filename).toLowerCase() === ".zip";
+function findImplicitArchiveRoot(reader) {
+    const entries = [];
+    const parents = new Set();
+    for (const entry of reader.entries()) {
+        const name = path.posix.normalize(entry.getPathname().replace(/\\/g, '/')).replace(/\/+$/, '');
+        if (!name || name === '.') continue;
+        const parts = name.split('/');
+        for (let i = 1; i < parts.length; i++) {
+            parents.add(parts.slice(0, i).join('/'));
+        }
+        entries.push({ name, parts, directory: entry.getFiletype() === 'Directory' });
+    }
+
+    let common = null;
+    for (const entry of entries) {
+        if (entry.directory && parents.has(entry.name)) continue;
+        const directories = entry.directory ? entry.parts : entry.parts.slice(0, -1);
+        if (common == null) common = directories;
+        else {
+            let i = 0;
+            while (i < common.length && i < directories.length && common[i] === directories[i]) i++;
+            common = common.slice(0, i);
+        }
+        if (common.length === 0) return null;
+    }
+    return common?.length ? common.join('/') : null;
+}
+
+function parseTarMode(line) {
+    const flags = line.slice(0, 10);
+    if (!/^[bcdhlps-][r-][w-][xsS-][r-][w-][xsS-][r-][w-][xtT-]$/.test(flags)) {
+        throw new Error('invalid tar permission listing');
+    }
+    let mode = 0;
+    for (const [index, bit] of [[1, 0o400], [2, 0o200], [3, 0o100],
+        [4, 0o040], [5, 0o020], [6, 0o010], [7, 0o004], [8, 0o002], [9, 0o001]]) {
+        if (/[rwxst]/.test(flags[index])) mode |= bit;
+    }
+    if (/[sS]/.test(flags[3])) mode |= 0o4000;
+    if (/[sS]/.test(flags[6])) mode |= 0o2000;
+    if (/[tT]/.test(flags[9])) mode |= 0o1000;
+    return { type: flags[0], mode };
+}
+
+function readTarModes(archivePath) {
+    return new Promise((resolve, reject) => {
+        const child = spawn('tar', ['-tvf', archivePath], { stdio: ['ignore', 'pipe', 'pipe'] });
+        const modes = [];
+        let pending = '';
+        let error = null;
+        let stderr = '';
+        child.stdout.setEncoding('utf8');
+        child.stdout.on('data', chunk => {
+            pending += chunk;
+            let end;
+            while ((end = pending.indexOf('\n')) !== -1) {
+                const line = pending.slice(0, end);
+                pending = pending.slice(end + 1);
+                if (!error) {
+                    try { modes.push(parseTarMode(line)); }
+                    catch (err) { error = err; }
+                }
+            }
+        });
+        child.stderr.setEncoding('utf8');
+        child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-4096); });
+        child.on('error', reject);
+        child.on('close', code => {
+            if (error) reject(error);
+            else if (code !== 0 || pending) reject(new Error(`failed to read tar permissions: ${stderr.trim()}`));
+            else resolve(modes);
+        });
+    });
+}
+
+async function extractArchive(archivePath, targetDir, root=null, assetName=null) {
+    const extractionRoot = path.resolve(targetDir);
+    const assetDirectory = path.resolve(extractionRoot, assetName);
+    let archiveRoot = null;
+    if (root != null) {
+        if (typeof root !== 'string' || root.includes('\\')) {
+            throw new Error('invalid archive root');
+        }
+        if (root !== '') {
+            archiveRoot = path.posix.normalize(root.replace(/\/$/, ''));
+            if (archiveRoot === '.' || archiveRoot === '..' || archiveRoot.startsWith('../') ||
+                path.posix.isAbsolute(root) || /^[A-Za-z]:/.test(root)) {
+                throw new Error('invalid archive root');
+            }
+        }
+    }
+    const bundledWasm = path.join(__dirname, 'libarchive.wasm');
+    const wasmPath = fileExists(bundledWasm)
+        ? bundledWasm
+        : require.resolve('libarchive-wasm/dist/libarchive.wasm');
+    const module = await libarchiveWasm({ wasmBinary: fs.readFileSync(wasmPath) });
+    const archiveBytes = new Int8Array(fs.readFileSync(archivePath));
+    const preserveTarModes = process.platform !== 'win32' && /\.(?:tar\.xz|tar\.gz|tgz)$/i.test(archivePath);
+    const tarModes = preserveTarModes ? await readTarModes(archivePath) : null;
+    if (root == null) {
+        const inspectionReader = new ArchiveReader(module, archiveBytes);
+        try {
+            archiveRoot = findImplicitArchiveRoot(inspectionReader);
+        } finally {
+            inspectionReader.free();
+        }
+    }
+    const reader = new ArchiveReader(module, archiveBytes);
+    const directoryModes = new Map();
+    let entryIndex = 0;
+
+    try {
+        for (const entry of reader.entries()) {
+            const tarMode = tarModes?.[entryIndex];
+            if (tarModes && !tarMode) throw new Error('tar entry count differs from permission listing');
+            entryIndex++;
+            const entryPath = entry.getPathname().replace(/\\/g, '/');
+            const normalized = path.posix.normalize(entryPath);
+            const type = entry.getFiletype();
+            if (tarMode && ((type === 'Directory' && tarMode.type !== 'd') ||
+                (type === 'File' && tarMode.type !== '-') ||
+                (type === 'SymbolicLink' && tarMode.type !== 'l'))) {
+                throw new Error('tar entry type differs from permission listing');
+            }
+            const relativePath = archiveRoot == null ? normalized
+                : normalized === archiveRoot ? ''
+                    : normalized.startsWith(archiveRoot + '/') ? normalized.slice(archiveRoot.length + 1) : null;
+            const installPath = relativePath;
+            const destination = path.resolve(assetDirectory, installPath || '');
+            if (path.posix.isAbsolute(entryPath) || path.win32.isAbsolute(entryPath) ||
+                /^[A-Za-z]:/.test(entryPath) ||
+                normalized === '..' || normalized.startsWith('../') ||
+                destination !== extractionRoot && !destination.startsWith(extractionRoot + path.sep)) {
+                throw new Error('invalid archive entry path');
+            }
+
+            if (installPath == null) continue;
+
+            for (let parent = path.dirname(destination);
+                parent !== extractionRoot && parent.startsWith(extractionRoot + path.sep);
+                parent = path.dirname(parent)) {
+                if (fs.lstatSync(parent, { throwIfNoEntry: false })?.isSymbolicLink()) {
+                    throw new Error('archive entry traverses a symbolic link');
+                }
+            }
+
+            const symlinkTarget = entry.getSymlinkTarget();
+            if (fs.lstatSync(destination, { throwIfNoEntry: false })?.isSymbolicLink()) {
+                throw new Error('archive entry overwrites a symbolic link');
+            }
+            if (entry.getHardlinkTarget()) {
+                throw new Error('archive links are unsupported');
+            }
+            if (type === 'SymbolicLink') {
+                if (!symlinkTarget || symlinkTarget === '.' || symlinkTarget === '..' ||
+                    symlinkTarget.includes('/') || symlinkTarget.includes('\\') ||
+                    /^[A-Za-z]:/.test(symlinkTarget) || destination === assetDirectory) {
+                    throw new Error('invalid archive link target');
+                }
+                fs.mkdirSync(path.dirname(destination), { recursive: true });
+                fs.symlinkSync(symlinkTarget, destination);
+            } else if (symlinkTarget) {
+                throw new Error('archive links are unsupported');
+            } else if (type === 'Directory') {
+                fs.mkdirSync(destination, { recursive: true });
+                if (tarMode) directoryModes.set(destination, tarMode.mode);
+            } else if (type === 'File') {
+                fs.mkdirSync(path.dirname(destination), { recursive: true });
+                const fd = fs.openSync(destination, 'w');
+                try {
+                    let remaining = entry.getSize();
+                    if (!Number.isSafeInteger(remaining) || remaining < 0) {
+                        throw new Error('invalid archive entry size');
+                    }
+                    while (remaining > 0) {
+                        const data = reader.readData(Math.min(remaining, 64 * 1024));
+                        if (data.length === 0) throw new Error('incomplete archive entry');
+                        const buffer = Buffer.from(data);
+                        let written = 0;
+                        while (written < buffer.length) {
+                            written += fs.writeSync(fd, buffer, written);
+                        }
+                        remaining -= data.length;
+                    }
+                } finally {
+                    fs.closeSync(fd);
+                }
+                if (tarMode) fs.chmodSync(destination, tarMode.mode);
+            } else {
+                throw new Error('unsupported archive entry type');
+            }
+        }
+        if (tarModes && entryIndex !== tarModes.length) {
+            throw new Error('tar entry count differs from permission listing');
+        }
+    } finally {
+        reader.free();
+    }
+    for (const [directory, mode] of [...directoryModes].sort((a, b) => b[0].length - a[0].length)) {
+        fs.chmodSync(directory, mode);
+    }
 }
 
 
@@ -100,15 +299,18 @@ class SemVer {
 // Asset
 //-----------------------------------------------------------------------------------------------//
 class Asset {
-    constructor(name, group, version, id=null) {
+    constructor(name, group, version, id=null, file=null, url=null, root=null) {
         this.id = id || Asset.generateId(name, group, version);
         this.name = name;
         this.group = group;
         this.version = version;
+        this.file = file;
+        this.url = url;
+        this.root = root;
     }
 
     clone() {
-        return new Asset(this.name, this.group, this.version.clone(), this.id);
+        return new Asset(this.name, this.group, this.version.clone(), this.id, this.file, this.url, this.root);
     }
 
     static generateId(name, group, _version) {
@@ -170,7 +372,14 @@ class Manifest {
                 if (group == "version" || group == "timestamp") continue;
                 const group_data = {};
                 for (const [_id, asset] of assets || []) {
-                    group_data[asset.name] = asset.version.toString();
+                    if (asset.file || asset.url || asset.root != null) {
+                        group_data[asset.name] = { version: asset.version.toString() };
+                        if (asset.file) group_data[asset.name].file = asset.file;
+                        if (asset.url) group_data[asset.name].url = asset.url;
+                        if (asset.root != null) group_data[asset.name].root = asset.root;
+                    } else {
+                        group_data[asset.name] = asset.version.toString();
+                    }
                 }
                 data[group] = group_data;
             }
@@ -198,9 +407,11 @@ class Manifest {
             if (group == "version" || group == "timestamp") continue;
             const assets = jsonManifest[group] || [];
             for (let name in assets) {
-                const version = assets[name];
+                const value = assets[name];
+                const version = typeof value === 'string' ? value : value.version;
                 const semver = SemVer.fromString(version);
-                const asset = new Asset(name, group, semver);
+                const asset = new Asset(name, group, semver, null, value.file || value.archive || null,
+                    value.url || null, value.root ?? null);
                 manifest.addAsset(asset);
             }
         }
@@ -311,7 +522,6 @@ class PackageManager {
         this._localDir = localDirectory || PackageManager.getUserAppDir(appName);
         this._localManifestPath = path.join(this._localDir, MANIFEST_FILE);
         this._localManifest = null;
-        this._localTempFile = path.join(this._localDir, TEMP_FILE);
         this._localTempDir = path.join(this._localDir, TEMP_FOLDER);
         this._callback = onProgress;
         this._callbackAsset = null;
@@ -370,13 +580,22 @@ class PackageManager {
             this.callback = onProgress;
         }
 
+        let data;
+
         try {
-            const data = await this._downloader.downloadToString(this._remoteManifestUrl);
+            data = await this._downloader.downloadToString(this._remoteManifestUrl);
             this._throwIfCancelled();
-             this._remoteManifest = Manifest.fromString(data);
         } catch (_err) {
             this._remoteManifest = null;
             throw new Error("failed to fetch repository manifest '" + this._remoteManifestUrl + "'");
+        }
+
+        try {
+            this._remoteManifest = Manifest.fromString(data);
+        } catch (_err) {
+            console.log("manifest parsing error: " + _err);
+            this._remoteManifest = null;
+            throw new Error("invalid manifest format");
         }
 
         try {
@@ -505,8 +724,7 @@ class PackageManager {
         }
 
         try {
-            const zip = new AdmZip(assetInstallInfo.tempFile);
-            zip.extractAllTo(assetInstallInfo.tempDir, true, true);
+            await extractArchive(assetInstallInfo.tempFile, assetInstallInfo.tempDir, asset.root, asset.name);
         } catch (_err) {
             throw new Error("extracting '" + asset.name + "' failed.");
         }
@@ -548,11 +766,14 @@ class PackageManager {
         if (null == asset || !asset.name) return null;
 
         const name = asset.name;
-        const archiveName = asset.name + ".zip";
-        const sourceUrl = resolveUrl(this._remoteUrl, asset.group + '/' + archiveName);
+        const archiveName = asset.file || asset.name + ".zip";
+        if (path.basename(archiveName) !== archiveName || archiveName === '.' || archiveName === '..') {
+            throw new Error('invalid archive filename');
+        }
+        const sourceUrl = asset.url || resolveUrl(this._remoteUrl, asset.group + '/' + archiveName);
         const installDir = path.join(this._localDir, name);
-        const tempFile = this._localTempFile;
-        const tempDir = this._localTempDir;
+        const tempFile = path.join(this._localTempDir, archiveName);
+        const tempDir = path.join(this._localTempDir, 'contents');
 
         const info = {
             name: name,
@@ -610,7 +831,6 @@ class PackageManager {
 
     _cleanup() {
         if (this._localTempDir) fs.rmSync(this._localTempDir, { recursive: true, force: true });
-        if (this._localTempFile) fs.rmSync(this._localTempFile, { force: true });
         this._callbackAsset = null;
     }
 

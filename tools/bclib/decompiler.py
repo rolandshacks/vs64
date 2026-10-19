@@ -61,7 +61,7 @@ class BasicDecompiler:
                 tcb_tokens.append("")
             tcb_tokens.append(k)
 
-        output_buffer = ""
+        output_buffer = "#lower\n" if lower_case else ""
 
         data = None
 

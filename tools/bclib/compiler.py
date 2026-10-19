@@ -310,9 +310,8 @@ class BasicProgram:
         if not filename:
             return None
 
-        CompileHelper.makedirs(filename)
-
         try:
+            CompileHelper.makedirs(filename)
             with open(filename, "wb") as binary_file:
                 # program load address (2 bytes)
                 addr = self.start_addr
@@ -345,7 +344,7 @@ class BasicProgram:
                 binary_file.write(bytearray([0x0, 0x0]))
 
         except OSError:
-            return (CompileError(filename, "could not write file"), None)
+            return CompileError(filename, "could not write file")
 
         return None
 
@@ -358,7 +357,8 @@ class BasicCompilerState:
 
     def __init__(self):
         """Constructor."""
-        self.reset()
+        self.line_step_size = 1
+        self.next_line = -1
 
     def reset(self):
         """Reset state."""
@@ -382,6 +382,8 @@ class BasicCompiler:
         self.token_map = None
         self.line_number_map = None
         self.last_line = 0
+        self.last_source_line = None
+        self.has_previous_line = False
         self.max_line_number = 0
         self.new_labels = []
         self.labels = {}
@@ -434,6 +436,8 @@ class BasicCompiler:
         need_ending_line = False
         if len(self.new_labels) > 0:
             need_ending_line = True
+            if self.max_line_number >= 0xffff:
+                return CompileError(self.modules[-1].filename, "line number out of range")
             for new_label in self.new_labels:
                 self.labels[new_label] = self.max_line_number+1
             self.new_labels = []
@@ -451,6 +455,8 @@ class BasicCompiler:
         # add REM statement at the end in case there was a label at the end
         if need_ending_line and len(self.modules) > 0:
             (ending_line, err) = self.compile_line(self.modules[-1], "rem", -1)
+            if err:
+                return err
             if ending_line:
                 ending_line.set_source_line("rem")
                 ending_line.set_index(-1)
@@ -602,9 +608,11 @@ class BasicCompiler:
         return result.group(1)
 
     def is_letter(self, c: str) -> bool:
+        """Check if char is a letter."""
         return bool(re.match(r"[a-zA-Z]", c))
 
     def is_alphanumeric(self, c: str) -> bool:
+        """Check if char is alphanumeric."""
         return bool(re.match(r"[a-zA-Z0-9]", c))
 
     def read_alias_token(self, line: str, start: int) -> tuple[str, int]:
@@ -765,6 +773,8 @@ class BasicCompiler:
         options = self.options
 
         self.last_line = 0
+        self.last_source_line = None
+        self.has_previous_line = False
         for filename in inputs:
             abs_filename = os.path.abspath(filename)
             module = BasicModule(abs_filename, options)
@@ -774,6 +784,8 @@ class BasicCompiler:
             self.modules.append(module)
         self.max_line_number = max(self.last_line, self.max_line_number)
         self.last_line = 0
+        self.last_source_line = None
+        self.has_previous_line = False
 
         return None
 
@@ -955,7 +967,11 @@ class BasicCompiler:
             token_id = None
             token_len = None
 
-            if c == " ":
+            if command_token == 0x83 and c not in (":", '"', "'"):
+                basic_line.store_char(c)
+                ofs += 1
+
+            elif c == " ":
                 # space
                 if not basic_line.is_empty() and not last_was_whitespace and not crunch:
                     basic_line.store_char(c)
@@ -974,11 +990,6 @@ class BasicCompiler:
                 ):
                     basic_line.store_char(c)
 
-                ofs += 1
-
-            elif command_token == 0x83 and c in ['-', '+']:
-                # handle operator signs in data line
-                basic_line.store_char(c)
                 ofs += 1
 
             elif c == '"' or c == "'":
@@ -1102,12 +1113,20 @@ class BasicCompiler:
 
                 if last_was_jump == 0xCB and label.lower() == "sub":
                     # turn 'GO SUB' into GOSUB
+                    while basic_line.peek_last_char() == " ":
+                        basic_line.drop_last_char()
+                    basic_line.drop_last_char()  # remove GO token
                     basic_line.store_byte(0x8D, label)
                     last_was_jump = 0x8D
                 elif last_was_jump == 0xCB and label.lower() == "to":
                     # handle 'GO TO'
-                    basic_line.store_byte(0xA4, label)
-                    last_was_jump = 0xA4
+                    if crunch:
+                        basic_line.drop_last_char()  # replace GO with GOTO
+                        basic_line.store_byte(0x89, label)
+                        last_was_jump = 0x89
+                    else:
+                        basic_line.store_byte(0xA4, label)
+                        last_was_jump = 0xA4
                 elif last_was_jump == 0xA7 and label.lower() == "goto":
                     # handle 'THEN GOTO'
                     basic_line.store_byte(0x89, label)
@@ -1136,7 +1155,7 @@ class BasicCompiler:
                             # get line number from label
                             label_line_number = self.labels.get(label.lower())
 
-                            if label_line_number:
+                            if label_line_number is not None:
                                 basic_line.store_string(str(label_line_number))
                             elif last_was_jump == 0xA7:
                                 # if no label was found after THEN, just expect
@@ -1185,7 +1204,8 @@ class BasicCompiler:
 
             if token:
 
-                if command_token is None: command_token = token_id
+                if token_id == 0x83 or command_token is None:
+                    command_token = token_id
 
                 token_skipped = False
 
@@ -1264,12 +1284,20 @@ class BasicCompiler:
         if result:
             # found regular line number
             line_number = int(result[0])
-            if line_number <= self.last_line:
+            if line_number > 0xffff:
+                return (None, None, None, CompileError(
+                    filename, "line number out of range", line_index
+                ))
+            previous_line = self.last_source_line if crunch else self.last_line
+            has_previous_line = self.last_source_line is not None if crunch else self.has_previous_line
+            if has_previous_line and line_number <= previous_line:
                 return (None, None, None, CompileError(
                     filename, "line number collision", line_index
                 ))
 
             if crunch:
+                self.last_source_line = line_number
+
                 # overwrite line number
 
                 if preprocess:
@@ -1305,10 +1333,15 @@ class BasicCompiler:
                 if self.state.next_line > 0:
                     line_number = self.state.next_line
                     self.state.next_line = -1
-                elif self.last_line == 0:
+                elif not self.has_previous_line:
                     line_number = 1
                 else:
                     line_number = self.last_line + self.state.line_step_size
+
+        if line_number < 0 or line_number > 0xffff:
+            return (None, None, None, CompileError(
+                filename, "line number out of range", line_index
+            ))
 
         if preprocess:
             for new_label in self.new_labels:
@@ -1316,6 +1349,7 @@ class BasicCompiler:
             self.new_labels = []
 
         self.last_line = line_number
+        self.has_previous_line = True
 
         return (line_number, label, ofs, None)
 

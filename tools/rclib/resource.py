@@ -459,7 +459,7 @@ class ResourceCompiler:
         try:
             formatter: BaseFormatter = FormatterFactory.create_instance(format_str)
         except TypeError as err:
-            return err
+            return CompileError(None, str(err))
 
         resources = self.resources
         resources.set_name(output)
@@ -479,21 +479,20 @@ class ResourceCompiler:
 
         s = resources.to_string(formatter)
 
-        self.write(output, s)
+        return self.write(output, s)
 
-        return None
-
-    def write(self, filename: Optional[str], content: str):
+    def write(self, filename: Optional[str], content: str) -> Optional[CompileError]:
         """Write generated output to file or console."""
 
         if not filename:
             print(content)
             return
 
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except FileExistsError:
-            pass
+        parent = os.path.dirname(filename)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
 
-        with open(filename, "w") as text_file:
+        with open(filename, "w", encoding="utf-8") as text_file:
             text_file.write(content)
+
+        return None

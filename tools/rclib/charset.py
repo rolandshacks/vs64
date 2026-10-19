@@ -150,8 +150,12 @@ class CharPadResource(CharsetResource):
             return CompileError(self, "invalid charpad file")
 
         format_version = self.read_byte()
+        if format_version == 82:
+            # handle discontinuoued prototype version
+            format_version = 8
+
         if format_version < 7 or format_version > 9:
-            return CompileError(self, "{version} is unsupported charpad file format version".format(version = format_version))
+            return CompileError(self, f"{format_version} is unsupported charpad file format version".format())
 
         match format_version:
             case 9:

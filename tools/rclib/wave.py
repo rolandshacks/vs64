@@ -25,7 +25,7 @@ class WaveResource(Resource):
             chunk_size = self.read_int(4)
             if chunk_id == id:
                 return chunk_size
-            self.read_skip(chunk_size)
+            self.read_skip(chunk_size + (chunk_size & 1))
 
         return 0
 

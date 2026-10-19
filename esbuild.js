@@ -48,7 +48,7 @@ const extensionBuild = {
     minify: production,
     sourcesContent: false,
     platform: 'node',
-    external: ['vscode'],
+    external: ['vscode', 'libarchive-wasm/dist/libarchive.wasm'],
     logLevel: 'debug',
     nodePaths: [global._sourcebase],
     sourcemap: 'linked',
@@ -81,6 +81,11 @@ const webBuild = {
 };
 
 async function main() {
+    fs.mkdirSync(outDir, { recursive: true });
+    fs.copyFileSync(
+        require.resolve('libarchive-wasm/dist/libarchive.wasm'),
+        path.join(outDir, 'libarchive.wasm')
+    );
     const ctx1 = await esbuild.context(extensionBuild);
     const ctx2 = await esbuild.context(webBuild);
 
@@ -89,7 +94,6 @@ async function main() {
     } else {
         await ctx1.rebuild();
         await ctx1.dispose();
-
         await ctx2.rebuild();
         await ctx2.dispose();
     }

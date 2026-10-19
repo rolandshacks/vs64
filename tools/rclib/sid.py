@@ -30,10 +30,12 @@ class SidResource(Resource):
 
         self.version = self.read_int(2)
         self.data_offset = self.read_int(2)
-        self.data_size = sid_size - (self.data_offset + 2)
         self.load_address = self.read_int(2)
+        self.payload_offset = self.data_offset
         if self.load_address == 0x0:
             self.load_address = int.from_bytes(sid[self.data_offset:self.data_offset + 2], 'little')
+            self.payload_offset += 2
+        self.data_size = sid_size - self.payload_offset
 
         self.init_address = self.read_int(2)
         self.play_address = self.read_int(2)
@@ -98,6 +100,6 @@ class SidResource(Resource):
         s += formatter.comment(f"Data size:    {self.data_size} bytes ({formatter.format_hexnumber(self.data_size)})\n")
         s += formatter.comment_line() + "\n"
 
-        s +=  formatter.byte_array(self.identifier, self.input, self.data_offset + 2, self.data_size)
+        s +=  formatter.byte_array(self.identifier, self.input, self.payload_offset, self.data_size)
 
         return s
