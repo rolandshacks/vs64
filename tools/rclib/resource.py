@@ -410,6 +410,7 @@ class ResourcePackage:
             lines.append(formatter.comment("clang-format off"))
         lines.append(formatter.comment_line())
         lines.append("\n")
+        lines.append(formatter.header())
 
         s = ""
         s += "\n".join(lines)

@@ -373,6 +373,10 @@ class ParserBase {
         return (this._options && this._options.toolkit && this._options.toolkit.isLLVM);
     }
 
+    get isRust() {
+        return (this._options && this._options.toolkit && this._options.toolkit.isRust);
+    }
+
     get isBasic() {
         return (this._options && this._options.toolkit && this._options.toolkit.isBasic);
     }

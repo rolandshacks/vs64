@@ -23,6 +23,7 @@ class Toolkit {
         this.isOscar64 = (name == "oscar64");
         this.isLLVM = (name == "llvm");
         this.isBasic = (name == "basic");
+        this.isRust = (name == "rust");
 
         this.isCpp = (this.isLLVM || this.isCC65 || this.isOscar64);
         this.isAssembler = (this.isAcme || this.isKick);
@@ -62,6 +63,9 @@ class Toolkit {
                 break;
             case "basic":
                 this.builtInDefines = [ "__basic__"];
+                break;
+            case "rust":
+                this.builtInDefines = [ "__rust__"];
                 break;
             default:
                 break;

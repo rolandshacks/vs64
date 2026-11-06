@@ -2,6 +2,11 @@
 
 All notable changes to the **VS64 Development Environment** extension will be documented in this file.
 
+## 2.8.0 Major Update
+
+- Added support for the Rust programming language
+- Bug-fixes and minor improvements
+
 ## 2.7.5 Minor Update
 
 - Bug-fixes and minor improvements

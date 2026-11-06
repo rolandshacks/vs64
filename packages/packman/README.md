@@ -35,9 +35,11 @@ are extracted, so `aaa/bbb/ccc` becomes `<asset-name>/ccc`. Use `root: ""` to
 keep archive paths exactly as they are, including a sole root directory. All
 formats use `libarchive-wasm`.
 Same-directory symbolic links are extracted when their targets stay inside the
-asset directory. Hard links, links with path components, and entries outside
-the extraction directory are rejected. On Linux and macOS, `.tar.xz`, `.tar.gz`,
-and `.tgz` entries retain their Unix permission bits, including executable
-bits. Packman uses the system `tar` command to read those modes because the
-WASM reader does not expose them. Directory modes are applied after extraction
+asset directory. Absolute symbolic links are skipped because they refer to
+paths on the archive creator's machine. Hard links, relative links with path
+components, and entries outside the extraction directory are rejected. On Linux
+and macOS, `.tar.xz`, `.tar.gz`, and `.tgz` entries retain their Unix
+permission bits, including executable bits. Packman uses the system `tar`
+command to read those modes because the WASM reader does not expose them.
+Directory modes are applied after extraction
 so restrictive directories do not block their own contents.

@@ -39,21 +39,21 @@ function fileExists(filename) {
     return fs.existsSync(filename) && fs.statSync(filename).isFile();
 }
 
-function findImplicitArchiveRoot(reader) {
-    const entries = [];
+function findImplicitArchiveRoot(entries) {
+    const meaningfulEntries = [];
     const parents = new Set();
-    for (const entry of reader.entries()) {
-        const name = path.posix.normalize(entry.getPathname().replace(/\\/g, '/')).replace(/\/+$/, '');
+    for (const entry of entries) {
+        const name = entry.name;
         if (!name || name === '.') continue;
         const parts = name.split('/');
         for (let i = 1; i < parts.length; i++) {
             parents.add(parts.slice(0, i).join('/'));
         }
-        entries.push({ name, parts, directory: entry.getFiletype() === 'Directory' });
+        meaningfulEntries.push({ name, parts, directory: entry.directory });
     }
 
     let common = null;
-    for (const entry of entries) {
+    for (const entry of meaningfulEntries) {
         if (entry.directory && parents.has(entry.name)) continue;
         const directories = entry.directory ? entry.parts : entry.parts.slice(0, -1);
         if (common == null) common = directories;
@@ -65,6 +65,27 @@ function findImplicitArchiveRoot(reader) {
         if (common.length === 0) return null;
     }
     return common?.length ? common.join('/') : null;
+}
+
+function moveImplicitArchiveRoot(extractionRoot, assetDirectory, archiveRoot, directoryModes) {
+    const sourceRoot = path.join(assetDirectory, archiveRoot);
+    const holdingDir = fs.mkdtempSync(path.join(extractionRoot, '.packman-root-'));
+    const holdingAsset = path.join(holdingDir, 'asset');
+    try {
+        fs.renameSync(sourceRoot, holdingAsset);
+        fs.rmSync(assetDirectory, { recursive: true, force: true });
+        fs.renameSync(holdingAsset, assetDirectory);
+    } finally {
+        fs.rmSync(holdingDir, { recursive: true, force: true });
+    }
+
+    const movedModes = new Map();
+    for (const [directory, mode] of directoryModes) {
+        if (directory === sourceRoot || directory.startsWith(sourceRoot + path.sep)) {
+            movedModes.set(path.join(assetDirectory, path.relative(sourceRoot, directory)), mode);
+        }
+    }
+    return movedModes;
 }
 
 function parseTarMode(line) {
@@ -114,7 +135,7 @@ function readTarModes(archivePath) {
     });
 }
 
-async function extractArchive(archivePath, targetDir, root=null, assetName=null) {
+async function extractArchive(archivePath, targetDir, root=null, assetName=null, sourceUrl=null) {
     const extractionRoot = path.resolve(targetDir);
     const assetDirectory = path.resolve(extractionRoot, assetName);
     let archiveRoot = null;
@@ -136,18 +157,14 @@ async function extractArchive(archivePath, targetDir, root=null, assetName=null)
         : require.resolve('libarchive-wasm/dist/libarchive.wasm');
     const module = await libarchiveWasm({ wasmBinary: fs.readFileSync(wasmPath) });
     const archiveBytes = new Int8Array(fs.readFileSync(archivePath));
-    const preserveTarModes = process.platform !== 'win32' && /\.(?:tar\.xz|tar\.gz|tgz)$/i.test(archivePath);
+    const sourcePath = sourceUrl ? new URL(sourceUrl).pathname : '';
+    const tarArchivePattern = /\.(?:tar\.xz|tar\.gz|tgz)$/i;
+    const preserveTarModes = process.platform !== 'win32' &&
+        (tarArchivePattern.test(archivePath) || tarArchivePattern.test(sourcePath));
     const tarModes = preserveTarModes ? await readTarModes(archivePath) : null;
-    if (root == null) {
-        const inspectionReader = new ArchiveReader(module, archiveBytes);
-        try {
-            archiveRoot = findImplicitArchiveRoot(inspectionReader);
-        } finally {
-            inspectionReader.free();
-        }
-    }
     const reader = new ArchiveReader(module, archiveBytes);
     const directoryModes = new Map();
+    const archiveEntries = root == null ? [] : null;
     let entryIndex = 0;
 
     try {
@@ -175,6 +192,10 @@ async function extractArchive(archivePath, targetDir, root=null, assetName=null)
                 throw new Error('invalid archive entry path');
             }
 
+            if (archiveEntries) {
+                archiveEntries.push({ name: normalized.replace(/\/+$/, ''), directory: type === 'Directory' });
+            }
+
             if (installPath == null) continue;
 
             for (let parent = path.dirname(destination);
@@ -193,9 +214,13 @@ async function extractArchive(archivePath, targetDir, root=null, assetName=null)
                 throw new Error('archive links are unsupported');
             }
             if (type === 'SymbolicLink') {
+                if (symlinkTarget && (path.posix.isAbsolute(symlinkTarget) ||
+                    path.win32.isAbsolute(symlinkTarget) || /^[A-Za-z]:/.test(symlinkTarget))) {
+                    continue;
+                }
                 if (!symlinkTarget || symlinkTarget === '.' || symlinkTarget === '..' ||
                     symlinkTarget.includes('/') || symlinkTarget.includes('\\') ||
-                    /^[A-Za-z]:/.test(symlinkTarget) || destination === assetDirectory) {
+                    destination === assetDirectory) {
                     throw new Error('invalid archive link target');
                 }
                 fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -237,7 +262,14 @@ async function extractArchive(archivePath, targetDir, root=null, assetName=null)
     } finally {
         reader.free();
     }
-    for (const [directory, mode] of [...directoryModes].sort((a, b) => b[0].length - a[0].length)) {
+    let finalDirectoryModes = directoryModes;
+    if (archiveEntries) {
+        archiveRoot = findImplicitArchiveRoot(archiveEntries);
+        if (archiveRoot) {
+            finalDirectoryModes = moveImplicitArchiveRoot(extractionRoot, assetDirectory, archiveRoot, directoryModes);
+        }
+    }
+    for (const [directory, mode] of [...finalDirectoryModes].sort((a, b) => b[0].length - a[0].length)) {
         fs.chmodSync(directory, mode);
     }
 }
@@ -585,9 +617,11 @@ class PackageManager {
         try {
             data = await this._downloader.downloadToString(this._remoteManifestUrl);
             this._throwIfCancelled();
-        } catch (_err) {
+        } catch (err) {
             this._remoteManifest = null;
-            throw new Error("failed to fetch repository manifest '" + this._remoteManifestUrl + "'");
+            if (err.message === "cancelled") throw err;
+            throw new Error("failed to fetch repository manifest '" + this._remoteManifestUrl + "': " + err.message,
+                { cause: err });
         }
 
         try {
@@ -724,7 +758,8 @@ class PackageManager {
         }
 
         try {
-            await extractArchive(assetInstallInfo.tempFile, assetInstallInfo.tempDir, asset.root, asset.name);
+            await extractArchive(assetInstallInfo.tempFile, assetInstallInfo.tempDir, asset.root, asset.name,
+                assetInstallInfo.sourceUrl);
         } catch (_err) {
             throw new Error("extracting '" + asset.name + "' failed.");
         }

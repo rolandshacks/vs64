@@ -109,6 +109,7 @@ class AsmParser extends ParserBase {
         let isKickAss = this.isKickAss;
         let isAcme = this.isAcme;
         let isLLVM = this.isLLVM;
+        let isRust = this.isRust;
 
         let tokensPerLineOfs = -1;
         let tokensPerLineCount = 0;

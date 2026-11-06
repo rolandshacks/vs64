@@ -18,11 +18,12 @@ from rclib import ResourceCompiler, ResourceFactory
 def usage():
     """Print tool usage information."""
 
-    print("Usage: rc [--format cpp|cc|acme|kick|raw] [--config config] -o output input...")
+    print("Usage: rc [--format cpp|cc|rust|acme|kick|raw] [--config config] -o output input...")
     print("")
     print("--format          : Specify output data format")
     print("                    cpp  - Generate C++ data")
     print("                    cc   - Generate C data")
+    print("                    rust - Generate Rust data")
     print("                    acme - Generate ACME assembler data")
     print("                    kick - Generate KickAssembler data")
     print("--config          : path to JSON configuration file")

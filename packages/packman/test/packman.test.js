@@ -10,6 +10,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
+const { ArchiveReader } = require('libarchive-wasm');
+const originalFetch = global.fetch;
+const manifestFixture = path.join(__dirname, 'packages.json');
 const symlinkTest = process.platform === 'win32' ? test.skip : test;
 const unixTest = process.platform === 'win32' ? test.skip : test;
 
@@ -86,6 +89,7 @@ describe('packman', () => {
     });
 
     afterEach(() => {
+        global.fetch = originalFetch;
         fs.rmSync(directory, { recursive: true, force: true });
     });
 
@@ -93,6 +97,38 @@ describe('packman', () => {
         const appName = "TestVS64Pack";
         const userAppDir = PackageManager.getUserAppDir(appName);
         expect(userAppDir).not.toBe(null);
+    });
+
+    test('preserves the reason a repository manifest could not be fetched', async () => {
+        const manager = new PackageManager('TestVS64Pack', 'https://example.com/packages/', directory);
+        manager._downloader.downloadToString = async () => {
+            throw new Error('Download failed with status 504');
+        };
+
+        await expect(manager.connect()).rejects.toThrow(/failed to fetch repository manifest.*504/);
+    });
+
+    test('connects after a 504 using the updated manifest fixture', async () => {
+        const manifest = fs.readFileSync(manifestFixture, 'utf8');
+        let requests = 0;
+        global.fetch = async () => {
+            requests++;
+            return new Response(requests === 1 ? 'Gateway Timeout' : manifest, {
+                status: requests === 1 ? 504 : 200
+            });
+        };
+        const manager = new PackageManager('TestVS64Pack', 'https://example.com/packages/', directory);
+
+        await manager.connect();
+
+        expect(requests).toBe(2);
+        expect(manager._remoteManifest.getGroupAssets(['linux']).map(asset => asset.name))
+            .toEqual(Object.keys(JSON.parse(manifest).linux));
+        const linuxAssets = manager._remoteManifest.getGroupAssets(['linux']);
+        expect(manager.getAssetInstallInfo(linuxAssets.find(asset => asset.name === 'acme')).sourceUrl)
+            .toBe('https://example.com/packages/linux/acme.tgz');
+        expect(manager.getAssetInstallInfo(linuxAssets.find(asset => asset.name === 'llvm-mos')).sourceUrl)
+            .toBe('https://github.com/llvm-mos/llvm-mos-sdk/releases/download/v23.4.0/llvm-mos-linux.tar.xz');
     });
 
     test('skips consecutive sole directories in a ZIP asset', async () => {
@@ -128,6 +164,29 @@ describe('packman', () => {
 
         expect(fs.readFileSync(path.join(directory, 'demo/bin/tool'), 'utf8')).toBe('tool');
         expect(fs.readFileSync(path.join(directory, 'demo/docs/readme'), 'utf8')).toBe('readme');
+    });
+
+    test('traverses an archive only once when root is inferred', async () => {
+        const archive = makeTar([{ name: 'release/bin/tool', data: 'tool' }]);
+        const entriesSpy = jest.spyOn(ArchiveReader.prototype, 'entries');
+
+        try {
+            await installFromArchive(directory, { version: '1.0.0', file: 'demo.tar' }, archive);
+            expect(entriesSpy).toHaveBeenCalledTimes(1);
+        } finally {
+            entriesSpy.mockRestore();
+        }
+    });
+
+    test('ignores an explicit dot directory when inferring the root', async () => {
+        const archive = makeTar([
+            { name: './', type: '5' },
+            { name: 'release/bin/tool', data: 'tool' }
+        ]);
+
+        await installFromArchive(directory, { version: '1.0.0', file: 'demo.tar' }, archive);
+
+        expect(fs.readFileSync(path.join(directory, 'demo/tool'), 'utf8')).toBe('tool');
     });
 
     test('keeps a root directory when the archive also has a root file', async () => {
@@ -224,6 +283,27 @@ describe('packman', () => {
         expect(fs.statSync(path.join(directory, 'demo/bin')).mode & 0o7777).toBe(0o750);
         expect(fs.statSync(path.join(directory, 'demo/bin/tool')).mode & 0o7777).toBe(0o755);
         expect(fs.statSync(path.join(directory, 'demo/bin/data')).mode & 0o7777).toBe(0o640);
+    });
+
+    unixTest('preserves modes when a tar.xz root is inferred', async () => {
+        await installFromArchive(directory, { version: '1.0.0', file: 'demo.tar.xz' }, TAR_XZ_MODE_FIXTURE);
+
+        expect(fs.statSync(path.join(directory, 'demo')).mode & 0o7777).toBe(0o750);
+        expect(fs.statSync(path.join(directory, 'demo/tool')).mode & 0o7777).toBe(0o755);
+        expect(fs.statSync(path.join(directory, 'demo/data')).mode & 0o7777).toBe(0o640);
+    });
+
+    unixTest('preserves tar.xz modes when the URL has the format but file is omitted', async () => {
+        const value = {
+            version: '1.0.0',
+            url: 'https://example.com/rust-mos-stable-x86_64-unknown-linux-gnu.tar.xz'
+        };
+        const manager = await installFromArchive(directory, value, TAR_XZ_MODE_FIXTURE, 'rust-mos');
+
+        expect(manager.getAssetInstallInfo(manager._remoteManifest.getGroupAssets(['generic'])[0]).archiveName)
+            .toBe('rust-mos.zip');
+        expect(fs.statSync(path.join(directory, 'rust-mos/tool')).mode & 0o7777).toBe(0o755);
+        expect(fs.statSync(path.join(directory, 'rust-mos/data')).mode & 0o7777).toBe(0o640);
     });
 
     test('downloads an item from its own URL while retaining its archive name', async () => {
@@ -323,6 +403,18 @@ describe('packman', () => {
 
         expect(fs.readFileSync(path.join(directory, 'demo/demo/bin/tool-alias'), 'utf8')).toBe('linked tool');
         expect(fs.lstatSync(path.join(directory, 'demo/demo/bin/tool-alias')).isSymbolicLink()).toBe(true);
+    });
+
+    symlinkTest('skips an absolute symbolic link and installs later entries', async () => {
+        const archive = makeTar([
+            { name: 'release/lib/rustlib/rustc-src/rust', type: '2', linkName: '/home/runner/work/rust' },
+            { name: 'release/bin/tool', data: 'installed tool' }
+        ]);
+
+        await installFromArchive(directory, { version: '1.0.0', file: 'demo.tar', root: 'release' }, archive);
+
+        expect(fs.lstatSync(path.join(directory, 'demo/lib/rustlib/rustc-src/rust'), { throwIfNoEntry: false })).toBeUndefined();
+        expect(fs.readFileSync(path.join(directory, 'demo/bin/tool'), 'utf8')).toBe('installed tool');
     });
 
     test('rejects a symbolic link outside the asset directory', async () => {

@@ -1,0 +1,13 @@
+{
+    "name": "rust",
+    "description": "Project rust",
+    "toolkit": "rust",
+    "sources": [
+        "src/main.rs"
+    ],
+    "build": "debug",
+    "definitions": [],
+    "includes": [],
+    "args": [],
+    "compiler": ""
+}

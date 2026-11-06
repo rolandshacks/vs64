@@ -28,10 +28,10 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "args": [
-                "--format", "kick",
+                "--format", "rust",
                 "--config", "${workspaceFolder}/test/project-config.json",
-                "--output", "${workspaceFolder}/test/temp/build/out.asm",
-                "${workspaceFolder}/test/res/charset.ctm"
+                "--output", "${workspaceFolder}/test/temp/build/out.rs",
+                "${workspaceFolder}/test/res/wave_hello.wav"
             ]
         },
         {

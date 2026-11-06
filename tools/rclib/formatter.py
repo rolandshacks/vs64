@@ -17,6 +17,7 @@ class OutputFormat(Enum):
     C = 2
     ASM = 3
     BASIC = 4
+    RUST = 5
 
 class OutputFormatVariant(Enum):
     """Output format variant identifiers."""
@@ -54,6 +55,12 @@ class BaseFormatter:
         self.output_meta_info = True
         self.clang_format_pragma = False
         self.uppercase = False
+        self.uppercase_const = False
+        self.file_header = ""
+
+    def header(self):
+        """Return header string."""
+        return self.file_header
 
     def begin_namespace(self, _name_: str):
         """Return namespace opening."""
@@ -134,24 +141,29 @@ class BaseFormatter:
 
         data_len = sz if sz else len(data)
 
+        arr_name = name.upper() if self.uppercase_const else name
+
         s = ""
-        s += self.bytearray_begin.format(name, data_len)
+        s += self.bytearray_begin.format(arr_name, data_len)
         s += self.binary(data, ofs, data_len, bitmask, bitscale, elements_per_line)
-        s += self.bytearray_end.format(name, data_len)
+        s += self.bytearray_end.format(arr_name, data_len)
         s += '\n'
-        s += self.byte_array_size(name, data_len)
+        s += self.byte_array_size(arr_name, data_len)
         return s
 
     def byte_array_size(self, name: str, sz: int):
         """Format byte array size info."""
-        s = self.bytearray_size.format(name, sz)
+        arr_name = name.upper() if self.uppercase_const else name
+        s = self.bytearray_size.format(arr_name, sz)
         return s
 
     def constant(self, name: str, data: int, format_code: str):
         """Output constant declaration."""
 
+        const_name = name.upper() if self.uppercase_const else name
+
         if not format_code:
-            s = self.constant_value.format(name, data, self.type_name_byte)
+            s = self.constant_value.format(const_name, data, self.type_name_byte)
         else:
             if format_code == 'i16' or format_code == 'x16':
                 value_type = self.type_name_word
@@ -167,7 +179,7 @@ class BaseFormatter:
             else:
                 value = data
 
-            s = self.constant_value.format(name, value, value_type)
+            s = self.constant_value.format(const_name, value, value_type)
 
         return s
 
@@ -250,6 +262,22 @@ class CFormatter(BaseFormatter):
         self.type_name_word = 'unsigned short'
         self.clang_format_pragma = True
 
+class RustFormatter(BaseFormatter):
+    """Rust formatter."""
+
+    def __init__(self, format_variant):
+        super().__init__(format_variant)
+        self.format = OutputFormat.RUST
+        self.comment_begin = '//'
+        self.commentline_char = '/'
+        self.bytearray_begin = 'pub static {0} : [u8; {1}] = [\n'
+        self.bytearray_end = ']; // {0}\n'
+        self.bytearray_size = ""
+        self.constant_value = 'pub const {0} : {2} = {1}{2};\n'
+        self.type_name_byte = 'u8'
+        self.type_name_word = 'u16'
+        self.uppercase_const = True
+
 class AsmFormatter(BaseFormatter):
     """Assembler formatter."""
 
@@ -319,6 +347,8 @@ class FormatterFactory:
             formatter = CppFormatter(OutputFormatVariant.NONE)
         elif format_str == "cc":
             formatter = CFormatter(OutputFormatVariant.NONE)
+        elif format_str == "rust":
+            formatter = RustFormatter(OutputFormatVariant.NONE)
         elif format_str == "basic":
             formatter = BasicFormatter(OutputFormatVariant.NONE)
         elif format_str == "acme":
