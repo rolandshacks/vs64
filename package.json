@@ -2,7 +2,7 @@
 	"name": "vs64",
 	"displayName": "VS64",
 	"description": "VS64 - The C64 Development Environment",
-	"version": "2.7.5",
+	"version": "2.8.0",
 	"preview": false,
 	"publisher": "rosc",
 	"license": "SEE LICENSE IN LICENSE",
@@ -78,6 +78,7 @@
 		"kickassembler",
 		"llvm",
 		"c++",
+		"rust",
 		"cc65",
 		"oscar64",
 		"basic",
@@ -85,6 +86,7 @@
 		"6510",
 		"vice",
 		"x16",
+		"mos",
 		"denise",
 		"emulator",
 		"debugger",
@@ -151,6 +153,11 @@
 			{
 				"command": "vs64.createProjectLlvm",
 				"title": "Create LLVM-MOS C++ Project",
+				"category": "VS64"
+			},
+			{
+				"command": "vs64.createProjectRust",
+				"title": "Create Rust Project",
 				"category": "VS64"
 			},
 			{
@@ -243,7 +250,7 @@
 					{
 						"id": "setup_project",
 						"title": "Create a VS64 Project",
-						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
+						"description": "VS64 provides a custom build system and project configuration.\n\n[Create ACME Assembler Project](command:vs64.createProjectAcme)\n\n[Create Kick Assembler Project](command:vs64.createProjectKick)\n\n[Create LLVM-MOS C++ Project](command:vs64.createProjectLlvm)\n\n[Create Rust Project](command:vs64.createProjectRust)\n\n[Create CC65 C Project](command:vs64.createProjectCc65)\n\n[Create Oscar64 C Project](command:vs64.createProjectOscar64)\n\n[Create C64 Basic Project](command:vs64.createProjectBasic)",
 						"media": {
 							"markdown": "resources/walkthroughs/project.md"
 						},
@@ -310,6 +317,27 @@
 					"column": 3,
 					"message": 5
 				}
+			},
+			{
+				"name": "rust",
+				"owner": "vs64",
+				"fileLocation": [
+					"autoDetect",
+					"${workspaceFolder}"
+				],
+				"pattern": [
+					{
+						"regexp": "(error(\\[E\\d+\\])?|warning): (.*)",
+						"severity": 1,
+						"message": 3
+					},
+					{
+						"regexp": "\\s+--> ([^:]+):(\\d+):(\\d+)",
+						"file": 1,
+						"line": 2,
+						"column": 3
+					}
+				]
 			}
 		],
 		"languages": [
@@ -472,6 +500,11 @@
 						"type": "string",
 						"default": "",
 						"description": "Path to LLVM-MOS SDK installation"
+					},
+					"vs64.rustInstallDir": {
+						"type": "string",
+						"default": "",
+						"description": "Path to Rust-MOS installation"
 					},
 					"vs64.cc65InstallDir": {
 						"type": "string",

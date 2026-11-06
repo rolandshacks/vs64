@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "vs64",
+            "action": "build",
+            "problemMatcher": [
+                "$rust"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "label": "build project"
+        }
+    ]
+}

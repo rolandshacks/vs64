@@ -301,15 +301,21 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         if (debuggerType == Constants.DebuggerTypeVice) {
             this._emulatorProcess = new ViceProcess(sessionInfo);
 
-            const args = settings.viceArgs + (options.args ? (" " + options.args) : "");
-            const emulatorCommand = settings.viceExecutable + " " + args;
+            const args = [];
+            if (settings.viceSharedDir) args.push('-directory "' + settings.viceSharedDir + '"');
+            if (settings.viceArgs) args.push(settings.viceArgs);
+            if (options.args) args.push(options.args);
+
+            const argsString = args.join(" ");
+
+            const emulatorCommand = settings.viceExecutable + " " + argsString;
             logger.trace(`launch VICE emulator: ${emulatorCommand}`)
 
             try {
                 await this._emulatorProcess.spawn(
                     settings.viceExecutable,
                     settings.vicePort,
-                    args,
+                    argsString,
                     processOptions
                 );
             } catch (err) {

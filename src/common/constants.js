@@ -21,7 +21,7 @@ const Constants = {
     ViceBinaryMonitorPort: 6502,                    // connectino port to VICE binary monitor interface
     ViceConnectTimeoutSec: 10,                      // connection timeout (in seconds) for VICE binary monitor
     ProjectConfigFile: "project-config.json",       // name of project config file
-    SupportedLanguageIds: [ "asm", "acme", "kickass", "s", "c", "cpp", "h", "hpp", "cc", "hh", "bas", "res", "raw", "spm", "properties" ],
+    SupportedLanguageIds: [ "asm", "acme", "kickass", "s", "c", "cpp", "h", "hpp", "cc", "hh", "rust", "bas", "res", "raw", "spm", "properties" ],
     AssemblerLanguageIds: [ "asm", "acme", "kickass" ],
     BasicLanguageId: "bas",
     DebuggerType6502: "6502",
@@ -41,6 +41,7 @@ const Constants = {
     COnlyFileFilter: "|c|",
     AsmFileFilter: "|s|asm|a|",
     BasicFileFilter: "|bas|",
+    RustFileFilter: "|rs|",
     ObjFileFilter: "|o|obj|",
     BinaryFileFilter: "|prg|bin|dat|res|raw|spm|spd|ctm|sid|wav|png|jpg|koa|kla|",
     BasicInterpreterLoopRoutine: 0xa7e4,            // default adress of vector $308-309

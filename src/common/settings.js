@@ -35,6 +35,7 @@ class Settings {
         this.buildIncludePaths = null;
         this.buildArgs = null;
         this.viceExecutable = null;
+        this.viceSharedDir = null;
         this.vicePort = Constants.ViceBinaryMonitorPort;
         this.viceArgs = null;
         this.x16Executable = null;
@@ -91,6 +92,7 @@ class Settings {
         this.setupAcme(workspaceConfig);
         this.setupKickAssembler(workspaceConfig);
         this.setupLLVM(workspaceConfig);
+        this.setupRust(workspaceConfig);
         this.setupCC65(workspaceConfig);
         this.setupOscar64(workspaceConfig);
         this.setupVice(workspaceConfig);
@@ -238,6 +240,20 @@ class Settings {
         }
     }
 
+    setupRust(workspaceConfig) {
+        const installDir = this.#getAbsDir(
+            workspaceConfig.get("vs64.rustInstallDir") ||
+            this.findApplicationBundle("rust-mos")
+        );
+        if (installDir) {
+            this.rustcExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("rustc"));
+            this.cargoExecutable = path.resolve(installDir, "bin", Utils.normalizeExecutableName("cargo"));
+        } else {
+            this.rustcExecutable = "rustc";
+            this.cargoExecutable = "cargo";
+        }
+    }
+
     setupLLVM(workspaceConfig) {
         const installDir = this.#getAbsDir(
             workspaceConfig.get("vs64.llvmInstallDir") ||
@@ -329,12 +345,14 @@ class Settings {
         //this.#migrateConfig(workspaceConfig, "vs64.emulatorPort", "vs64.vicePort")
         //this.#migrateConfig(workspaceConfig, "vs64.emulatorArgs", "vs64.viceArgs")
 
+        this.viceSharedDir = null;
         const executablePath = this.#getAbsDir(workspaceConfig.get("vs64.viceExecutable")||workspaceConfig.get("vs64.emulatorExecutable"));
         if (executablePath) {
             this.viceExecutable = Utils.normalizeExecutableName(executablePath);
         } else {
             const bundledExecutable = this.findApplicationBundle("gtkvice", "bin/x64sc");
             this.viceExecutable = bundledExecutable || Utils.normalizeExecutableName("x64sc");
+            this.viceSharedDir = this.findApplicationBundle("gtkvice", "share/vice");
         }
         this.vicePort = asInteger(workspaceConfig.get("vs64.vicePort")||workspaceConfig.get("vs64.emulatorPort"))||Constants.ViceBinaryMonitorPort;
         this.viceTimeout = asInteger(workspaceConfig.get("vs64.viceTimeout"))||Constants.ViceConnectTimeoutSec;
@@ -410,14 +428,16 @@ class Settings {
 
         logger.debug("extension log level is " + Logger.getLevelName(Logger.getGlobalLevel()));
         logger.debug("auto build is " + (settings.autoBuild ? "enabled" : "disabled"));
-        logger.debug("clang++ executable: " + settings.clangExecutable);
-        logger.debug("clang executable: " + settings.clangcExecutable);
         logger.debug("acme executable: " + settings.acmeExecutable);
         logger.debug("kickass executable: " + settings.kickExecutable);
         logger.debug("cc65 executable: " + settings.cc65Executable);
         logger.debug("ca65 executable: " + settings.ca65Executable);
         logger.debug("ld65 executable: " + settings.ld65Executable);
         logger.debug("oscar64 executable: " + settings.oscar64Executable);
+        logger.debug("clang++ executable: " + settings.clangExecutable);
+        logger.debug("clang executable: " + settings.clangcExecutable);
+        logger.debug("rustc executable: " + settings.rustcExecutable);
+        logger.debug("cargo executable: " + settings.cargoExecutable);
         logger.debug("vice executable: " + settings.viceExecutable);
         logger.debug("ninja executable: " + settings.ninjaExecutable);
         logger.debug("python executable: " + settings.pythonExecutable);

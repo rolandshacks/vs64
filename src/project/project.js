@@ -54,6 +54,7 @@ class Project {
     get outfile() { return this._outfile; }
     get outdebug() { return this._outdebug; }
     get compilecommandsfile() { return this._compilecommandsfile; }
+    get cargotomlfile() { return this._cargotomlfile; }
     get cpppropertiesfile() { return this._cpppropertiesfile; }
     get buildfiles() { return this._buildfiles; }
     get includes() { return this._includes; }
@@ -143,6 +144,7 @@ class Project {
         this._buildfile = path.resolve(this._builddir, "build.ninja");
         this._compilecommandsfile = path.resolve(this._builddir, "compile_commands.json");
         this._cpppropertiesfile = path.resolve(this._basedir, ".vscode", "c_cpp_properties.json");
+        this._cargotomlfile = path.resolve(this._builddir, "Cargo.toml");
 
         this.#load();
 
@@ -161,6 +163,9 @@ class Project {
                 this._outdebug = path.resolve(this._builddir, this._name + ".dbg");
                 break;
             case "llvm":
+                this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
+                break;
+            case "rust":
                 this._outdebug = path.resolve(this._builddir, this._outfile + ".elf");
                 break;
             case "cc65":
@@ -187,6 +192,8 @@ class Project {
         if (toolkit.isCpp) {
             this.#writeCompileCommands();
             this.#writeCppProperties();
+        } else if (toolkit.isRust) {
+            //this.#writeCargoToml();
         }
     }
 
@@ -200,8 +207,8 @@ class Project {
         if (!data.toolkit) { throw("property 'toolkit' needs to be defined (either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic')"); }
         const toolkitId = data.toolkit.toLowerCase();
 
-        if (["acme", "kick", "llvm", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
-            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'cc65', 'oscar64' or 'basic'");
+        if (["acme", "kick", "llvm", "rust", "cc65", "oscar64", "basic"].indexOf(toolkitId) < 0) {
+            throw("property 'toolkit' needs to be either 'acme', 'kick', 'llvm', 'rust', 'cc65', 'oscar64' or 'basic'");
         }
 
         this._toolkit = Toolkit.fromName(toolkitId);
@@ -362,6 +369,7 @@ class Project {
             if (!rcArguments.hasOption("format")) {
                 if (toolkit.isCC65 || toolkit.isOscar64) rcFormat = "cc";
                 else if (toolkit.isLLVM) rcFormat = "cpp";
+                else if (toolkit.isRust) rcFormat = "rust";
                 else rcFormat = toolkit.name;
                 rcArguments.setOption("format", rcFormat);
             } else {
@@ -379,6 +387,7 @@ class Project {
             } else {
                 if (rcFormat == "cc") this._resourceOutputType = "c";
                 else if (rcFormat == "cpp") this._resourceOutputType = "cpp";
+                else if (rcFormat == "rust") this._resourceOutputType = "rs";
                 else if (rcFormat == "basic") this._resourceOutputType = "bas";
             }
         }
@@ -531,6 +540,58 @@ class Project {
             fs.writeFileSync(filename, json, 'utf8');
         } catch (e) {
             logger.error("could not write cpp properties file: " + e);
+        }
+
+    }
+
+    #writeCargoToml() {
+
+        const project = this;
+
+        this.#createBuildDir();
+
+        const filename = this.cargotomlfile;
+        const filetime = Utils.getFileTime(filename);
+        if (this._modificationTime && filetime >= this._modificationTime) {
+            return;
+        }
+
+        const fileContent = [];
+        const rustSources = this.querySourceByExtension(Constants.RustFileFilter)||[];
+        const resourceOutputType = this._resourceOutputType;
+
+        fileContent.push('[package]');
+        fileContent.push('name = "' + project.name + '"');
+        fileContent.push('version = "0.1.0"');
+        fileContent.push('edition = "2024"');
+        fileContent.push('');
+
+        fileContent.push('[[bin]]');
+        fileContent.push('name = "' + project.name + '"');
+        for (const rustSource of rustSources) {
+            fileContent.push('path = "' + rustSource + '"');
+        }
+        fileContent.push('');
+
+        fileContent.push('[profile.dev]');
+        fileContent.push('panic = "abort"');
+        fileContent.push('opt-level = "s"');
+        fileContent.push('debug = true');
+        fileContent.push('strip = "none"');
+        fileContent.push('incremental = false');
+        fileContent.push('');
+
+        fileContent.push('[profile.release]');
+        fileContent.push('panic = "abort"');
+        fileContent.push('opt-level = "s"');
+        fileContent.push('debug = true');
+        fileContent.push('strip = "none"');
+
+        try {
+            const s = fileContent.join("\n");
+            fs.writeFileSync(filename, s, 'utf8');
+        } catch (e) {
+            logger.error("could not write cargo file: " + e);
         }
 
     }
@@ -775,7 +836,7 @@ class Project {
 
         const toolkit = this.toolkit;
 
-        const doNotResolveResources = false;
+        const doNotResolveResources = (toolkit.isRust);
 
         const asmFiles = TranslationList.fromList(
             (toolkit.isAcme) ?
@@ -786,11 +847,12 @@ class Project {
         const basFiles = TranslationList.fromList(this.querySourceByExtension(Constants.BasicFileFilter));
         const resFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ResourceFileFilter));
         const cppFiles = TranslationList.fromList(this.querySourceByExtension(Constants.CppFileFilter));
+        const rustFiles = TranslationList.fromList(this.querySourceByExtension(Constants.RustFileFilter));
         const objFiles = TranslationList.fromList(this.querySourceByExtension(Constants.ObjFileFilter));
         const genFiles = TranslationList.createEmpty();
         const depFiles = TranslationList.createEmpty();
 
-        const resourceOutputType = (toolkit.isCpp || toolkit.isBasic) ? this._resourceOutputType : "asm";
+        const resourceOutputType = (toolkit.isCpp || toolkit.isRust || toolkit.isBasic) ? this._resourceOutputType : "asm";
 
         resFiles.forEach((input) => {
             const output = this.#getBuildPath(input, resourceOutputType);
@@ -800,7 +862,7 @@ class Project {
             if (!doNotResolveResources) {
                 if (resourceOutputType == "asm" || toolkit.isAssembler) asmFiles.add(output, input);
                 else if (resourceOutputType == "basic" || toolkit.isBasic) basFiles.add(output, input);
-                else cppFiles.add(output, input);
+                else ifcppFiles.add(output, input);
             }
 
         });
@@ -832,7 +894,7 @@ class Project {
                 this.getFileReferences(filename, dependencies);
             });
             depFiles.add(thisInstance.outfile, dependencies);
-        } else if (toolkit.isCpp) {
+        } else if (toolkit.isCpp || toolkit.isRust) {
             // add dependency information for object files
             asmFiles.forEach((input) => {
                 objFiles.add(this.#getBuildPath(input, "o"), input, "asm");
@@ -867,13 +929,14 @@ class Project {
         }
 
         const buildTree = {
-            res: resFiles,  // resource files
-            gen: genFiles,  // generated resource files (all)
-            cpp: cppFiles,  // cpp files
-            asm: asmFiles,  // assembler files
-            bas: basFiles,  // basic files
-            obj: objFiles,  // object files (llvm and cc65)
-            deps: depFiles  // dependencies (kick)
+            res: resFiles,   // resource files
+            gen: genFiles,   // generated resource files (all)
+            cpp: cppFiles,   // cpp files
+            rust: rustFiles, // rust files
+            asm: asmFiles,   // assembler files
+            bas: basFiles,   // basic files
+            obj: objFiles,   // object files (llvm and cc65)
+            deps: depFiles   // dependencies (kick)
         }
 
         return buildTree;
@@ -894,6 +957,8 @@ class Project {
         if (toolkit.isCpp) {
             this.#writeCompileCommands();
             this.#writeCppProperties();
+        } else if (toolkit.isRust) {
+            // this.#writeCargoToml();
         }
 
         const buildFile = this.buildfile;
@@ -1293,6 +1358,168 @@ class Project {
             script.push("build $target | $dbg_out : cc " + Ninja.join(buildTree.cpp.array()));
             script.push("");
 
+        /*
+        } else if (toolkit.isRust) {
+
+            let targetName = "c64";
+            let targetConfig = "c64";
+            if (project.machine) {
+                targetName = (project.machine != "none") ? project.machine : null;
+                targetConfig = (project.machine != "none") ? project.machine : "unknown";
+            }
+            const targetConfigName = "mos-" + targetConfig + "-none";
+
+            const rustFlags = [
+                '"-C"', '"split-debuginfo=off"', '"-C"', '"target-cpu=mos6502"', '"-C"', '"dwarf-version=5"'
+            ];
+            if (targetName) {
+                rustFlags.push('"-C"')
+                rustFlags.push('"link-arg=--config=mos-' + targetConfig + '.cfg"');
+            }
+
+            const rf = rustFlags.join(',');
+
+            const flags = new NinjaArgs();
+
+            if (releaseBuild) {
+                flags.add('--release');
+            }
+
+            flags.add('--config', "'build.rustc=\"$rustc\"'");
+            flags.add('--config', "'target." + targetConfigName + ".linker=\"$clang\"'");
+            flags.add('--config', "'target." + targetConfigName + ".rustflags=[" + rf + "]'");
+            flags.add('--target', targetConfigName);
+            flags.add('--target-dir', './build');
+
+            flags.add(this._args);
+
+            script.push(Ninja.keyValue("rustc", (project.compiler || settings.rustcExecutable)));
+            script.push(Ninja.keyValue("cargo", (settings.cargoExecutable)));
+            script.push(Ninja.keyValue("clang", (settings.clangcExecutable)));
+            script.push("");
+
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule rs");
+            script.push("    depfile = $out.d");
+            script.push("    deps = gcc");
+            script.push("    command = $cargo build --manifest-path build/Cargo.toml $flags");
+            script.push("");
+
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
+
+            let target_build = "build $target | $dbg_out : rs " + Ninja.join(buildTree.rust.array());
+            if (buildTree.gen && buildTree.gen.size > 0) {
+                target_build += " | " + Ninja.join(buildTree.gen.array());
+            }
+            script.push(target_build);
+            script.push("");
+        */
+
+        } else if (toolkit.isRust) {
+
+            let targetName = "c64";
+            let targetConfig = "c64";
+            if (project.machine) {
+                targetName = (project.machine != "none") ? project.machine : null;
+                targetConfig = (project.machine != "none") ? project.machine : "unknown";
+            }
+
+            const asm_flags = new NinjaArgs(["-Wall", "-g"]);
+
+            if (releaseBuild) {
+                asm_flags.add("-Os", "-flto");
+            } else {
+                asm_flags.add("-O0");
+            }
+
+            if (asm_flags.indexOf("--config ") == -1) asm_flags.add(["--config", "mos-" + targetConfig + ".cfg"]);
+
+            const flags = new NinjaArgs();
+
+            flags.add("--target", "mos-unknown-none");
+            flags.add("--crate-name", project.name);
+            flags.add("--crate-type", "bin");
+            flags.add("--edition", "2024");
+            flags.add("--emit=link");
+            flags.add("-g");
+            flags.add("-C", "split-debuginfo=off");
+            flags.add("-C", "strip=none");
+            flags.add("-C", "linker=$clang");
+
+            if (targetName) {
+                flags.add("-C", "link-arg=--config=" + "mos-" + targetConfig + ".cfg");
+            }
+
+            buildTree.obj.forEach((to, from, rule) => {
+                flags.add("-C", "link-arg=" + to);
+            });
+
+            flags.add("-C", "target-cpu=mos6502");
+            flags.add("-C", "panic=\"abort\"");
+            flags.add("-C", "dwarf-version=5");
+
+            if (releaseBuild) {
+                flags.add("-C", "opt-level=\"s\"");
+            } else {
+                flags.add("-C", "opt-level=\"0\"");
+            }
+
+            flags.add(this._args);
+
+            script.push(Ninja.keyValue("rustc", (project.compiler || settings.rustcExecutable)));
+            script.push(Ninja.keyValue("clang", (settings.clangcExecutable)));
+            script.push("");
+
+            script.push(Ninja.keyArgs("flags", flags));
+            script.push(Ninja.keyArgs("asmflags", asm_flags));
+            script.push("");
+
+            script.push("rule res");
+            script.push("    command = $python_exe $rc_exe $rc_flags -o $out $in");
+            script.push("");
+
+            script.push("rule asm");
+            script.push("    command = $clang --target=mos -mcpu=mos6502 $asmflags -c -o $out $in");
+            script.push("");
+            
+            script.push("rule rust");
+            script.push("    command = $rustc -o $out $flags $in");
+            script.push("");
+
+            buildTree.gen.forEach((to, from) => {
+                script.push(Ninja.build(to, from, "res"));
+            });
+            script.push("");
+
+            buildTree.obj.forEach((to, from, rule) => {
+                script.push(Ninja.build(to, from, (rule || "asm")));
+            });
+            script.push("");
+
+            let target_build = "build $target | $dbg_out : rust " + Ninja.join(buildTree.rust.array());
+
+            if ((buildTree.gen && buildTree.gen.size > 0) || (buildTree.obj && buildTree.obj.size > 0)) {
+                target_build += " |";
+                if (buildTree.gen && buildTree.gen.size > 0) {
+                    target_build += " " + Ninja.join(buildTree.gen.array());
+                }
+                if (buildTree.obj && buildTree.obj.size > 0) {
+                    target_build += " " + Ninja.join(buildTree.obj.array());
+                }
+            }
+            
+            script.push(target_build);
+            script.push("");
+
         } else if (toolkit.isLLVM) {
 
             const defaultFlags = [
@@ -1330,7 +1557,6 @@ class Project {
             }
 
             let defaultTargetConf = targetName ? ["--config", "mos-" + targetName + ".cfg"] : null;
-
             if (defaultTargetConf && flags.indexOf("--config ") == -1 && asm_flags.indexOf("--config ") == -1) asm_flags.add(defaultTargetConf);
             if (defaultTargetConf && flags.indexOf("--config ") == -1 && c_flags.indexOf("--config ") == -1) c_flags.add(defaultTargetConf);
             if (defaultTargetConf && flags.indexOf("--config ") == -1 && ld_flags.indexOf("--config ") == -1) ld_flags.add(defaultTargetConf);

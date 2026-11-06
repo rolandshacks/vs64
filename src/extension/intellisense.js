@@ -68,6 +68,8 @@ class IntellisenseConfigurationProvider {
 
         if (toolkit.isLLVM) {
             compilerPath = settings.clangExecutable;
+        } else if (toolkit.isRust) {
+            compilerPath = settings.rustcExecutable;
         } else if (toolkit.isCC65) {
             compilerPath = settings.cc65Executable;
         } else if (toolkit.isOscar64) {

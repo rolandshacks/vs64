@@ -14,9 +14,10 @@ The VS64 extension makes it easy to develop software for the C64 using Visual St
 
 * ACME assembler
 * KickAssembler
-* LLVM-MOS C/C++ compiler
 * CC65 C compiler
 * Oscar64 C/C++ compiler
+* LLVM-MOS C/C++ compiler
+* Rust compiler (rust-mos)
 * BASIC V2 and Tuned Simon's BASIC
 * Meta-build system based on the Ninja build toolkit
 * Integrated project setup and configuration
@@ -94,6 +95,14 @@ VS64 also supports the LLVM-MOS C/C++ Compiler.
 * Installation: Download and install from https://github.com/llvm-mos/llvm-mos-sdk
 
 Please make sure you update the VS64 settings with the correct LLVM-MOS installation and include paths.
+
+### Rust Compiler (rust-mos)
+
+VS64 also supports the rust-mos Rust Compiler.
+
+* Installation: Download and install from https://github.com/sbechet/rust-mos-sync/
+
+Please make sure you update the VS64 settings with the correct rust-mos installation and include paths.
 
 ### CC65 Compiler
 
@@ -563,7 +572,7 @@ Defines all used source and resource files. The build system will keep track of 
 
 > toolkit
 
-Specifies which build toolkit is used. Currently supported are `"acme"`, `"kick"`, `"llvm"`, `"cc65"`, `"oscar64"` and `"basic"`.
+Specifies which build toolkit is used. Currently supported are `"acme"`, `"kick"`, `"llvm"`, `"rust"`, `"cc65"`, `"oscar64"` and `"basic"`.
 
 > machine
 
@@ -893,6 +902,10 @@ Path to Cc65 installation. Example: `C:\Tools\c64\cc65`.
 
 Path to LLVM-MOS installation. Example: `C:\Tools\c64\llvm-mos`.
 
+> VS64: Rust Install Dir
+
+Path to RUST-MOS installation. Example: `C:\Tools\c64\rust-mos`.
+
 > VS64: Build Defines
 
 Global build defines.
@@ -999,6 +1012,7 @@ This package includes open source from other developers and I would like to than
 * The ACME Cross-Assembler: https://sourceforge.net/projects/acme-crossass
 * The Kick Assembler: http://theweb.dk/KickAssembler
 * LLVM-MOS: https://github.com/llvm-mos/llvm-mos-sdk
+* Rust-MOS: https://github.com/sbechet/rust-mos-sync/
 * CC65 C-Compiler: https://cc65.github.io
 * Oscar64 C-Compiler: https://github.com/drmortalwombat/oscar64
 * VICE, the Versatile Commodore Emulator: http://vice-emu.sourceforge.net

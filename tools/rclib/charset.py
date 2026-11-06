@@ -47,7 +47,6 @@ class CharsetResource(Resource):
         if num_chars < 1: return ""
 
         s = ""
-
         s += formatter.comment_line() + "\n"
         if self.type_info: s += formatter.comment(f"Type:         {self.type_info}\n")
         if self.editor_info: s += formatter.comment(f"Editor:       {self.editor_info}\n")

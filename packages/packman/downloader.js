@@ -6,6 +6,9 @@ const { URL } = require('url');
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_MAX_REDIRECTS = 5;
+const MAX_GATEWAY_RETRIES = 2;
+const RETRY_DELAY_MS = 250;
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 
 class Downloader {
     constructor(onProgress = undefined, timeoutMs = undefined, maxRedirects = undefined) {
@@ -26,21 +29,22 @@ class Downloader {
     async download(url, targetPath) {
         await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
 
-        const { response, cleanup } = await this.getResponse(url);
+        const { response, cleanup, refreshTimeout } = await this.getResponse(url);
         const tempPath = this.getTempOutputPath(targetPath);
         const totalBytes = this.getContentLength(response);
 
         try {
             await pipeline(
                 this.getResponseStream(response),
-                this.createProgressStream(totalBytes),
+                this.createProgressStream(totalBytes, refreshTimeout),
                 fs.createWriteStream(tempPath)
             );
+            cleanup();
             await fs.promises.rename(tempPath, targetPath);
             return targetPath;
         } catch (error) {
             await this.removePartialFile(tempPath);
-            throw error;
+            throw this.normalizeDownloadError(error, url);
         } finally {
             cleanup();
         }
@@ -51,11 +55,18 @@ class Downloader {
             throw new TypeError('encoding must be a string');
         }
 
-        const { response, cleanup } = await this.getResponse(url);
+        const { response, cleanup, refreshTimeout } = await this.getResponse(url);
 
         try {
-            const buffer = Buffer.from(await response.arrayBuffer());
-            return buffer.toString(encoding);
+            if (!response.body) return '';
+            const chunks = [];
+            for await (const chunk of this.getResponseStream(response)) {
+                refreshTimeout();
+                chunks.push(chunk);
+            }
+            return Buffer.concat(chunks).toString(encoding);
+        } catch (error) {
+            throw this.normalizeDownloadError(error, url);
         } finally {
             cleanup();
         }
@@ -65,7 +76,16 @@ class Downloader {
         const parsedUrl = new URL(url);
         this.validateProtocol(parsedUrl);
 
-        const result = await this.fetchWithTimeout(parsedUrl);
+        let result;
+        for (let attempt = 0; attempt <= MAX_GATEWAY_RETRIES; attempt++) {
+            result = await this.fetchWithTimeout(parsedUrl);
+            if (!RETRYABLE_STATUSES.has(result.response.status) || attempt === MAX_GATEWAY_RETRIES) {
+                break;
+            }
+            await this.discardResponse(result.response);
+            result.cleanup();
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
+        }
         const { response, cleanup } = result;
 
         if (this.isRedirect(response.status)) {
@@ -89,17 +109,18 @@ class Downloader {
         if (!response.ok) {
             await this.discardResponse(response);
             cleanup();
-            throw new Error(`Download failed with status ${response.status}`);
+            throw new Error(`Download failed with status ${response.status} from ${parsedUrl}`);
         }
 
         return result;
     }
 
-    createProgressStream(totalBytes) {
+    createProgressStream(totalBytes, refreshTimeout) {
         let receivedBytes = 0;
 
         return new Transform({
             transform: (chunk, encoding, callback) => {
+                refreshTimeout();
                 receivedBytes += chunk.length;
 
                 try {
@@ -174,6 +195,12 @@ class Downloader {
         await fs.promises.rm(filePath, { force: true });
     }
 
+    normalizeDownloadError(error, url) {
+        if (error.name !== 'AbortError') return error;
+        return new Error(`Download timed out after ${this.timeoutMs}ms without data from ${url}`,
+            { cause: error });
+    }
+
     async fetchWithTimeout(url) {
         if (typeof fetch !== 'function') {
             throw new Error('Native fetch is not available. Use Node.js 18 or newer.');
@@ -193,15 +220,12 @@ class Downloader {
             return {
                 response,
                 cleanup: () => clearTimeout(timeout),
+                refreshTimeout: () => timeout.refresh(),
             };
         } catch (error) {
             clearTimeout(timeout);
 
-            if (error.name === 'AbortError') {
-                throw new Error(`Download timed out after ${this.timeoutMs}ms`);
-            }
-
-            throw error;
+            throw this.normalizeDownloadError(error, url);
         }
     }
 
