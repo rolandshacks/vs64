@@ -97,13 +97,13 @@ class DebugQuery {
 
             const fmt = expr.substr(pos);
             if (fmt == 'b') {
-                query.dataSize = 8;
+                query.dataSize = 1;
                 query.dataType = DebugQuery.DATATYPE_BYTE;
             } else if (fmt == 'w') {
-                query.dataSize = 16;
+                query.dataSize = 2;
                 query.dataType = DebugQuery.DATATYPE_WORD;
             } else if (fmt == 's') {
-                query.dataSize = 8;
+                query.dataSize = 1;
                 query.dataType = DebugQuery.DATATYPE_STRING;
             } else {
                 query.elementCount = parseInt(fmt);
@@ -1764,16 +1764,23 @@ class DebugSession extends DebugAdapter.LoggingDebugSession {
         } else {
 
             info.label = symbol.name;
-            if (symbol.data_size == 1) {
-                info.value = Formatter.formatU8(symbol.value);
-            } else if (symbol.data_size == 2) {
-                info.value = Formatter.formatU16(symbol.value);
-            } else if (symbol.isAddress) {
-                info.value = Formatter.formatU8(await emu.read(symbol.value));
-            } else {
-                info.value = Formatter.formatValue(symbol.value);
+            let value = symbol.value;
+            if (symbol.isAddress) {
+                if (symbol.data_size == 2) {
+                    const mem = await emu.readMemory(value, value + 1);
+                    value = mem[0] | (mem[1] << 8);
+                } else {
+                    value = await emu.read(value);
+                }
             }
 
+            if (symbol.data_size == 2) {
+                info.value = Formatter.formatU16(value);
+            } else if (symbol.data_size == 1 || symbol.isAddress) {
+                info.value = Formatter.formatU8(value);
+            } else {
+                info.value = Formatter.formatValue(value);
+            }
         }
 
         return info;
